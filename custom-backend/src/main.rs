@@ -1,11 +1,7 @@
-extern crate signal_hook;
-
 use std::{
     fs,
     io::{prelude::*, BufReader},
     net::{TcpListener, TcpStream},
-    sync::Arc,
-    sync::atomic::{AtomicBool, Ordering}
 };
 
 // Most of the core of this is borrowed straight from 
@@ -13,28 +9,13 @@ use std::{
 
 fn main() {
     
-    let sigterm_received = Arc::new(AtomicBool::new(false));
-    let sigint_received  = Arc::new(AtomicBool::new(false));
-
-    signal_hook::flag::register(
-        signal_hook::consts::SIGTERM, 
-        Arc::clone(&sigterm_received)
-    ).unwrap();
-
-    signal_hook::flag::register(
-        signal_hook::consts::SIGINT, 
-        Arc::clone(&sigint_received)
-    ).unwrap();
-
-    let listener = TcpListener::bind("127.0.0.1:7878").unwrap();
+    let listener = TcpListener::bind("127.0.0.1:80").unwrap();
     
     for stream in listener.incoming() {
 
-        if sigterm_received.load(Ordering::Relaxed) || sigint_received.load(Ordering::Relaxed) {
-            break;
-        }
-        
+        println!("atomics checked");
         let stream = stream.unwrap();
+        
         println!("Connection established!");
         
         let request = stream_to_string(&stream);
