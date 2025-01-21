@@ -13,7 +13,7 @@ fn main() {
     // binding to "all available" IPs (when only one is actually available on the server)
     // for privacy. If the IP the URL is discovered, the device would be exposed
     // if that info is paired with the private IP
-    let listener = TcpListener::bind("0.0.0.0:7878").unwrap();
+    let listener = TcpListener::bind("0.0.0.0:80").unwrap();
     
     for stream in listener.incoming() {
 
