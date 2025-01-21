@@ -1,20 +1,19 @@
 use std::{
     fs,
     io::{prelude::*, BufReader},
-    net::{TcpListener, TcpStream},
+    net::{TcpListener, TcpStream}, path::Path,
 };
 
 // The core of this is borrowed straight from 
 // the Rust Book here: https://doc.rust-lang.org/book/ch20-01-single-threaded.html
 
-enum FileType {
-    HTML,
-    image,
-}
 
 fn main() {
-    
-    let listener = TcpListener::bind("0.0.0.0:80").unwrap();
+
+    // binding to "all available" IPs (when only one is actually available on the server)
+    // for privacy. If the IP the URL is discovered, the device would be exposed
+    // if that info is paired with the private IP
+    let listener = TcpListener::bind("0.0.0.0:7878").unwrap();
     
     for stream in listener.incoming() {
 
@@ -28,6 +27,7 @@ fn main() {
     
 }
 
+
 fn stream_to_string(stream: &TcpStream) -> Vec<String> {
     let buf_reader = BufReader::new(stream);
     let http_request: Vec<String> = buf_reader
@@ -39,59 +39,108 @@ fn stream_to_string(stream: &TcpStream) -> Vec<String> {
     http_request
 }
 
-fn respond(request: Vec<String>, mut stream: TcpStream) {
+// stream variable is needed to pass along to serve_*() functions
+fn respond(request: Vec<String>, stream: TcpStream) {
     let mut filepath = String::from("/home/martin/archie-server");
     let mut parsed_line0 = request[0].split_ascii_whitespace();
     let method = parsed_line0.next().unwrap(); 
 
-    let (status_line, filename, filetype) = match method {
+    match method {
         "GET" => {
             let request_path = parsed_line0.next().unwrap();
-            
-            match request_path {
-                "/"      => {
-                    filepath.push_str("/home.html");
-                    ("HTTP/1.1 200 OK", filepath, FileType::HTML)
-                }
-                // "/stats" => {
-                //     filepath.push_str("/stats.html");
-                //     ("HTTP/1.1 200 OK", filepath)
-                // }
-                "/data/images/the-server.jpg" => {
+
+            if request_path == "/" {
+                filepath.push_str("/home.html");
+                serve_html(stream, "HTTP/1.1 200 OK", filepath);
+
+                return;  // no need to go further, esp. for most common case
+            }
+
+            let request_path_root = request_path
+                                                .split("/")
+                                                .nth(1) // path starts AFTER /, so first element null
+                                                .unwrap();
+
+            // using this pattern in case there are other types of data to be served;
+            // it will make them easy to add
+            match request_path_root {
+                "images" => {
                     filepath.push_str(request_path);
-                    ("HTTP/1.1 200 OK", filepath, FileType::image)
-                }
-                "/data/images/arch-logo.png" => {
-                    filepath.push_str(request_path);
-                    ("HTTP/1.1 200 OK", filepath, FileType::image)
+                    serve_image(stream, filepath)
                 }
                 _ => {
-                    filepath.push_str("/errors/404.html");
-                    ("HTTP/1.1 404 Not Found", filepath, FileType::HTML)
+                    serve_404(stream);
                 }
             }
         }
         _ => {
             filepath.push_str("/errors/405.html");
-            ("HTTP/1.1 405 Method Not Allowed", filepath, FileType::HTML)
+            serve_html(stream, "HTTP/1.1 405 Method Not Allowed", filepath);
         }
     };
+}
 
-    let response_raw = match filetype {
-        FileType::HTML => {
-            let contents = fs::read_to_string(filename).unwrap();
-            let length = contents.len();
 
-            let response =
-                format!("{status_line}\r\nContent-Length: {length}\r\n\r\n{contents}");
+fn serve_html(mut stream: TcpStream, status_line: &str, filepath: String) {
 
-            response.as_bytes()
-        }
-        FileType::image => {
-            let contents = fs::read(filename).unwrap();
-            contents.as_slice()
-        }
-    };
+    let contents = fs::read_to_string(filepath).unwrap();
+    let length = contents.len();
+
+    let response =
+        format!("{status_line}\r\nContent-Length: {length}\r\n\r\n{contents}");
+
+    stream.write_all(response.as_bytes()).unwrap();
+}
+
+
+// special case of serve_html() used frequently enough
+// to warant its own wrapper function
+fn serve_404(stream: TcpStream) {
+    serve_html(
+        stream, 
+        "HTTP/1.1 404 Not Found", 
+        String::from("/home/martin/archie-server/errors/404.html")
+    );
+}
+
+fn serve_image(mut stream: TcpStream, filepath: String) {
+    let status_line = "HTTP/1.1 200 OK";
     
-    stream.write_all(response_raw).unwrap();
+    if !(Path::new(&filepath).exists()) {
+        serve_404(stream);
+        return;
+    }
+
+    // most of this below, aside form the MIME type checking,  is from this Reddit post:
+    // https://www.reddit.com/r/learnrust/comments/nt1yec/chapter_20_web_server_project_help_how_do_i_serve/
+
+    // assuming the only . is before the file extension
+    // this is probably okay, since the vast majority of these image requests
+    // will be from <img> tags, hence they will be for files/paths I personally
+    // write, and can ensure they only include a . just before the extension.
+    let img_type = filepath.split(".").nth(1).unwrap();
+    let content_type = match img_type {
+        "png" => "image/png",
+        "jpg" => "image/jpeg",
+        _     => {
+            serve_html(
+                stream, 
+                "HTTP/1.1 415 Unsupported Media Type", 
+                String::from("/home/martin/archie-server/errors/415.html")
+            );
+            return;
+        }
+    };
+
+    let contents = fs::read(filepath).unwrap();
+
+    let response = format!(
+        "{}\r\nContent-Length: {}\r\nContent-Type: {}\r\n\r\n",
+        status_line,
+        contents.len(),
+        content_type
+    );
+
+    stream.write(response.as_bytes()).unwrap();
+    stream.write(&contents).unwrap();
 }
