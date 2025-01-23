@@ -1,46 +1,134 @@
 use std::{
+    env,
+    error::Error as StdError,
     fs,
-    io::{prelude::*, BufReader},
-    net::{TcpListener, TcpStream}, path::Path,
+    io::prelude::*,
+    net::{TcpListener, TcpStream}, 
+    path::Path,
+    sync::Arc
+};
+
+use rustls::{
+    pki_types::{ 
+        pem::PemObject, 
+        CertificateDer, 
+        PrivateKeyDer, 
+    },
+    ServerConnection
 };
 
 // The core of this is borrowed straight from 
 // the Rust Book here: https://doc.rust-lang.org/book/ch20-01-single-threaded.html
 
 
-fn main() {
+fn main() -> Result<(), Box<dyn StdError>> {
 
-    // binding to "all available" IPs (when only one is actually available on the server)
-    // for privacy. If the IP the URL is discovered, the device would be exposed
-    // if that info is paired with the private IP
-    let listener = TcpListener::bind("0.0.0.0:80").unwrap();
+    println!("Loading certificates and keys...");
+    let mut configed_server = config_auth()
+        .expect("Server could not be configured with TLS.");
+    println!("Certificates and keys loaded!");
+
+    let listener = get_listener("443");
     
-    for stream in listener.incoming() {
-
-        let stream = stream.unwrap();
-        println!("Connection established!");
+    for stream_res in listener.incoming() {
         
-        let request = stream_to_string(&stream);
-        respond(request, stream);
+        let mut stream = stream_res.unwrap();
+        // complete handshake
+        println!("Establishing secure connection...");
+        configed_server.complete_io(&mut stream).unwrap();
+        println!("Secure connection established.");
+
+        let mut tls_stream: rustls::Stream<'_, ServerConnection, TcpStream> 
+            = rustls::Stream::new(
+            &mut configed_server,
+            &mut stream
+        );
+
+        let mut buf = Vec::<u8>::new();
+        tls_stream.read_to_end(&mut buf).unwrap();
+        let request = String::from_utf8(buf).unwrap();
+
+        respond(request, tls_stream);
         println!("Response sent!");
     }
-    
+
+    Ok(())
 }
 
 
-fn stream_to_string(stream: &TcpStream) -> Vec<String> {
-    let buf_reader = BufReader::new(stream);
-    let http_request: Vec<String> = buf_reader
-        .lines()
-        .map(|result| result.unwrap())
-        .take_while(|line| !line.is_empty())
+fn config_auth() -> Result<ServerConnection, rustls::Error> {
+
+    // Modified version of simpleserver.rs example from Rustls docs
+    // load in certs from environment filepaths
+    let cert_file = env::var_os("CRT_FILE")
+        .expect("Certificates filepath variable not found in environment.")
+        .into_string()
+        .unwrap();
+    let private_key_file = env::var_os("PK_FILE")
+        .expect("Private keys filepath variable not found in environment.")
+        .into_string()
+        .unwrap();
+
+    let certs: Vec<CertificateDer> = CertificateDer::pem_file_iter(&cert_file)
+        .expect(
+            &format!(
+                "Certificate file not found at {} (or other file issue).", 
+                &cert_file
+            )
+        )
+        .map(|cert| cert.expect("Error in reading a certificate."))
         .collect();
 
-    http_request
+    let private_key = PrivateKeyDer::from_pem_file(&private_key_file)
+        .expect(
+            &format!(
+                "Private key file not found at {} (or other file issue).", 
+                private_key_file
+            )
+        );
+    
+    let config = rustls::ServerConfig::builder()
+        .with_no_client_auth()
+        .with_single_cert(certs, private_key)?;
+    
+    rustls::ServerConnection::new(Arc::new(config))
 }
 
+
+fn get_listener(port: &str) -> TcpListener {
+        // Using environment variable for privacy.
+    // If the IP the URL is discovered, the device would be exposed
+    // if that info is paired with the private IP
+    let private_ip = env::var_os("PRIV_IP")
+        .expect("PRIV_IP not found in environment.")
+        .into_string()
+        .unwrap();
+
+    let bind_addr = format!("{}:{}", private_ip, port);
+
+    TcpListener::bind(bind_addr).unwrap()
+}
+
+
 // stream variable is needed to pass along to serve_*() functions
-fn respond(request: Vec<String>, stream: TcpStream) {
+fn respond(request_str: String, stream: rustls::Stream<'_, ServerConnection, TcpStream>) {
+
+    let request = request_str
+        .split("\n")
+        .collect::<Vec<&str>>();
+
+    // this chunk is for fun, to see what kind of user agents are 
+    // viewing my website!
+    if let Some(user_agent) = request
+        .iter()
+        .filter(|el| el.starts_with("User-Agent"))
+        .next()     
+    {
+        println!("Processing request from user agent: {}...", user_agent);
+    } else {
+        println!("Processing request from unspecified user agent...")
+    }
+
     let mut filepath = String::from("/home/martin/archie-server");
     let mut parsed_line0 = request[0].split_ascii_whitespace();
     let method = parsed_line0.next().unwrap(); 
@@ -81,7 +169,7 @@ fn respond(request: Vec<String>, stream: TcpStream) {
 }
 
 
-fn serve_html(mut stream: TcpStream, status_line: &str, filepath: String) {
+fn serve_html(mut stream: rustls::Stream<'_, ServerConnection, TcpStream>, status_line: &str, filepath: String) {
 
     let contents = fs::read_to_string(filepath).unwrap();
     let length = contents.len();
@@ -94,8 +182,8 @@ fn serve_html(mut stream: TcpStream, status_line: &str, filepath: String) {
 
 
 // special case of serve_html() used frequently enough
-// to warant its own wrapper function
-fn serve_404(stream: TcpStream) {
+// to warrant its own wrapper function
+fn serve_404(stream: rustls::Stream<'_, ServerConnection, TcpStream>) {
     serve_html(
         stream, 
         "HTTP/1.1 404 Not Found", 
@@ -103,7 +191,7 @@ fn serve_404(stream: TcpStream) {
     );
 }
 
-fn serve_image(mut stream: TcpStream, filepath: String) {
+fn serve_image(mut stream: rustls::Stream<'_, ServerConnection, TcpStream>, filepath: String) {
     let status_line = "HTTP/1.1 200 OK";
     
     if !(Path::new(&filepath).exists()) {
