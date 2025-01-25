@@ -28,14 +28,21 @@ fn main() -> Result<(), Box<dyn StdError>> {
         .expect("Server could not be configured with TLS.");
     println!("Certificates and keys loaded!");
 
-    let listener = get_listener("443");
-    
+    let listener = TcpListener::bind("0.0.0.0:443").unwrap();
+
     for stream_res in listener.incoming() {
         
         let mut stream = stream_res.unwrap();
         // complete handshake
         println!("Establishing secure connection...");
-        configed_server.complete_io(&mut stream).unwrap();
+        match configed_server.complete_io(&mut stream) {
+            Ok(_bytes_written) => (),
+            Err(e) => {
+                println!("The following error occured with this connection:\n\t{e:?}");
+                println!("\nListening for the next connection..."); 
+                continue;
+            }
+        }
         println!("Secure connection established.");
 
         let mut tls_stream: rustls::Stream<'_, ServerConnection, TcpStream> 
@@ -92,21 +99,6 @@ fn config_auth() -> Result<ServerConnection, rustls::Error> {
         .with_single_cert(certs, private_key)?;
     
     rustls::ServerConnection::new(Arc::new(config))
-}
-
-
-fn get_listener(port: &str) -> TcpListener {
-        // Using environment variable for privacy.
-    // If the IP the URL is discovered, the device would be exposed
-    // if that info is paired with the private IP
-    let private_ip = env::var_os("PRIV_IP")
-        .expect("PRIV_IP not found in environment.")
-        .into_string()
-        .unwrap();
-
-    let bind_addr = format!("{}:{}", private_ip, port);
-
-    TcpListener::bind(bind_addr).unwrap()
 }
 
 
