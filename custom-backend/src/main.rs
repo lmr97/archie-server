@@ -1,10 +1,10 @@
 use std::{
-    env,
-    error::Error as StdError,
-    fs,
-    io::prelude::*,
+    env, 
+    error::Error as StdError, 
+    fs, 
+    io::prelude::*, 
     net::{TcpListener, TcpStream}, 
-    path::Path,
+    path::Path, 
     sync::Arc
 };
 
@@ -20,6 +20,11 @@ use rustls::{
 // The core of this is borrowed straight from 
 // the Rust Book here: https://doc.rust-lang.org/book/ch20-01-single-threaded.html
 
+struct HTTPRequest {
+    header: String,
+    content: Option<Vec<u8>>,
+    content_len: u64
+}
 
 fn main() -> Result<(), Box<dyn StdError>> {
 
@@ -28,12 +33,12 @@ fn main() -> Result<(), Box<dyn StdError>> {
         .expect("Server could not be configured with TLS.");
     println!("Certificates and keys loaded!");
 
-    let listener = TcpListener::bind("0.0.0.0:443").unwrap();
+    let listener = get_listener();
 
     for stream_res in listener.incoming() {
         
         let mut stream = stream_res.unwrap();
-        // complete handshake
+        
         println!("Establishing secure connection...");
         match configed_server.complete_io(&mut stream) {
             Ok(_bytes_written) => (),
@@ -44,18 +49,40 @@ fn main() -> Result<(), Box<dyn StdError>> {
             }
         }
         println!("Secure connection established.");
+        
 
-        let mut tls_stream: rustls::Stream<'_, ServerConnection, TcpStream> 
-            = rustls::Stream::new(
-            &mut configed_server,
-            &mut stream
-        );
-
+        // let mut tls_stream: rustls::Stream<'_, ServerConnection, TcpStream> 
+        //     = rustls::Stream::new(
+        //     &mut configed_server,
+        //     &mut stream
+        // );
+        println!("is_handshaking: {:?}\nwants_read: {:?}\nwants_write: {:?}", 
+        configed_server.is_handshaking(), 
+        configed_server.wants_read(), 
+        configed_server.wants_write());
         let mut buf = Vec::<u8>::new();
-        tls_stream.read_to_end(&mut buf).unwrap();
-        let request = String::from_utf8(buf).unwrap();
+        //let mut bytes_read = tls_stream.read(&mut buf).unwrap();
+        configed_server.reader().read(&mut buf).unwrap();
+        configed_server.complete_io(&mut stream).unwrap();
+        //println!("{:?}", buf);
+    
+        let request_header = String::from_utf8(buf.to_vec()).unwrap();
+        println!("{request_header}");
 
-        respond(request, tls_stream);
+        // let req_content = match request_header.find("Content-Length") {
+            
+        //     Some(content_len_line) => { 
+        //         let req_header_vec = request_header
+        //             .lines()
+        //             .collect::<Vec<String>>();
+        //         let mut content_buf: Vec<u8> = vec![0; content_length];
+        //         tls_stream.read_exact(&mut content_buf);
+        //         Some(content_buf)
+        //     },
+        //     None => None
+        // };
+
+        //respond(request_header, tls_stream);
         println!("Response sent!");
     }
 
@@ -102,9 +129,20 @@ fn config_auth() -> Result<ServerConnection, rustls::Error> {
 }
 
 
+fn get_listener() -> TcpListener {
+    let mut host = env::var_os("PRIV_IP")
+        .expect("Private IP variable not found in environment.")
+        .into_string()
+        .unwrap();
+
+    host.push_str(":443");
+
+    TcpListener::bind(host).unwrap()
+}
+
 // stream variable is needed to pass along to serve_*() functions
 fn respond(request_str: String, stream: rustls::Stream<'_, ServerConnection, TcpStream>) {
-
+    println!("Got to respond()");
     let request = request_str
         .split("\n")
         .collect::<Vec<&str>>();
@@ -116,14 +154,17 @@ fn respond(request_str: String, stream: rustls::Stream<'_, ServerConnection, Tcp
         .filter(|el| el.starts_with("User-Agent"))
         .next()     
     {
-        println!("Processing request from user agent: {}...", user_agent);
+        println!("Processing request from: \n\t{}...", user_agent);
     } else {
         println!("Processing request from unspecified user agent...")
     }
-
+    println!("Request str: {}", request_str);
     let mut filepath = String::from("/home/martin/archie-server");
     let mut parsed_line0 = request[0].split_ascii_whitespace();
-    let method = parsed_line0.next().unwrap(); 
+    let Some(method) = parsed_line0.next() else {
+        println!("Request has no HTTP method. Moving onto next request...");
+        return;
+    }; 
 
     match method {
         "GET" => {
