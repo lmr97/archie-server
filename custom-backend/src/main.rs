@@ -1,96 +1,33 @@
-use std::{
-    env, 
-    error::Error as StdError, 
-    fs, 
-    io::prelude::*, 
-    net::{TcpListener, TcpStream}, 
-    path::Path, 
-    sync::Arc
-};
+use std::{env, error::Error as StdError};
 
-use rustls::{
-    pki_types::{ 
-        pem::PemObject, 
-        CertificateDer, 
-        PrivateKeyDer, 
-    },
-    ServerConnection
-};
 
-// The core of this is borrowed straight from 
-// the Rust Book here: https://doc.rust-lang.org/book/ch20-01-single-threaded.html
+use warp::Filter;
 
-struct HTTPRequest {
-    header: String,
-    content: Option<Vec<u8>>,
-    content_len: u64
-}
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn StdError>> {
 
-fn main() -> Result<(), Box<dyn StdError>> {
-
-    println!("Loading certificates and keys...");
-    let mut configed_server = config_auth()
-        .expect("Server could not be configured with TLS.");
-    println!("Certificates and keys loaded!");
-
-    let listener = get_listener();
-
-    for stream_res in listener.incoming() {
-        
-        let mut stream = stream_res.unwrap();
-        
-        println!("Establishing secure connection...");
-        match configed_server.complete_io(&mut stream) {
-            Ok(_bytes_written) => (),
-            Err(e) => {
-                println!("The following error occured with this connection:\n\t{e:?}");
-                println!("\nListening for the next connection..."); 
-                continue;
-            }
-        }
-        println!("Secure connection established.");
-        
-
-        // let mut tls_stream: rustls::Stream<'_, ServerConnection, TcpStream> 
-        //     = rustls::Stream::new(
-        //     &mut configed_server,
-        //     &mut stream
-        // );
-        println!("is_handshaking: {:?}\nwants_read: {:?}\nwants_write: {:?}", 
-        configed_server.is_handshaking(), 
-        configed_server.wants_read(), 
-        configed_server.wants_write());
-        let mut buf = Vec::<u8>::new();
-        //let mut bytes_read = tls_stream.read(&mut buf).unwrap();
-        configed_server.reader().read(&mut buf).unwrap();
-        configed_server.complete_io(&mut stream).unwrap();
-        //println!("{:?}", buf);
+    let (cert, pks) = get_auth_paths();
     
-        let request_header = String::from_utf8(buf.to_vec()).unwrap();
-        println!("{request_header}");
+    let home = warp::get()
+        .and(warp::path("/"))
+        .and(warp::fs::file("../home.html"));
 
-        // let req_content = match request_header.find("Content-Length") {
-            
-        //     Some(content_len_line) => { 
-        //         let req_header_vec = request_header
-        //             .lines()
-        //             .collect::<Vec<String>>();
-        //         let mut content_buf: Vec<u8> = vec![0; content_length];
-        //         tls_stream.read_exact(&mut content_buf);
-        //         Some(content_buf)
-        //     },
-        //     None => None
-        // };
+    let image = warp::path("images")
+        .and(warp::fs::dir("../images/"));
 
-        //respond(request_header, tls_stream);
-        println!("Response sent!");
-    }
+    let routes = home.or(image);
+    warp::serve(routes)
+        .tls()
+        .cert_path(cert)
+        .key_path(pks)
+        .run(([127,0,0,1], 443))
+        .await;
 
     Ok(())
 }
 
 
-fn config_auth() -> Result<ServerConnection, rustls::Error> {
+fn get_auth_paths() -> (String, String) {
 
     // Modified version of simpleserver.rs example from Rustls docs
     // load in certs from environment filepaths
@@ -103,165 +40,5 @@ fn config_auth() -> Result<ServerConnection, rustls::Error> {
         .into_string()
         .unwrap();
 
-    let certs: Vec<CertificateDer> = CertificateDer::pem_file_iter(&cert_file)
-        .expect(
-            &format!(
-                "Certificate file not found at {} (or other file issue).", 
-                &cert_file
-            )
-        )
-        .map(|cert| cert.expect("Error in reading a certificate."))
-        .collect();
-
-    let private_key = PrivateKeyDer::from_pem_file(&private_key_file)
-        .expect(
-            &format!(
-                "Private key file not found at {} (or other file issue).", 
-                private_key_file
-            )
-        );
-    
-    let config = rustls::ServerConfig::builder()
-        .with_no_client_auth()
-        .with_single_cert(certs, private_key)?;
-    
-    rustls::ServerConnection::new(Arc::new(config))
-}
-
-
-fn get_listener() -> TcpListener {
-    let mut host = env::var_os("PRIV_IP")
-        .expect("Private IP variable not found in environment.")
-        .into_string()
-        .unwrap();
-
-    host.push_str(":443");
-
-    TcpListener::bind(host).unwrap()
-}
-
-// stream variable is needed to pass along to serve_*() functions
-fn respond(request_str: String, stream: rustls::Stream<'_, ServerConnection, TcpStream>) {
-    println!("Got to respond()");
-    let request = request_str
-        .split("\n")
-        .collect::<Vec<&str>>();
-
-    // this chunk is for fun, to see what kind of user agents are 
-    // viewing my website!
-    if let Some(user_agent) = request
-        .iter()
-        .filter(|el| el.starts_with("User-Agent"))
-        .next()     
-    {
-        println!("Processing request from: \n\t{}...", user_agent);
-    } else {
-        println!("Processing request from unspecified user agent...")
-    }
-    println!("Request str: {}", request_str);
-    let mut filepath = String::from("/home/martin/archie-server");
-    let mut parsed_line0 = request[0].split_ascii_whitespace();
-    let Some(method) = parsed_line0.next() else {
-        println!("Request has no HTTP method. Moving onto next request...");
-        return;
-    }; 
-
-    match method {
-        "GET" => {
-            let request_path = parsed_line0.next().unwrap();
-
-            if request_path == "/" {
-                filepath.push_str("/home.html");
-                serve_html(stream, "HTTP/1.1 200 OK", filepath);
-
-                return;  // no need to go further, esp. for most common case
-            }
-
-            let request_path_root = request_path
-                                                .split("/")
-                                                .nth(1) // path starts AFTER /, so first element null
-                                                .unwrap();
-
-            // using this pattern in case there are other types of data to be served;
-            // it will make them easy to add
-            match request_path_root {
-                "images" => {
-                    filepath.push_str(request_path);
-                    serve_image(stream, filepath)
-                }
-                _ => {
-                    serve_404(stream);
-                }
-            }
-        }
-        _ => {
-            filepath.push_str("/errors/405.html");
-            serve_html(stream, "HTTP/1.1 405 Method Not Allowed", filepath);
-        }
-    };
-}
-
-
-fn serve_html(mut stream: rustls::Stream<'_, ServerConnection, TcpStream>, status_line: &str, filepath: String) {
-
-    let contents = fs::read_to_string(filepath).unwrap();
-    let length = contents.len();
-
-    let response =
-        format!("{status_line}\r\nContent-Length: {length}\r\n\r\n{contents}");
-
-    stream.write_all(response.as_bytes()).unwrap();
-}
-
-
-// special case of serve_html() used frequently enough
-// to warrant its own wrapper function
-fn serve_404(stream: rustls::Stream<'_, ServerConnection, TcpStream>) {
-    serve_html(
-        stream, 
-        "HTTP/1.1 404 Not Found", 
-        String::from("/home/martin/archie-server/errors/404.html")
-    );
-}
-
-fn serve_image(mut stream: rustls::Stream<'_, ServerConnection, TcpStream>, filepath: String) {
-    let status_line = "HTTP/1.1 200 OK";
-    
-    if !(Path::new(&filepath).exists()) {
-        serve_404(stream);
-        return;
-    }
-
-    // most of this below, aside form the MIME type checking,  is from this Reddit post:
-    // https://www.reddit.com/r/learnrust/comments/nt1yec/chapter_20_web_server_project_help_how_do_i_serve/
-
-    // assuming the only . is before the file extension
-    // this is probably okay, since the vast majority of these image requests
-    // will be from <img> tags, hence they will be for files/paths I personally
-    // write, and can ensure they only include a . just before the extension.
-    let img_type = filepath.split(".").nth(1).unwrap();
-    let content_type = match img_type {
-        "png" => "image/png",
-        "jpg" => "image/jpeg",
-        _     => {
-            serve_html(
-                stream, 
-                "HTTP/1.1 415 Unsupported Media Type", 
-                String::from("/home/martin/archie-server/errors/415.html")
-            );
-            return;
-        }
-    };
-
-    let contents = fs::read(filepath).unwrap();
-
-    let response = format!(
-        "{}\r\nContent-Length: {}\r\nContent-Type: {}\r\n\r\n",
-        status_line,
-        contents.len(),
-        content_type
-    );
-
-    stream.write(response.as_bytes()).unwrap();
-    stream.write(&contents).unwrap();
+    (cert_file, private_key_file)
 }
