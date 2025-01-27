@@ -1,6 +1,4 @@
 use std::{env, error::Error as StdError};
-
-
 use warp::Filter;
 
 #[tokio::main]
@@ -9,18 +7,20 @@ async fn main() -> Result<(), Box<dyn StdError>> {
     let (cert, pks) = get_auth_paths();
     
     let home = warp::get()
-        .and(warp::path("/"))
+        .and(warp::path::end())
         .and(warp::fs::file("../home.html"));
 
-    let image = warp::path("images")
-        .and(warp::fs::dir("../images/"));
+    let image = warp::get()
+        .and(warp::path("images"))
+        .and(warp::fs::dir("../images/"))
+        .with(warp::compression::gzip());
 
     let routes = home.or(image);
     warp::serve(routes)
         .tls()
         .cert_path(cert)
         .key_path(pks)
-        .run(([127,0,0,1], 443))
+        .run(([0,0,0,0], 443))
         .await;
 
     Ok(())
