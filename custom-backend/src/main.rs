@@ -4,7 +4,7 @@ use std::{
     convert::Infallible
 };
 use warp::http::StatusCode;
-use warp::{reject, Filter, Rejection, Reply};
+use warp::{Filter, Rejection, Reply};
 
 static LOCAL_ROOT: &str = "/home/martin/archie-server";
 
