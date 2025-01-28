@@ -53,8 +53,14 @@ fn get_auth_paths() -> (String, String) {
 // very simple right now, to match the server
 async fn handle_rejection(err: Rejection) -> Result<impl Reply, Infallible> {
     
-    let err_404 = warp::reply::html(format!("{}/errors/404.html", LOCAL_ROOT));
-    let err_500 = warp::reply::html(format!("{}/errors/500.html", LOCAL_ROOT));
+    let err_404 = warp::reply::html(
+        std::fs::read_to_string(format!("{}/errors/404.html", LOCAL_ROOT))
+            .expect("File not found.")
+    );
+    let err_500 = warp::reply::html(
+        std::fs::read_to_string(format!("{}/errors/404.html", LOCAL_ROOT))
+        .expect("File not found.")
+    );
     
     if err.is_not_found() {
         Ok(warp::reply::with_status(err_404, StatusCode::NOT_FOUND))
