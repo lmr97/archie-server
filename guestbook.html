@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Archie's Guestbook</title>
+    <link rel="stylesheet" href="/static/styles/std-style.css">
+</head>
+
+
+<body>
+    <div class="round-box">
+        <h1 id="heading"><i>Guestbook</i></h1>
+        <div style="text-align:center;"></div>
+            <p><b>Leave a message to show you were here!</b></p></div>
+            <div class="round-box">
+            <h2 id="msg-heading"><i>Your entry</i></h2>
+            <p>
+                <label for="guestbook-note">What's your name? (you can leave it blank) </label>
+                <input type="text" id="guestbook-name" name="name" maxlength="40"> 
+            </p>
+            <p>
+                <label for="guestbook-note">What would you like to say?</label>
+                <textarea id="guestbook-note" name="note" rows="4" cols="65" maxlength="500"></textarea>
+            </p>
+            <div class="buttons">
+                <button type="submit">Submit</button>
+            </div>
+            </div>
+        </div>
+    </div>
+    <div class="round-box" id="entry-log">
+        <h2 id="heading"><i>Entries so far</i></h2>
+        <div class="guestbook-entry">
+            <p class="entry-time">Tuesday 10:45am, January 20th 2025</p>
+            <p class="entry-text">basebal</p>
+            <p class="guest-name">&mdash; Bobson Dugnut</p>
+        </div>
+    </div>
+</body>
+<script type="module" src="/static/scripts/guestbook.js"></script>
+</html>
