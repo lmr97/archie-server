@@ -270,7 +270,7 @@ dependencies = [
  "mysql",
  "mysql_common",
  "serde",
- "serde_derive",
+ "serde_json",
  "tokio",
  "warp",
 ]
