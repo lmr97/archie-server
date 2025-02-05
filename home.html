@@ -2,7 +2,7 @@
 <html>
 <head>
     <title>Archie - A Self-hosting Project</title>
-    <link rel="stylesheet" href="/static/styles/std-style.css">
+    <link rel="stylesheet" href="./static/styles/std-style.css">
     <meta charset="utf-8">
 </head>
 
@@ -11,9 +11,11 @@
     <h1 id="heading"><i>Archie: Adventures in Self-hosting</i></h1>
     <p>I had an old HP ProBook 640 laying around, and wanted to give it new
         life as a web server. I got a free domain from 
-        <a href="https://www.noip.com/">noip.com</a>, and went from there!
-    <p>The server runs on <b>Arch Linux</b>, with a simple, custom-built <b>Rust</b> backend, using <a href="https://github.com/seanmonstar/warp">Warp</a>. 
-        You can see all the code used to serve this webpage <a href="https://github.com/lmr97/archie-server">on GitHub</a>.</p>
+        <a href="https://www.noip.com/">noip.com</a>, and went from there!</p>
+    <p>The server runs on <b>Arch Linux</b>, with a custom-built <b>Rust</b> backend, using the 
+        <a href="https://github.com/seanmonstar/warp">Warp</a> framework. For the guestbook, I'm using a <b>MySQL</b> database 
+        to store and retrieve the entries. </p>
+    <p>You can see all the code used to serve this webpage <a href="https://github.com/lmr97/archie-server">on GitHub</a>.</p>
     <h2 style="text-align:center;">
         <a href="guestbook">
             <button class="to-guestbook">Sign the guestbook!</button>
