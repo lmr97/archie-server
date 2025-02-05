@@ -20,6 +20,8 @@ function updateGuestbookRemote() {
     // reset fields
     document.getElementById("guestbook-name").value = "";
     document.getElementById("guestbook-note").value = "";
+    
+    alert("Entry recieved. Thank you for leaving a note!");
 }
 
 function populateEntry(entryData, timeOpts) {
