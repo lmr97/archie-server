@@ -9,6 +9,7 @@ let timeOptions = {
     day: 'numeric' 
 }
 
+
 function updateGuestbookRemote() {
     let guest = document.getElementById("guestbook-name").value;
     let note  = document.getElementById("guestbook-note").value;
@@ -43,6 +44,7 @@ function updateGuestbookRemote() {
     entries[0].before(entryNode);
 
 }
+
 
 function populateEntry(entryData) {
     
@@ -89,6 +91,7 @@ function populateEntry(entryData) {
     return entryElement;
 }
 
+
 function updateGuestbookDisplay() {
     
     fetch("https://archie.zapto.org/guestbook/entries")
@@ -109,6 +112,7 @@ function updateGuestbookDisplay() {
             }
         );
 }
+
 
 updateGuestbookDisplay();
 document.querySelector("button").addEventListener("click", updateGuestbookRemote);
