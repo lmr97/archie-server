@@ -35,6 +35,8 @@ function updateGuestbookRemote() {
     alert("Entry recieved. Thank you for leaving a note!");
 
     // add entry to page, at the top of the list
+    newEntry["time_stamp"] = new Date().getTime().toString();
+    console.log(newEntry["time_stamp"]);
     const entryNode = populateEntry(newEntry);
     let entries = document.getElementsByClassName("guestbook-entry");
     entries[0].before(entryNode);
