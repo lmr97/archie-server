@@ -8,8 +8,11 @@ mod db_io;
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn StdError>> {
 
+    println!("Loading certificates and keys...");
     let (cert, pks) = archie_utils::get_auth_paths();
+    println!("Authorization loaded!");
 
+    println!("Defining routes...");
     let home = warp::path::end()
         .and(warp::get())
         .and(warp::fs::file(format!("{}/home.html", archie_utils::LOCAL_ROOT)));
@@ -78,7 +81,8 @@ async fn main() -> Result<(), Box<dyn StdError>> {
         .or(node_modules)
         .or(guestbook)
         .recover(archie_utils::handle_rejection);
-
+    
+    println!("Routes defined. Launching server!");
     warp::serve(routes)
         .tls()
         .cert_path(cert)
