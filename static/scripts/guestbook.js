@@ -67,7 +67,7 @@ function populateEntry(entryData, timeOpts) {
 
 function updateGuestbookDisplay() {
     
-    fetch("http://localhost:8080/guestbook/entries")
+    fetch("https://archie.zapto.org/guestbook/entries")
         .then(
             response => response.text()
         ).then(
