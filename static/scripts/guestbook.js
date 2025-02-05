@@ -36,8 +36,8 @@ function updateGuestbookRemote() {
 
     // add entry to page, at the top of the list
     let nowUTC = new Date(Date.now());
-    newEntry["time_stamp"] = nowUTC.toISOString();
-    console.log(newEntry["time_stamp"]);
+    newEntry["time_stamp"] = nowUTC.toISOString().slice(0, -1);  // shave off Z
+    console.log(newEntry);
     const entryNode = populateEntry(newEntry);
     let entries = document.getElementsByClassName("guestbook-entry");
     entries[0].before(entryNode);
