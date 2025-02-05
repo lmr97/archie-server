@@ -148,7 +148,7 @@ pub async fn update_guestbook(form_entry: GuestbookEntry) -> impl Reply {
     // doing this in this scope so that the name is in scope
     // for printing name on entry to server console (for fun)
     let entry_name = if form_entry.name.is_empty() {
-        "anonymous".to_string()
+        "(anonymous)".to_string()
     } else {
         form_entry.name
     };
