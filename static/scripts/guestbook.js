@@ -25,7 +25,7 @@ function updateGuestbookRemote() {
     let previousEntries = document.getElementsByClassName("guestbook-entry");
     for (el in previousEntries) {
         while (el.firstChild) {
-            el.removeChild(element.firstChild);
+            el.removeChild(el.firstChild);
         }
         el.parentNode.removeChild(el);
     }
