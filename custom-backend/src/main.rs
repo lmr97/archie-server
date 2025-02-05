@@ -82,7 +82,7 @@ async fn main() -> Result<(), Box<dyn StdError>> {
         .or(guestbook)
         .recover(archie_utils::handle_rejection);
     
-    println!("Routes defined. Launching server!");
+    println!("Routes defined. Launching server!\n");
     warp::serve(routes)
         .tls()
         .cert_path(cert)
