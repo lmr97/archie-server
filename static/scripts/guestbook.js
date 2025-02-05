@@ -2,22 +2,27 @@ function updateGuestbookRemote() {
     let guest = document.getElementById("guestbook-name").value;
     let note  = document.getElementById("guestbook-note").value;
     
-    let xhr = new XMLHttpRequest();
-
-    xhr.open("POST", "https://archie.zapto.org/guestbook/entries", true);
-    xhr.setRequestHeader("Content-Type", "application/json");
-    xhr.send(
-        JSON.stringify(
+    fetch('https://archie.zapto.org/guestbook/entries', {
+        method: 'POST',
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(
             {
                 "name": guest,
                 "note": note
             }
         )
+      }
     );
-
+    
     // reset fields
     document.getElementById("guestbook-name").value = "";
-    document.getElementById("guestbook-note").value  = "";
+    document.getElementById("guestbook-note").value = "";
+
+    // update list of entries without reloading page
+    updateGuestbookDisplay();
 }
 
 function populateEntry(entryData, timeOpts) {
