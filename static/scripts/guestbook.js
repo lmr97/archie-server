@@ -20,18 +20,6 @@ function updateGuestbookRemote() {
     // reset fields
     document.getElementById("guestbook-name").value = "";
     document.getElementById("guestbook-note").value = "";
-
-    // clear out existing entries
-    let previousEntries = document.getElementsByClassName("guestbook-entry");
-    for (el of previousEntries) {
-        while (el.firstChild) {
-            el.removeChild(el.firstChild);
-        }
-        el.parentNode.removeChild(el);
-    }
-
-    // update list of entries without reloading page
-    updateGuestbookDisplay();
 }
 
 function populateEntry(entryData, timeOpts) {
