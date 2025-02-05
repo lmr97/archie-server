@@ -4,7 +4,7 @@ function updateGuestbookRemote() {
     
     let xhr = new XMLHttpRequest();
 
-    xhr.open("POST", "http://localhost:8080/guestbook/entries", true);
+    xhr.open("POST", "https://archie.zapto.org/guestbook/entries", true);
     xhr.setRequestHeader("Content-Type", "application/json");
     xhr.send(
         JSON.stringify(
