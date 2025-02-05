@@ -21,6 +21,15 @@ function updateGuestbookRemote() {
     document.getElementById("guestbook-name").value = "";
     document.getElementById("guestbook-note").value = "";
 
+    // clear out existing entries
+    let previousEntries = document.getElementsByClassName("guestbook-entry");
+    for (el in previousEntries) {
+        while (el.firstChild) {
+            el.removeChild(element.firstChild);
+        }
+        el.parentNode.removeChild(el);
+    }
+
     // update list of entries without reloading page
     updateGuestbookDisplay();
 }
