@@ -9,3 +9,10 @@ CREATE TABLE guestbook
     guestNote       VARCHAR(300),
     PRIMARY KEY     (id) 
 );
+
+CREATE TABLE hitsLog
+(
+    id              INT NOT NULL AUTO_INCREMENT,
+    hitTime         DATETIME,
+    PRIMARY KEY     (id) 
+);

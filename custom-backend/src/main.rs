@@ -17,11 +17,16 @@ async fn main() -> Result<(), Box<dyn StdError>> {
         .and(warp::get())
         .and(warp::fs::file(format!("{}/home.html", archie_utils::LOCAL_ROOT)));
     
+    let hit_count = warp::path("hits")
+        .and(warp::get())
+        .then(db_io::update_hits);
+
     let static_content = warp::path("static")
         .and(warp::get())
         .and(warp::fs::dir(format!("{}/static/", archie_utils::LOCAL_ROOT)))
         .with(warp::compression::gzip());
 
+    // unused currently, but keeping for potential future features
     let node_modules = warp::get()
         .and(warp::path("node_modules"))
         .and(warp::fs::dir(format!("{}/node_modules/", archie_utils::LOCAL_ROOT)))
@@ -78,6 +83,7 @@ async fn main() -> Result<(), Box<dyn StdError>> {
 
     let routes = home
         .or(static_content)
+        .or(hit_count)
         .or(node_modules)
         .or(guestbook)
         .recover(archie_utils::handle_rejection);
