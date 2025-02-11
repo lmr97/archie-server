@@ -199,7 +199,7 @@ pub async fn update_guestbook(form_entry: GuestbookEntry) -> impl Reply {
 // This is because, on this website, hits are defined by how many
 // GET requests there are to /hits.
 pub async fn update_hits() -> impl Reply {
-    println!("update_hits() called...");
+    
     let buf_pool = match get_db_conn() {
         Some(bp) => { bp },
         None => { return send_500_json(); }
