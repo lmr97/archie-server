@@ -1,13 +1,9 @@
 use std::env; 
-use chrono::prelude::*;
-use warp::http::StatusCode;
-use warp::reply::{
-    with_status,
-    Html, html, 
-    Json, json, 
-    WithStatus
+use axum::{
+    response::IntoResponse,
+    Json
 };
-use warp::Reply;
+use chrono::prelude::*;
 use mysql::*;
 use mysql::prelude::*;
 
@@ -34,7 +30,7 @@ fn get_db_conn() -> Option<mysql::Pool> {
     let url = env::var_os("DB_URL")
         .expect("Database URL variable not found in environment.")
         .into_string()
-        .unwrap();  // this failure should crash the database
+        .unwrap();  // this failure should crash the server
 
     let opts_res = Opts::from_url(&url);
 
@@ -47,7 +43,7 @@ fn get_db_conn() -> Option<mysql::Pool> {
 }
 
 
-fn send_500_html() -> WithStatus<Html<String>> {
+fn send_500_html() -> axum::response::Html<String> {
     let get_html_res = std::fs::read_to_string(
         "/home/martin/archie-server/static/errors/500.html"
     );
@@ -68,26 +64,14 @@ fn send_500_html() -> WithStatus<Html<String>> {
         }
     };
 
-    with_status(
-        html(html_string.clone()), 
-        StatusCode::INTERNAL_SERVER_ERROR)
+    axum::response::Html(html_string.clone())
 }
 
-
-fn send_500_json() -> WithStatus<Json> {
-    with_status(json::<String>(
-        &String::from(
-            "{\"status\": \"error\", \
-            \"message\": \"Likely a database communication error\", \
-            \"code\": 500}"
-        )
-    ), StatusCode::INTERNAL_SERVER_ERROR)
-}
 
 
 // it is a simpler, albeit slower, design to make the connection every
 // time the function is called
-pub async fn get_guestbook() -> WithStatus<Json> {
+pub async fn get_guestbook() -> Json {
 
     let buf_pool = match get_db_conn() {
         Some(bp) => { bp },
@@ -139,7 +123,7 @@ pub async fn get_guestbook() -> WithStatus<Json> {
 }
 
 
-pub async fn update_guestbook(form_entry: GuestbookEntry) -> impl Reply {
+pub async fn update_guestbook(form_entry: GuestbookEntry) -> axum::response::Html<String> {
 
     // db connection setup
     let Some(buf_pool) = get_db_conn() 
@@ -168,18 +152,14 @@ pub async fn update_guestbook(form_entry: GuestbookEntry) -> impl Reply {
         match insert_res {
             Ok(_) => {
                 println!("New entry in the guestbook from {}!", entry_name);
-                return with_status(
-                    html(
-                        String::from("\
-                            <!DOCTYPE html>\n\
-                            <html><head>\n\
-                            <title>Entry Received!</title>\n\
-                            </head>\n\
-                            <p>Thanks for leaving a note on my website!</p>\n\
-                            </html>"
-                        )
-                    ), StatusCode::OK
-                );
+                return axum::response::Html(String::from(
+                        "<!DOCTYPE html>\n\
+                        <html><head>\n\
+                        <title>Entry Received!</title>\n\
+                        </head>\n\
+                        <p>Thanks for leaving a note on my website!</p>\n\
+                        </html>"
+                ));
             },
             Err(e) => {
                 println!("Couldn't get data from database, likely due to internally \
