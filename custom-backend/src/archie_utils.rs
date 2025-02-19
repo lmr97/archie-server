@@ -1,12 +1,58 @@
-use std::collections::HashMap;
-use std::{convert::Infallible, env};
-use chrono::prelude::*;
-use warp::http::StatusCode;
-use warp::reply::{with_status, html};
-use warp::{Rejection, Reply};
-use mysql::*;
+use std::env;
+use axum::{
+    extract::rejection::JsonRejection, 
+    http::StatusCode,
+    response::{Response, IntoResponse}
+};
+
 
 pub static LOCAL_ROOT: &str = "/home/martin/archie-server";
+
+pub enum WebsiteError {
+    DatabaseErrorGeneral(mysql::error::Error), 
+    DatabaseErrorUrl(mysql::UrlError),
+    JsonError(JsonRejection)
+}
+
+impl From<mysql::error::Error> for WebsiteError {
+    fn from(db_err: mysql::Error) -> Self {
+        Self::DatabaseErrorGeneral(db_err)
+    }
+}
+
+impl From<mysql::UrlError> for WebsiteError {
+    fn from(db_err_url: mysql::UrlError) -> Self {
+        Self::DatabaseErrorUrl(db_err_url)
+    }
+}
+
+impl From<JsonRejection> for WebsiteError {
+    fn from(rejection: JsonRejection) -> Self {
+        Self::JsonError(rejection)
+    }
+}
+
+impl IntoResponse for WebsiteError {
+    fn into_response(self) -> Response {
+        let body = match self {
+            WebsiteError::DatabaseErrorGeneral(err) => {
+                err; // log error here
+                "Something went wrong with our database. Sorry for the trouble."
+            },
+            WebsiteError::DatabaseErrorUrl(err) => {
+                err; // log error here
+                "The server is looking in the wrong place for the database. This is an easy fix, and will be resolved very soon."
+            },
+            WebsiteError::JsonError(err) => {
+                err; // log error here
+                "Some data could not be parsed properly. I'll address this soon, so try again later."
+            }
+        };
+
+        // it's often easiest to implement `IntoResponse` by calling other implementations
+        (StatusCode::INTERNAL_SERVER_ERROR, body).into_response()
+    } 
+}
 
 pub fn get_auth_paths() -> (String, String) {
 
@@ -21,62 +67,4 @@ pub fn get_auth_paths() -> (String, String) {
         .unwrap();
 
     (cert_file, private_key_file)
-}
-
-
-// very simple right now, to match the server
-pub async fn handle_rejection(err: Rejection) -> Result<impl Reply, Infallible> {
-    
-    // easily extensible way to handle errors with custom HTML pages 
-    // simply make a new error page with the error code as the filename,
-    // in ./static/errors with a .html extension,
-    // and update the `supported_err_codes` array below.
-    let supported_err_codes = ["404", "500"];
-    let mut err_html: HashMap<&str, String> = HashMap::new();
-
-    for code in supported_err_codes {
-        let code_res = std::fs::read_to_string(
-            format!(
-                "{}/static/errors/{}.html", 
-                LOCAL_ROOT,
-                code
-        ));
-
-        let html_string= match code_res {
-            Ok(html_string) => { html_string },
-            Err(_) => {
-                println!("ERROR: {}.html not found at usual location, sending unpretty version.", code);
-                format!("\
-                    <!DOCTYPE html>\n\
-                    <html><head>\n\
-                    <title>{code} Error</title>\n\
-                    </head>\n\
-                    <p>{code} Error</p>\n\
-                    </html>"
-                )
-            }
-        };
-
-        err_html.insert(code, html_string);
-    }
-
-    println!(
-        "{}: Encountered error: {:?}", 
-        Local::now()
-            .format("%a %d %b %Y, %I:%M%p")
-            .to_string(), 
-        err
-    );
-    
-    if err.is_not_found() {
-        Ok(with_status(
-            html(err_html["404"].clone()), 
-            StatusCode::NOT_FOUND
-        ))
-    } else {
-        Ok(with_status(
-            html(err_html["500"].clone()), 
-            StatusCode::INTERNAL_SERVER_ERROR
-        ))
-    }
 }

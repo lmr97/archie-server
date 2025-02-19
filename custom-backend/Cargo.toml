@@ -1,10 +1,10 @@
 [package]
 name = "custom-backend"
-version = "0.2.0"
+version = "0.3.0"
 edition = "2021"
 
 [dependencies]
-axum = "0.8.1"
+axum = { version = "0.8.1", features = ["json"] }
 chrono = "0.4.39"
 mysql = { version = "26.0.0", features = ["chrono"] }
 mysql_common = "0.34.1"
@@ -13,4 +13,3 @@ serde_json = "1.0.138"
 tokio = { version = "1", features = ["full"] }
 tower = "0.5.2"
 tower-http = { version = "0.6.2", features = ["fs"] }
-warp = { version = "0.3", features = ["tls", "compression"] }
