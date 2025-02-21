@@ -3,8 +3,9 @@ use axum::{
     extract::rejection::JsonRejection, 
     response::{Html, IntoResponse, Response}
 };
+use tracing::error;
 
-use crate::utils;
+use crate::archie_utils;
 
 
 #[derive(Debug)]
@@ -35,17 +36,21 @@ impl From<JsonRejection> for WebsiteError {
 impl IntoResponse for WebsiteError {
     fn into_response(self) -> Response {
         match self {
-            WebsiteError::DatabaseErrorGeneral(e) => {e;},
-            WebsiteError::DatabaseErrorUrl(e)  => {e;},
-            WebsiteError::JsonError(e)    => {e;}
+            WebsiteError::DatabaseErrorGeneral(e) => {
+                error!("Error in database I/O: {:?}", e);
+            },
+            WebsiteError::DatabaseErrorUrl(e)  => {
+                error!("Database URL misspecified, or DB inaccessible: {:?}", e);
+            },
+            WebsiteError::JsonError(e)    => {
+                error!("JSON could not be parsed: {:?}", e);
+            }
         };
 
-        // log error
-
-        // get nice 500 error page
+        // get nice 500 error page...
         let html_500_err = read_to_string(
-            format!("{}/static/errors/500.html", utils::LOCAL_ROOT))
-            .unwrap_or(
+            format!("{}/static/errors/500.html", archie_utils::LOCAL_ROOT))
+            .unwrap_or(     // ...or the quick 'n' dirty version
                 "<!DOCTYPE html>\n\
                 <html><head>\n\
                 <title>500 Error</title>\n\

@@ -6,6 +6,7 @@ use axum::{
 use chrono::prelude::*;
 use mysql::*;
 use mysql::prelude::*;
+use tracing::info;
 use crate::err_handling::WebsiteError;
 
 #[derive(Debug, serde::Deserialize)] 
@@ -94,7 +95,7 @@ pub async fn update_guestbook(Json(form_entry): Json<GuestbookEntry>) -> Result<
         }
     )?;
 
-    println!("New entry in the guestbook from {}!", entry_name);
+    info!("New entry in the guestbook from {}!", entry_name);
     Ok(Html(String::from(
         "<!DOCTYPE html>\n\
         <html><head>\n\

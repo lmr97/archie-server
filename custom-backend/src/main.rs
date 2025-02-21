@@ -1,4 +1,5 @@
 use std::net::SocketAddr;
+use std::fs::OpenOptions;
 use axum::{
     routing::{get, get_service, post}, 
     Router
@@ -7,29 +8,38 @@ use axum_server::tls_rustls::RustlsConfig;
 use tower_http::{
     services::ServeDir,
     services::ServeFile,
-    //trace::TraceLayer,
 };
+use tracing::info;
 
-mod utils;
+mod archie_utils;
 mod err_handling;
 mod db_io;
 
 #[tokio::main]
 async fn main() {
 
-    println!("Loading certificates and keys...");
-    let (cert, pks) = utils::get_auth_paths();
+    let log_file = OpenOptions::new()
+        .append(true)
+        .open("/var/log/archie-server.log")
+        .unwrap();
+    tracing_subscriber::fmt()
+        .with_max_level(tracing::Level::TRACE)
+        .with_writer(log_file)
+        .init();
+
+    info!("Loading certificates and keys...");
+    let (cert, pks) = archie_utils::get_auth_paths();
     let auth_config = RustlsConfig::from_pem_file(cert, pks)
         .await
-        .unwrap();
-    println!("Authorization loaded!");
+        .unwrap();                  // I don't want to serve the webpage without TLS, so crash okay
+    info!("Authorization loaded!");
 
-    println!("Defining routes...");
+    info!("Defining routes...");
     //let guestbook = Router::new().nest("/", );
-    let homepage = ServeFile::new(format!("{}/home.html", utils::LOCAL_ROOT));
-    let static_dir = ServeDir::new(format!("{}/static", utils::LOCAL_ROOT));
+    let homepage = ServeFile::new(format!("{}/home.html", archie_utils::LOCAL_ROOT));
+    let static_dir = ServeDir::new(format!("{}/static", archie_utils::LOCAL_ROOT));
 
-    let guestbook_page = ServeFile::new(format!("{}/guestbook.html", utils::LOCAL_ROOT));
+    let guestbook_page = ServeFile::new(format!("{}/guestbook.html", archie_utils::LOCAL_ROOT));
     let guestbook_entries: Router<()> = Router::new()
         .route("/", post(db_io::update_guestbook))
         .route("/", get(db_io::get_guestbook));
@@ -43,10 +53,11 @@ async fn main() {
         .route("/hits", get(db_io::update_hits))
         .nest_service("/static", get_service(static_dir));
     
-    println!("Serving!");
     let addr = SocketAddr::from(([0, 0, 0, 0], 443));
+    info!("Serving on {:?}!", addr);
+
     axum_server::bind_rustls(addr, auth_config)
         .serve(routes.into_make_service())
         .await
-        .unwrap();
+        .unwrap();                  // should cause crash; fatal error to server
 }
