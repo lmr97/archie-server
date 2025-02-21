@@ -23,10 +23,13 @@ async fn main() {
         .open("/var/log/archie-server.log")
         .unwrap();
     tracing_subscriber::fmt()
-        .with_max_level(tracing::Level::TRACE)
+        .with_max_level(tracing::Level::INFO)
         .with_writer(log_file)
         .init();
 
+    info!("");    // blank line to separate start-ups
+    info!("/// Waking up! ///");
+    info!("Initializing server.");
     info!("Loading certificates and keys...");
     let (cert, pks) = archie_utils::get_auth_paths();
     let auth_config = RustlsConfig::from_pem_file(cert, pks)
@@ -35,7 +38,6 @@ async fn main() {
     info!("Authorization loaded!");
 
     info!("Defining routes...");
-    //let guestbook = Router::new().nest("/", );
     let homepage = ServeFile::new(format!("{}/home.html", archie_utils::LOCAL_ROOT));
     let static_dir = ServeDir::new(format!("{}/static", archie_utils::LOCAL_ROOT));
 

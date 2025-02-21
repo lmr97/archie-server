@@ -54,6 +54,7 @@ fn get_db_conn() -> Result<mysql::Pool, UrlError> {
 
 // it is a simpler, albeit slower, design to establish the connection every
 // time the function is called
+#[tracing::instrument(ret)]
 pub async fn get_guestbook() -> Result<Json::<Guestbook>, WebsiteError> {
 
     let buf_pool = get_db_conn()?;
@@ -71,6 +72,7 @@ pub async fn get_guestbook() -> Result<Json::<Guestbook>, WebsiteError> {
     Ok(Json(Guestbook {guestbook: guestbook_table}))
 }
 
+#[tracing::instrument(ret)]
 pub async fn update_guestbook(Json(form_entry): Json<GuestbookEntry>) -> Result<Html<String>, WebsiteError> {
 
     // db connection setup
@@ -111,6 +113,7 @@ pub async fn update_guestbook(Json(form_entry): Json<GuestbookEntry>) -> Result<
 // then returns the total number of hits as a JSON response.
 // This is because, on this website, hits are defined by how many
 // GET requests there are to /hits.
+#[tracing::instrument(ret)]
 pub async fn update_hits() -> Result<String, WebsiteError> {
     
     let buf_pool = get_db_conn()?;
@@ -136,7 +139,7 @@ pub async fn update_hits() -> Result<String, WebsiteError> {
         )?;
         tx.commit()?; // as before, conn issues would have been handled previously
 
-        
+        // get the number as a string, because that has IntoResponse implemented
         if let Some(hits_count) = conn.query_first::<String, &str>(
             r"SELECT COUNT(*) AS hits_count FROM hitsLog"
         )? {
