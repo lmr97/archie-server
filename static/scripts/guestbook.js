@@ -9,6 +9,8 @@ let timeOptions = {
     day: 'numeric' 
 }
 
+let url = "https://archie.zapto.org/";
+
 
 function updateGuestbookRemote() {
     let guest = document.getElementById("guestbook-name").value;
@@ -19,7 +21,7 @@ function updateGuestbookRemote() {
         "note": note
     }
 
-    fetch('https://archie.zapto.org/guestbook/entries', {
+    fetch(url+"guestbook/entries", {
         method: 'POST',
         headers: {
           'Accept': 'application/json',
@@ -93,15 +95,13 @@ function populateEntry(entryData) {
 
 function updateGuestbookDisplay() {
     
-    fetch("https://archie.zapto.org/guestbook/entries")
+    fetch(url+"guestbook/entries")
         .then(
             response => response.text()
         ).then(
             respBody => {
-                // the double JSON parsing accounts for literal backslashes in
-                // the response body. The first parse renders the escaped double-quotes,
-                // and the second one actually deserializes.
-                let allEntries = JSON.parse(JSON.parse(respBody));
+                let allEntries = JSON.parse(respBody)["guestbook"];
+                console.log(allEntries);
                 let entryDisplay = document.getElementById("entry-log");
 
                 for (let i = 0; i < allEntries.length; i++) {
