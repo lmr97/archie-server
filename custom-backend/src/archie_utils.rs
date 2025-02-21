@@ -2,7 +2,7 @@
 
 use std::env;
 
-pub static LOCAL_ROOT: &str = "/home/martinr/archie-server";
+pub static LOCAL_ROOT: &str = "/home/martin/archie-server";
 
 pub fn get_auth_paths() -> (String, String) {
 
