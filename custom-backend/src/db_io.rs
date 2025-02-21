@@ -113,7 +113,6 @@ pub async fn update_guestbook(Json(form_entry): Json<GuestbookEntry>) -> Result<
 // then returns the total number of hits as a JSON response.
 // This is because, on this website, hits are defined by how many
 // GET requests there are to /hits.
-#[tracing::instrument(ret)]
 pub async fn update_hits() -> Result<String, WebsiteError> {
     
     let buf_pool = get_db_conn()?;
