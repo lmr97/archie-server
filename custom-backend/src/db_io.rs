@@ -6,7 +6,7 @@ use axum::{
 use chrono::prelude::*;
 use mysql::*;
 use mysql::prelude::*;
-use crate::archie_utils::WebsiteError;
+use crate::err_handling::WebsiteError;
 
 #[derive(Debug, serde::Deserialize)] 
 pub struct GuestbookEntry {
