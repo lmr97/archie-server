@@ -29,10 +29,11 @@ async fn main() {
         .open(get_env_var("SERVER_LOG"))
         .unwrap();
     tracing_subscriber::fmt()
-        .with_max_level(tracing::Level::DEBUG)
+        .with_max_level(tracing::Level::INFO)
         .with_writer(log_file)
         .init();
 
+    info!("\n\n\t\t////// Hi there! I'm Archie. Let me get ready for you... //////\n");
     info!("Loading certificates and keys...");
     let (cert, pks) = archie_utils::get_auth_paths();
     let auth_config = RustlsConfig::from_pem_file(cert, pks)
@@ -43,9 +44,9 @@ async fn main() {
     info!("Defining routes...");
     let server_root = get_env_var("SERVER_ROOT");
 
-    let homepage = ServeFile::new(format!("{}/home.html", server_root));
+    let homepage  = ServeFile::new(format!("{}/home.html", server_root));
     let static_dir = ServeDir::new(format!("{}/static", server_root));
-    
+
     let guestbook_page = ServeFile::new(format!("{}/guestbook.html", server_root));
     let guestbook_entries: Router<()> = Router::new()
         .route("/", post(db_io::update_guestbook))
@@ -56,14 +57,14 @@ async fn main() {
 
     let routes = Router::new()
         .route("/", get_service(homepage))
-        .nest_service("/static", get_service(static_dir))
+        .nest("/guestbook", guestbook_routes)
         .route("/hits", get(db_io::get_hit_count))
         .route("/hits", post(db_io::log_hit))
-        .nest("/guestbook", guestbook_routes);
-    
+        .nest_service("/static", get_service(static_dir));
+        
     let addr = SocketAddr::from_str(&get_env_var("SERVER_SOCKET")).unwrap();
-    info!("Serving on {:?}!", addr);
 
+    info!("Serving on {:?}!", addr);
     axum_server::bind_rustls(addr, auth_config)
         .serve(routes.into_make_service())
         .await
