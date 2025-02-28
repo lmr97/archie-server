@@ -35,8 +35,8 @@ pub struct Guestbook {
 
 #[derive(Debug, serde::Deserialize)]
 pub struct WebpageHit {
-    user_agent: String,
     time_stamp: NaiveDateTime,
+    user_agent: String,
 }
 
 fn get_db_conn() -> Result<mysql::Pool, UrlError> {
@@ -47,7 +47,7 @@ fn get_db_conn() -> Result<mysql::Pool, UrlError> {
         .unwrap()
         .into_string()
         .unwrap();
-
+    
     let opts = Opts::from_url(&url)?;
 
     Ok(Pool::new(opts).unwrap()) // unwrap() b/c infallible
@@ -79,25 +79,17 @@ pub async fn update_guestbook(Json(form_entry): Json<GuestbookEntry>) -> Result<
     let buf_pool = get_db_conn()?;
     let mut conn = buf_pool.get_conn()?;
 
-    // converting in this scope so that the name is in scope
-    // for printing name on entry to server console (for fun)
-    let entry_name = if form_entry.name.is_empty() {
-        "(anonymous)".to_string()
-    } else {
-        form_entry.name
-    };
-
     // return value needs to be caught so that type can be annotated
     let _: Option<Row> = conn.exec_first(
         r"INSERT INTO guestbook (dateSubmitted, guestName, guestNote)
                 VALUES (UTC_TIMESTAMP(), :name, :note)",
         params! {
-            "name" => &entry_name, 
+            "name" => &form_entry.name, 
             "note" => form_entry.note
         }
     )?;
 
-    info!("New entry in the guestbook from {}!", entry_name);
+    info!("New entry in the guestbook from {}!", form_entry.name);
     Ok(Html(String::from(
         "<!DOCTYPE html>\n\
         <html><head>\n\
@@ -125,7 +117,7 @@ pub async fn get_hit_count() -> Result<String, WebsiteError> {
 
 
 pub async fn log_hit(Json(page_hit): Json<WebpageHit>) -> Result<Response, WebsiteError> {
-    
+
     let buf_pool = get_db_conn()?;
     let mut conn = buf_pool.get_conn()?;
         

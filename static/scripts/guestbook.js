@@ -9,8 +9,6 @@ let timeOptions = {
     day: 'numeric' 
 }
 
-let url = "https://archie.zapto.org/";
-
 
 function updateGuestbookRemote() {
     let guest = document.getElementById("guestbook-name").value;
@@ -21,10 +19,11 @@ function updateGuestbookRemote() {
         "note": note
     }
 
-    fetch(url+"guestbook/entries", {
+    if (newEntry.name.length == 0) newEntry.name = "(anonymous)";
+
+    fetch(window.location.href+"/entries", {
         method: 'POST',
         headers: {
-          'Accept': 'application/json',
           'Content-Type': 'application/json'
         },
         body: JSON.stringify(newEntry)
@@ -38,8 +37,7 @@ function updateGuestbookRemote() {
     alert("Entry recieved. Thank you for leaving a note!");
 
     // add entry to page, at the top of the list
-    let nowUTC             = new Date(Date.now());
-    newEntry["time_stamp"] = nowUTC.toISOString().slice(0, -1);  // shave off Z
+    newEntry["time_stamp"] = new Date().toISOString().slice(0, -1);  // shave off Z
 
     const entryNode        = populateEntry(newEntry);
     let entries            = document.getElementsByClassName("guestbook-entry");
@@ -95,13 +93,12 @@ function populateEntry(entryData) {
 
 function updateGuestbookDisplay() {
     
-    fetch(url+"guestbook/entries")
+    fetch(window.location.href+"/entries")
         .then(
             response => response.text()
         ).then(
             respBody => {
                 let allEntries = JSON.parse(respBody)["guestbook"];
-                console.log(allEntries);
                 let entryDisplay = document.getElementById("entry-log");
 
                 for (let i = 0; i < allEntries.length; i++) {
