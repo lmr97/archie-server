@@ -1,4 +1,4 @@
-CREATE DATABASE archie;
+-- CREATE DATABASE archie;
 USE archie;
 
 CREATE TABLE guestbook
@@ -10,9 +10,10 @@ CREATE TABLE guestbook
     PRIMARY KEY     (id) 
 );
 
-CREATE TABLE hitsLog
+CREATE TABLE hitLog
 (
     id              INT NOT NULL AUTO_INCREMENT,
     hitTime         DATETIME,
+    userAgent       VARCHAR(150),
     PRIMARY KEY     (id) 
 );
