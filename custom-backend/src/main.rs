@@ -58,8 +58,8 @@ async fn main() {
     let routes = Router::new()
         .route("/", get_service(homepage))
         .nest("/guestbook", guestbook_routes)
-        .route("/hits", get(db_io::get_hit_count))
         .route("/hits", post(db_io::log_hit))
+        .route("/hits", get(db_io::get_hit_count))
         .nest_service("/static", get_service(static_dir));
         
     let addr = SocketAddr::from_str(&get_env_var("SERVER_SOCKET")).unwrap();
