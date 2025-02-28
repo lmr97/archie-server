@@ -121,18 +121,14 @@ pub async fn log_hit(Json(page_hit): Json<WebpageHit>) -> Result<Response, Websi
     let buf_pool = get_db_conn()?;
     let mut conn = buf_pool.get_conn()?;
         
-    // using transaction with defined isolation level to prevent race conditions
-    let tx_options = TxOpts::default()
-        .set_isolation_level(Some(
-            IsolationLevel::Serializable
-        ));
-
     let mut tx = conn
-        .start_transaction(tx_options)?;   
-        
-    // INSERT statements return a string with the number of rows affected, 
-    // warnings, and duplicates.
-    // In this context this doesn't matter, except for type annotations.
+        .start_transaction(TxOpts::default())?; 
+
+    // this function runs async of get_hit_count(), which is called immediately after this one
+    // through a GET request to /hits. In practice, this means the hit count it returned was
+    // 1 behind the DB.
+    // So, I'm setting a write lock to block the GET that comes on the heels of this INSERT.
+    tx.exec_first::<String, &str, Params>("LOCK TABLE hitLog WRITE", Params::Empty)?;
     tx.exec_first::<String, &str, Params>(
         r"INSERT INTO hitLog (hitTime, userAgent) VALUES (:time_stamp, :user_agent);",
         params! {
@@ -140,6 +136,7 @@ pub async fn log_hit(Json(page_hit): Json<WebpageHit>) -> Result<Response, Websi
             "user_agent" => page_hit.user_agent
         }
     )?;
+    tx.exec_first::<String, &str, Params>("UNLOCK TABLES", Params::Empty)?;
     tx.commit()?;
     
     Ok(Response::new(Body::empty()))  // return 200 OK
