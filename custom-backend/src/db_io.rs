@@ -128,6 +128,7 @@ pub async fn log_hit(Json(page_hit): Json<WebpageHit>) -> Result<Response, Websi
     // through a GET request to /hits. In practice, this means the hit count it returned was
     // 1 behind the DB.
     // So, I'm setting a write lock to block the GET that comes on the heels of this INSERT.
+    // There is some slight overhead for this, unsuprisingly, but that's acceptable.
     tx.exec_first::<String, &str, Params>("LOCK TABLE hitLog WRITE", Params::Empty)?;
     tx.exec_first::<String, &str, Params>(
         r"INSERT INTO hitLog (hitTime, userAgent) VALUES (:time_stamp, :user_agent);",
