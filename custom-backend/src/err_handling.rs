@@ -49,8 +49,11 @@ impl IntoResponse for WebsiteError {
 
         // get nice 500 error page...
         let html_500_err = read_to_string(
-            format!("{}/static/errors/500.html", archie_utils::LOCAL_ROOT))
-            .unwrap_or(     // ...or the quick 'n' dirty version
+            format!(
+                "{}/static/errors/500.html", 
+                archie_utils::get_env_var("SERVER_ROOT")
+            ))
+            .unwrap_or(     // ...or the quick 'n' dirty version if otherwise
                 "<!DOCTYPE html>\n\
                 <html><head>\n\
                 <title>500 Error</title>\n\

@@ -1,4 +1,6 @@
 use std::env; 
+use axum::body::Body;
+use axum::response::Response;
 use axum::{
     response::Html, 
     Json
@@ -12,7 +14,7 @@ use crate::err_handling::WebsiteError;
 #[derive(Debug, serde::Deserialize)] 
 pub struct GuestbookEntry {
     name: String,
-    note: String
+    note: String,
 }
 #[derive(Debug, serde::Serialize)]
 pub struct GuestbookEntryStamped {
@@ -20,7 +22,7 @@ pub struct GuestbookEntryStamped {
     // and for time-value sorting to by done by the DB on query
     time_stamp: NaiveDateTime,  
     name: String,
-    note: String
+    note: String,
 }
 
 // This struct exists for organinzing all the JSON 
@@ -28,27 +30,27 @@ pub struct GuestbookEntryStamped {
 // larger JSON object
 #[derive(Debug, serde::Serialize)]
 pub struct Guestbook {
-    guestbook: Vec<GuestbookEntryStamped>
+    guestbook: Vec<GuestbookEntryStamped>,
 }
 
+#[derive(Debug, serde::Deserialize)]
+pub struct WebpageHit {
+    user_agent: String,
+    time_stamp: NaiveDateTime,
+}
 
 fn get_db_conn() -> Result<mysql::Pool, UrlError> {
     
     // gets URL from the environment to preserve security,
     // since it contains a plain-text password
     let url = env::var_os("DB_URL")
-        .expect("Database URL variable not found in environment.")
+        .unwrap()
         .into_string()
-        .unwrap();  // this failure should crash the server, it cannot run without it
+        .unwrap();
 
-    let opts_res = Opts::from_url(&url);
+    let opts = Opts::from_url(&url)?;
 
-    match opts_res {
-        Ok(opts) => {
-            Ok(Pool::new(opts).unwrap()) // unwrap() b/c infallible
-        },  
-        Err(err) => { Err(err) }
-    }
+    Ok(Pool::new(opts).unwrap()) // unwrap() b/c infallible
 }
 
 
@@ -86,7 +88,7 @@ pub async fn update_guestbook(Json(form_entry): Json<GuestbookEntry>) -> Result<
     };
 
     // return value needs to be caught so that type can be annotated
-    let _: Vec<Row> = conn.exec(
+    let _: Option<Row> = conn.exec_first(
         r"INSERT INTO guestbook (dateSubmitted, guestName, guestNote)
                 VALUES (UTC_TIMESTAMP(), :name, :note)",
         params! {
@@ -107,43 +109,46 @@ pub async fn update_guestbook(Json(form_entry): Json<GuestbookEntry>) -> Result<
 }
 
 
-// Updates the list of timestamps (corresponding to home page hits),
-// then returns the total number of hits as a JSON response.
-// This is because, on this website, hits are defined by how many
-// GET requests there are to /hits.
-pub async fn update_hits() -> Result<String, WebsiteError> {
+// adds new hit info to database
+pub async fn get_hit_count() -> Result<String, WebsiteError> {
     
     let buf_pool = get_db_conn()?;
     let mut conn = buf_pool.get_conn()?;
         
+    match conn.query_first::<String, &str>(
+        r"SELECT COUNT(*) AS hit_count FROM hitLog"
+    )? {
+        Some(hits_count) => Ok(hits_count),
+        None => Ok(String::from("0"))
+    }     
+}
+
+
+pub async fn log_hit(Json(page_hit): Json<WebpageHit>) -> Result<Response, WebsiteError> {
+    
+    let buf_pool = get_db_conn()?;
+    let mut conn = buf_pool.get_conn()?;
+        
+    // using transaction with defined isolation level to prevent race conditions
     let tx_options = TxOpts::default()
         .set_isolation_level(Some(
             IsolationLevel::Serializable
         ));
 
-    // unwrapping b/c the earlier ? would have caught any 
-    // conn issues, and I know that the transaction options are
-    // allowed for the database
     let mut tx = conn
         .start_transaction(tx_options)?;   
         
-        // INSERT statements return a string with the number of rows effected, 
-        // warnings, and duplicates.
-        // In this context it doesn't matter, except for type annotations
-        tx.exec_first::<String, &str, Params>(
-            r"INSERT INTO hitsLog (hitTime) VALUES (UTC_TIMESTAMP());",
-            Params::Empty
-        )?;
-        tx.commit()?; // as before, conn issues would have been handled previously
-
-        
-        if let Some(hits_count) = conn.query_first::<String, &str>(
-            r"SELECT COUNT(*) AS hits_count FROM hitsLog"
-        )? {
-            Ok(hits_count)
+    // INSERT statements return a string with the number of rows affected, 
+    // warnings, and duplicates.
+    // In this context this doesn't matter, except for type annotations.
+    tx.exec_first::<String, &str, Params>(
+        r"INSERT INTO hitLog (hitTime, userAgent) VALUES (:time_stamp, :user_agent);",
+        params! {
+            "time_stamp" => page_hit.time_stamp, 
+            "user_agent" => page_hit.user_agent
         }
-        else {
-            Ok(String::from("0"))
-        }
-                
+    )?;
+    tx.commit()?;
+    
+    Ok(Response::new(Body::empty()))  // return 200 OK
 }

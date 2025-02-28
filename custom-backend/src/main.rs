@@ -1,5 +1,6 @@
-use std::net::SocketAddr;
+use std::{net::SocketAddr, str::FromStr};
 use std::fs::OpenOptions;
+use archie_utils::get_env_var;
 use axum::{
     routing::{get, get_service, post}, 
     Router
@@ -15,15 +16,20 @@ mod archie_utils;
 mod err_handling;
 mod db_io;
 
+// the frequent usage of unwrap() in main() here is because
+// any panics that happen in main() will cause the server to 
+// crash on startup, and not during subsequent runtime (I made 
+// sure to purge functions that could be called after server 
+// startup of any calls to unwrap()).
 #[tokio::main]
 async fn main() {
 
     let log_file = OpenOptions::new()
         .append(true)
-        .open("/var/log/archie-server.log")
+        .open(get_env_var("SERVER_LOG"))
         .unwrap();
     tracing_subscriber::fmt()
-        .with_max_level(tracing::Level::TRACE)
+        .with_max_level(tracing::Level::DEBUG)
         .with_writer(log_file)
         .init();
 
@@ -35,11 +41,12 @@ async fn main() {
     info!("Authorization loaded!");
 
     info!("Defining routes...");
-    //let guestbook = Router::new().nest("/", );
-    let homepage = ServeFile::new(format!("{}/home.html", archie_utils::LOCAL_ROOT));
-    let static_dir = ServeDir::new(format!("{}/static", archie_utils::LOCAL_ROOT));
+    let server_root = get_env_var("SERVER_ROOT");
 
-    let guestbook_page = ServeFile::new(format!("{}/guestbook.html", archie_utils::LOCAL_ROOT));
+    let homepage = ServeFile::new(format!("{}/home.html", server_root));
+    let static_dir = ServeDir::new(format!("{}/static", server_root));
+    
+    let guestbook_page = ServeFile::new(format!("{}/guestbook.html", server_root));
     let guestbook_entries: Router<()> = Router::new()
         .route("/", post(db_io::update_guestbook))
         .route("/", get(db_io::get_guestbook));
@@ -49,11 +56,12 @@ async fn main() {
 
     let routes = Router::new()
         .route("/", get_service(homepage))
-        .nest("/guestbook", guestbook_routes)
-        .route("/hits", get(db_io::update_hits))
-        .nest_service("/static", get_service(static_dir));
+        .nest_service("/static", get_service(static_dir))
+        .route("/hits", get(db_io::get_hit_count))
+        .route("/hits", post(db_io::log_hit))
+        .nest("/guestbook", guestbook_routes);
     
-    let addr = SocketAddr::from(([0, 0, 0, 0], 443));
+    let addr = SocketAddr::from_str(&get_env_var("SERVER_SOCKET")).unwrap();
     info!("Serving on {:?}!", addr);
 
     axum_server::bind_rustls(addr, auth_config)

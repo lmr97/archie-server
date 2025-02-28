@@ -1,8 +1,16 @@
-// This is a catch-all file
+// This is a catch-all file, at this point largely 
+// to fetch environment variables
 
 use std::env;
 
-pub static LOCAL_ROOT: &str = "/home/martinr/archie-server";
+pub fn get_env_var(env_var: &str) -> String {
+    env::var_os(env_var)
+    .unwrap_or_else(
+        || panic!("Environment variable {env_var} needs to be set.")
+    )
+    .into_string()
+    .unwrap()
+}
 
 pub fn get_auth_paths() -> (String, String) {
 
