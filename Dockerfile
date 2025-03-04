@@ -2,7 +2,7 @@
 # sudo docker build -t archie .
 #
 # to run (on port 443):
-# sudo docker run -d -p 4949:443 archie
+# sudo docker run -d -p 443:4949 archie
 
 # this could be a multi-stage build, but I'm keeping it
 # single-stage because of Arch's rolling-release model,
