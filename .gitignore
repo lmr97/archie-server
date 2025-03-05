@@ -1,4 +1,4 @@
 /custom-backend/target
-/node_modules/
+/db-init/
 test*
 *.pem
