@@ -7,7 +7,7 @@ services:
       - "443:4949"
     # needs double $ to read from shell env
     environment:
-      DB_URL: mysql://server1:$${MYSQL_PASSWORD?}@db:33061/archie
+      DB_URL: mysql://server1:${MYSQL_PASSWORD?}@db:33061/archie
     volumes:
       - type: bind
         source: ./archie-server.log
@@ -34,7 +34,7 @@ services:
     environment:
         MYSQL_ONETIME_PASSWORD: false
         MYSQL_ALLOW_EMPTY_PASSWORD: false
-        MYSQL_PASSWORD: $${MYSQL_PASSWORD?}
+        MYSQL_PASSWORD: ${MYSQL_PASSWORD?}
   
 secrets:
   server-cert:

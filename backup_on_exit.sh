@@ -4,7 +4,7 @@
 # to db_schema.sql
 
 backup() {
-    echo "Backing up DB to ~/archie-server/sql_scripts/db_schema.sql (on host)..."
+    echo "Backing up DB to ~/archie-server/db-init/db_schema.sql (on host)..."
 
     # works without password being set, oddly
     mysqldump --databases archie \
