@@ -34,7 +34,7 @@ services:
     environment:
         MYSQL_ONETIME_PASSWORD: false
         MYSQL_ALLOW_EMPTY_PASSWORD: false
-        MYSQL_PASSWORD: ${MYSQL_PASSWORD?}
+        MYSQL_PASSWORD: ${MYSQL_PASSWORD}  # the first one is already caught
   
 secrets:
   server-cert:
