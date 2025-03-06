@@ -4,7 +4,7 @@ services:
     build: .
     container_name: "archie-svr"
     ports:
-      - "443:4949"
+      - "${PRIV_IP}:443:4949"
     # if running with sudo, make sure to use the --preserve-env option
     # so that your shell env is used
     environment:
