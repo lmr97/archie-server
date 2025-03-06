@@ -1,5 +1,7 @@
--- CREATE DATABASE archie;
+CREATE DATABASE archie;
 USE archie;
+
+SET TIME_ZONE='+00:00';
 
 CREATE TABLE guestbook
 (
@@ -13,7 +15,7 @@ CREATE TABLE guestbook
 CREATE TABLE hitLog
 (
     id              INT NOT NULL AUTO_INCREMENT,
-    hitTime         DATETIME,
+    hitTime         TIMESTAMP,
     userAgent       VARCHAR(150),
     PRIMARY KEY     (id) 
 );

@@ -4,7 +4,7 @@
 # to run (on host port 443):
 # sudo docker run -d -p 443:4949 archie
 
-FROM rust
+FROM rust:1.83.0
 
 RUN useradd server
 USER server
@@ -12,9 +12,8 @@ WORKDIR /home/server
 COPY --chown=server . .
 
 ENV HOME          "/home/server"
-ENV CRT_FILE      "$HOME/fullchain.pem"
-ENV PK_FILE       "$HOME/privkey.pem"
-ENV DB_URL        "mysql://server1:s3rv3r-pass@db:33061/archie"
+ENV CRT_FILE      "/run/secrets/server-cert"
+ENV PK_FILE       "/run/secrets/server-priv-key"
 ENV SERVER_LOG    "$HOME/archie-server.log"
 ENV SERVER_ROOT   "$HOME/archie-server"
 ENV SERVER_SOCKET "0.0.0.0:4949"
