@@ -8,8 +8,8 @@ backup() {
 
     # this script runs with root privileges
     bash -c \
-        'mysqldump --databases archie -uroot -p"$MYSQL_ROOT_PASSWORD" > \
-        /docker-entrypoint-initdb.d/db_schema.sql'
+        'mysqldump --databases archie -uroot -p"$MYSQL_ROOT_PASSWORD" \
+        -r /docker-entrypoint-initdb.d/db_schema.sql'
 }
 
 trap 'backup' SIGTERM
