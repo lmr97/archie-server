@@ -6,18 +6,17 @@
 backup() {
     echo "Backing up DB to ~/archie-server/db-init/db_schema.sql (on host)..."
 
-    # works without password being set, oddly
     mysqldump --databases archie \
         --user server1 --password="$MYSQL_PASSWORD" \
+        --skip-lock-tables \
         -r /docker-entrypoint-initdb.d/db_schema.sql
 }
 
 trap 'backup' SIGTERM
 
 # default ENTRYPOINT for mysql image, that gets passed an argument
-# of 'mysqld' as the CMD (which gets)
+# of 'mysqld' as the CMD
 # after backgrounding, the PID for the child == $!
-echo $1
 docker-entrypoint.sh "${@}" &
 
 # don't exit from this script until completion of the child process,
