@@ -11,16 +11,15 @@ USER server
 WORKDIR /home/server
 COPY --chown=server . .
 
-ENV HOME          "/home/server"
+ENV SERVER_ROOT   "/home/server"
 ENV CRT_FILE      "/run/secrets/server-cert"
 ENV PK_FILE       "/run/secrets/server-priv-key"
-ENV SERVER_LOG    "$HOME/archie-server.log"
-ENV SERVER_ROOT   "$HOME/archie-server"
+ENV SERVER_LOG    "$SERVER_ROOT/archie-server.log"
 ENV SERVER_SOCKET "0.0.0.0:4949"
 
-RUN touch "$HOME/archie-server.log"
+RUN touch "$SERVER_ROOT/archie-server.log"
 
-WORKDIR "$HOME/custom-backend"
+WORKDIR "$SERVER_ROOT/custom-backend"
 RUN cargo install --path .
 
 EXPOSE 4949
