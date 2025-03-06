@@ -8,6 +8,7 @@ services:
     # needs double $ to read from shell env
     environment:
       DB_URL: mysql://server1:$${MYSQL_PASSWORD?}@db:33061/archie
+      SERVER_SOCKET: $${SERVER_SOCKET?}
     volumes:
       - type: bind
         source: ./archie-server.log
