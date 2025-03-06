@@ -8,6 +8,7 @@ backup() {
 
     # works without password being set, oddly
     mysqldump --databases archie \
+        --user server1 --password="$MYSQL_PASSWORD" \
         -r /docker-entrypoint-initdb.d/db_schema.sql
 }
 
