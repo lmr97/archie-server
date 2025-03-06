@@ -11,6 +11,7 @@ use tower_http::{
     services::ServeFile,
 };
 use tracing::info;
+use tracing_subscriber::EnvFilter;
 
 mod archie_utils;
 mod err_handling;
@@ -29,7 +30,7 @@ async fn main() {
         .open(get_env_var("SERVER_LOG"))
         .unwrap();
     tracing_subscriber::fmt()
-        .with_max_level(tracing::Level::INFO)
+        .with_env_filter(EnvFilter::from_default_env())
         .with_writer(log_file)
         .init();
 
