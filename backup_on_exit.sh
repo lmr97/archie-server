@@ -6,9 +6,8 @@
 backup() {
     echo "Backing up DB to ~/archie-server/sql_scripts/db_schema.sql (on host)..."
 
-    # works without MYSQL_ROOT_PASSWORD being set, oddly
+    # works without password being set, oddly
     mysqldump --databases archie \
-        --uroot --p"$MYSQL_ROOT_PASSWORD" \
         -r /docker-entrypoint-initdb.d/db_schema.sql
 }
 
