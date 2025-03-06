@@ -7,9 +7,9 @@ backup() {
     echo "Backing up DB to ~/archie-server/sql_scripts/db_schema.sql (on host)..."
 
     # this script runs with root privileges
-    bash -c \
-        'mysqldump --databases archie -uroot -p"$MYSQL_ROOT_PASSWORD" \
-        -r /docker-entrypoint-initdb.d/db_schema.sql'
+    mysqldump --databases archie \
+        --user server1 --password="$MYSQL_PASSWORD" \
+        -r /docker-entrypoint-initdb.d/db_schema.sql
 }
 
 trap 'backup' SIGTERM
