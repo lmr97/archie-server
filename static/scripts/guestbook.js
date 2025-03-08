@@ -114,6 +114,11 @@ function displayCharCount(guestbookNoteElement) {
     let entryLength = guestbookNoteElement.value.length;
 
     countElement.textContent = `Charcter count: ${entryLength}/1000`;
+
+    // using >= cuz you never know
+    if (entryLength >= 1000) {
+        countElement.textContent = "Charcter count: 1000/1000 (maximum reached)";
+    }
 }
 
 function updateGuestbookDisplay() {
