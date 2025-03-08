@@ -5,8 +5,8 @@ CREATE TABLE guestbook
 (
     id              INT NOT NULL AUTO_INCREMENT,
     dateSubmitted   DATETIME,
-    guestName       VARCHAR(30)  NOT NULL,
-    guestNote       VARCHAR(300),
+    guestName       VARCHAR(50)  NOT NULL,
+    guestNote       VARCHAR(1000),
     PRIMARY KEY     (id) 
 );
 
