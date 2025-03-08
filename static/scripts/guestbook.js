@@ -10,10 +10,12 @@ let timeOptions = {
 }
 
 
-function updateGuestbookRemote() {
+async function updateGuestbookRemote() {
     let guest = document.getElementById("guestbook-name").value;
     let note  = document.getElementById("guestbook-note").value;
     
+    // length restrictions are emforced by textarea element itself
+
     let newEntry = {
         "name": guest,
         "note": note
@@ -21,14 +23,30 @@ function updateGuestbookRemote() {
 
     if (newEntry.name.length == 0) newEntry.name = "(anonymous)";
 
-    fetch(window.location.href+"/entries", {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(newEntry)
-      }
-    );
+    try {
+        // catch exceptions thrown by fetch()
+        const response = await fetch(window.location.href+"/entries", 
+            {
+                method: 'POST',
+                headers: {
+                'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(newEntry)
+            }
+        );
+
+        // catch server error responses
+        if (!response.ok) {
+            throw new Error(
+                `POST entry to db failed with status code: ${resp.status}`
+            );
+        }
+    }
+    catch (err) {
+        console.error(`POST entry to db failed, because: ${err}`);
+        alert("Error in recieving guestbook entry, sorry. \nI'll look into this issue as soon as I can!");
+        return;
+    }
     
     // reset fields
     document.getElementById("guestbook-name").value = "";
@@ -91,11 +109,25 @@ function populateEntry(entryData) {
 }
 
 
+function displayCharCount(guestbookNoteElement) {
+    let countElement = document.getElementById("char-count");
+    let entryLength = guestbookNoteElement.value.length;
+
+    countElement.textContent = `Charcter count: ${entryLength}/1000`;
+}
+
 function updateGuestbookDisplay() {
     
     fetch(window.location.href+"/entries")
         .then(
-            response => response.text()
+            response => {
+                if (!response.ok) {
+                    throw new Error(
+                        `Error in retrieving entries. Status code: ${response.status}`
+                    )
+                } 
+                response.text()
+            }
         ).then(
             respBody => {
                 let allEntries = JSON.parse(respBody)["guestbook"];
@@ -106,9 +138,29 @@ function updateGuestbookDisplay() {
                     entryDisplay.appendChild(entryElement);
                 }
             }
+        ).catch(
+            err => {
+                let entryDisplay = document.getElementById("entry-log");
+
+                let pageErrElement = document.createElement("p");
+                pageErrElement.textContent = "(cannot retrieve other entries)";
+                pageErrElement.style["font-style"] = "italic";
+
+                entryDisplay.appendChild(pageErrElement);
+                console.error(err);
+            }
         );
 }
 
 
 updateGuestbookDisplay();
-document.querySelector("button").addEventListener("click", updateGuestbookRemote);
+
+let noteEntryArea = document.getElementById("guestbook-note");
+noteEntryArea.addEventListener("keydown", function() {displayCharCount(this)});
+noteEntryArea.addEventListener("keyup",   function() {displayCharCount(this)});
+
+document
+    .querySelector("button")
+    .addEventListener(
+        "click", updateGuestbookRemote
+    );

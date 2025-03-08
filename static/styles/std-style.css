@@ -27,6 +27,9 @@ p.entry-time {
 p.guest-name {
     text-align: right;
 }
+#char-count {
+    margin: 0;
+}
 div.buttons {
     display: flex;
     justify-content: flex-end;
