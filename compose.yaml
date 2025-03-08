@@ -5,10 +5,10 @@ services:
     container_name: "archie-svr"
     ports:
       - "443:4949"
-    # if running with sudo, make sure to use the --preserve-env option
-    # so that your shell env is used
+    # if running with sudo, use the --preserve-env option
+    # so that your user shell env is in scope
     environment:
-      DB_URL: mysql://server1:${MYSQL_PASSWORD?}@db:33061/archie
+      DB_URL: mysql://server1:${MYSQL_PASSWORD?}@db:3306/archie
       RUST_LOG: "debug"   # for `tracing` logger
     volumes:
       - type: bind
@@ -21,8 +21,6 @@ services:
   db:
     image: "mysql:9.2"
     container_name: "archie-db"
-    ports:
-      - "33061:3306"
     volumes:
       - type: bind
         source: "./db-init/"
