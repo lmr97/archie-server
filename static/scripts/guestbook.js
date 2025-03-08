@@ -126,7 +126,7 @@ function updateGuestbookDisplay() {
                         `Error in retrieving entries. Status code: ${response.status}`
                     )
                 } 
-                response.text()
+                return response.text();
             }
         ).then(
             respBody => {
