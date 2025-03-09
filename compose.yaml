@@ -28,6 +28,7 @@ services:
   db:
     image: "mysql:9.2"
     container_name: "archie-db"
+    hostname: "db"
     volumes:
       - type: bind
         source: "./db-init/"
