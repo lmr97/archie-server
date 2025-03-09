@@ -1,6 +1,12 @@
 use std::fs::read_to_string;
 use axum::{
-    extract::rejection::JsonRejection, http::{request::Parts, StatusCode}, response::{Html, IntoResponse, Response}
+    extract::rejection::JsonRejection,
+    http::StatusCode, 
+    response::{
+        Html, 
+        IntoResponse, 
+        Response
+    }
 };
 use tracing::error;
 
@@ -60,8 +66,11 @@ impl IntoResponse for WebsiteError {
                 <p>500 Error: Internal Server Error</p>\n\
                 <p>This is most likely due to issues with the database.</p>\n\
                 </html>".to_string()
-            ); 
+            );
 
-        (StatusCode::INTERNAL_SERVER_ERROR, Html(html_500_err)).into_response()
+        let mut err_resp = Html(html_500_err).into_response();
+        *err_resp.status_mut() = StatusCode::INTERNAL_SERVER_ERROR;
+
+        err_resp
     } 
 }
