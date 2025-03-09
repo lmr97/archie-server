@@ -9,7 +9,7 @@ FROM rust:1.83.0
 RUN useradd server
 USER server
 WORKDIR /home/server
-COPY --chown=server . .
+COPY --chown=server ./custom-backend ./custom-backend
 
 ENV SERVER_ROOT   "/home/server"
 ENV CRT_FILE      "/run/secrets/server-cert"

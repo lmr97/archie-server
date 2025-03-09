@@ -14,6 +14,12 @@ services:
       - type: bind
         source: ./archie-server.log
         target: /home/server/archie-server.log
+      - type: bind
+        source: ./pages
+        target: /home/server/pages
+      - type: bind
+        source: ./static
+        target: /home/server/static
     secrets:
       - server-cert
       - server-priv-key
