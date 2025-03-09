@@ -9,7 +9,8 @@ services:
     # so that your user shell env is in scope
     environment:
       DB_URL: mysql://server1:${MYSQL_PASSWORD?}@db:3306/archie
-      RUST_LOG: "debug"   # for `tracing` logger
+      RUST_LOG: "none,custom-backend=debug"   # for `tracing` logger
+    # allows web content to be loaded in on compose, not requiring rebuild
     volumes:
       - type: bind
         source: ./archie-server.log
