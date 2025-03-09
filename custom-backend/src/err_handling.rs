@@ -1,6 +1,6 @@
 use std::fs::read_to_string;
 use axum::{
-    extract::rejection::JsonRejection, http::{request::Parts, StatusCode}, response::{Html, IntoResponse, Response}
+    extract::rejection::JsonRejection, http::StatusCode, response::{Html, IntoResponse, Response}
 };
 use tracing::error;
 
