@@ -11,8 +11,12 @@ let timeOptions = {
 
 
 async function updateGuestbookRemote() {
+async function updateGuestbookRemote() {
     let guest = document.getElementById("guestbook-name").value;
     let note  = document.getElementById("guestbook-note").value;
+    
+    // length restrictions are emforced by textarea element itself
+
     
     // length restrictions are emforced by textarea element itself
 
@@ -23,6 +27,30 @@ async function updateGuestbookRemote() {
 
     if (newEntry.name.length == 0) newEntry.name = "(anonymous)";
 
+    try {
+        // catch exceptions thrown by fetch()
+        const response = await fetch(window.location.href+"/entries", 
+            {
+                method: 'POST',
+                headers: {
+                'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(newEntry)
+            }
+        );
+
+        // catch server error responses
+        if (!response.ok) {
+            throw new Error(
+                `POST entry to db failed with status code: ${resp.status}`
+            );
+        }
+    }
+    catch (err) {
+        console.error(`POST entry to db failed, because: ${err}`);
+        alert("Error in recieving guestbook entry, sorry. \nI'll look into this issue as soon as I can!");
+        return;
+    }
     try {
         // catch exceptions thrown by fetch()
         const response = await fetch(window.location.href+"/entries", 
@@ -121,6 +149,18 @@ function displayCharCount(guestbookNoteElement) {
     }
 }
 
+function displayCharCount(guestbookNoteElement) {
+    let countElement = document.getElementById("char-count");
+    let entryLength = guestbookNoteElement.value.length;
+
+    countElement.textContent = `Charcter count: ${entryLength}/1000`;
+
+    // using >= cuz you never know
+    if (entryLength >= 1000) {
+        countElement.textContent = "Charcter count: 1000/1000 (maximum reached)";
+    }
+}
+
 function updateGuestbookDisplay() {
     
     fetch(window.location.href+"/entries")
@@ -154,6 +194,17 @@ function updateGuestbookDisplay() {
                 entryDisplay.appendChild(pageErrElement);
                 console.error(err);
             }
+        ).catch(
+            err => {
+                let entryDisplay = document.getElementById("entry-log");
+
+                let pageErrElement = document.createElement("p");
+                pageErrElement.textContent = "(cannot retrieve other entries)";
+                pageErrElement.style["font-style"] = "italic";
+
+                entryDisplay.appendChild(pageErrElement);
+                console.error(err);
+            }
         );
 }
 
@@ -164,6 +215,15 @@ let noteEntryArea = document.getElementById("guestbook-note");
 noteEntryArea.addEventListener("keydown", function() {displayCharCount(this)});
 noteEntryArea.addEventListener("keyup",   function() {displayCharCount(this)});
 
+let noteEntryArea = document.getElementById("guestbook-note");
+noteEntryArea.addEventListener("keydown", function() {displayCharCount(this)});
+noteEntryArea.addEventListener("keyup",   function() {displayCharCount(this)});
+
+document
+    .querySelector("button")
+    .addEventListener(
+        "click", updateGuestbookRemote
+    );
 document
     .querySelector("button")
     .addEventListener(
