@@ -44,10 +44,10 @@ async fn main() {
     info!("Defining routes...");
     let server_root = get_env_var("SERVER_ROOT");
 
-    let homepage  = ServeFile::new(format!("{}/home.html", server_root));
+    let homepage  = ServeFile::new(format!("{}/pages/home.html", server_root));
     let static_dir = ServeDir::new(format!("{}/static", server_root));
 
-    let guestbook_page = ServeFile::new(format!("{}/guestbook.html", server_root));
+    let guestbook_page = ServeFile::new(format!("{}/pages/guestbook.html", server_root));
     let guestbook_entries: Router<()> = Router::new()
         .route("/", post(db_io::update_guestbook))
         .route("/", get(db_io::get_guestbook));
