@@ -11,8 +11,6 @@ let timeOptions = {
 
 
 async function updateGuestbookRemote() {
-async function updateGuestbookRemote() {
-    let guest = document.getElementById("guestbook-name").value;
     let note  = document.getElementById("guestbook-note").value;
     
     // length restrictions are emforced by textarea element itself
@@ -210,10 +208,6 @@ function updateGuestbookDisplay() {
 
 
 updateGuestbookDisplay();
-
-let noteEntryArea = document.getElementById("guestbook-note");
-noteEntryArea.addEventListener("keydown", function() {displayCharCount(this)});
-noteEntryArea.addEventListener("keyup",   function() {displayCharCount(this)});
 
 let noteEntryArea = document.getElementById("guestbook-note");
 noteEntryArea.addEventListener("keydown", function() {displayCharCount(this)});
