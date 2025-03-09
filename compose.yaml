@@ -8,7 +8,7 @@ services:
     # if running with sudo, use the --preserve-env option
     # so that your user shell env is in scope
     environment:
-      DB_URL: mysql://server1:${MYSQL_PASSWORD?}@db/archie
+      DB_URL: mysql://server1:${MYSQL_PASSWORD?}@db:3306/archie
       RUST_LOG: "custom-backend=info"   # for `tracing` logger
     # allows web content to be loaded in on compose, not requiring rebuild
     volumes:
