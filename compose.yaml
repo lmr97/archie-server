@@ -2,7 +2,7 @@ name: archie
 services:
   svr:
     build: .
-    container_name: "archie-svr"
+    #container_name: "archie-svr"
     ports:
       - "443:4949"
     # if running with sudo, use the --preserve-env option
@@ -27,7 +27,7 @@ services:
 
   db:
     image: "mysql:9.2"
-    container_name: "archie-db"
+    #container_name: "archie-db"
     hostname: "db"
     volumes:
       - type: bind
