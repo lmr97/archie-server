@@ -7,6 +7,7 @@ services:
     # if running with sudo, use the --preserve-env option
     # so that your user shell env is in scope
     environment:
+      # DB host needs to be CONTAINER name not service name
       DB_URL: mysql://server1:${MYSQL_PASSWORD?}@archie-db:3306/archie
       RUST_LOG: "custom_backend=info"   # for `tracing` logger
     # allows web content to be loaded in on compose, not requiring rebuild
@@ -27,7 +28,6 @@ services:
   db:
     image: "mysql:9.2"
     container_name: "archie-db"
-    hostname: "db"
     volumes:
       - type: bind
         source: "./db-init/"
@@ -42,6 +42,7 @@ services:
         MYSQL_ONETIME_PASSWORD: false
         MYSQL_ALLOW_EMPTY_PASSWORD: false
         MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD?}
+        MYSQL_USER: server1
         MYSQL_PASSWORD: ${MYSQL_PASSWORD?} 
   
 secrets:
