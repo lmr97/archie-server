@@ -50,6 +50,8 @@ fn get_db_conn() -> Result<mysql::Pool, UrlError> {
     
     let opts = Opts::from_url(&url)?;
 
+    info!("DB connection successful.");
+
     Ok(Pool::new(opts).unwrap()) // unwrap() b/c infallible
 }
 
@@ -69,6 +71,8 @@ pub async fn get_guestbook() -> Result<Json::<Guestbook>, WebsiteError> {
             GuestbookEntryStamped {time_stamp, name, note}
         }
     )?;
+
+    info!("GET /guestbook successful.");
 
     Ok(Json(Guestbook {guestbook: guestbook_table}))
 }
@@ -107,12 +111,16 @@ pub async fn get_hit_count() -> Result<String, WebsiteError> {
     let buf_pool = get_db_conn()?;
     let mut conn = buf_pool.get_conn()?;
         
-    match conn.query_first::<String, &str>(
+    let hits = match conn.query_first::<String, &str>(
         r"SELECT COUNT(*) AS hit_count FROM hitLog"
     )? {
-        Some(hits_count) => Ok(hits_count),
-        None => Ok(String::from("0"))
-    }     
+        Some(hits_count) => hits_count,
+        None => String::from("0")
+    };
+
+    info!("Page hit count retrieved.");
+
+    Ok(hits)   
 }
 
 
@@ -134,11 +142,13 @@ pub async fn log_hit(Json(page_hit): Json<WebpageHit>) -> Result<Response, Websi
         r"INSERT INTO hitLog (hitTime, userAgent) VALUES (:time_stamp, :user_agent);",
         params! {
             "time_stamp" => page_hit.time_stamp, 
-            "user_agent" => page_hit.user_agent
+            "user_agent" => &page_hit.user_agent
         }
     )?;
     tx.exec_first::<String, &str, Params>("UNLOCK TABLES", Params::Empty)?;
     tx.commit()?;
     
+    info!("New visit from: {}", page_hit.user_agent);
+
     Ok(Response::new(Body::empty()))  // return 200 OK
 }
