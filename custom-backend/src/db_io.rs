@@ -50,7 +50,7 @@ fn get_db_conn() -> Result<mysql::Pool, mysql::Error> {
     
     let opts = Opts::from_url(&url)?;
 
-    Pool::new(opts) // unwrap() b/c infallible
+    Pool::new(opts)
 }
 
 
