@@ -39,7 +39,7 @@ pub struct WebpageHit {
     user_agent: String,
 }
 
-fn get_db_conn() -> Result<mysql::Pool, UrlError> {
+fn get_db_conn() -> Result<mysql::Pool, mysql::Error> {
     
     // gets URL from the environment to preserve security,
     // since it contains a plain-text password
@@ -50,9 +50,7 @@ fn get_db_conn() -> Result<mysql::Pool, UrlError> {
     
     let opts = Opts::from_url(&url)?;
 
-    info!("DB connection successful.");
-
-    Ok(Pool::new(opts).unwrap()) // unwrap() b/c infallible
+    Pool::new(opts) // unwrap() b/c infallible
 }
 
 
