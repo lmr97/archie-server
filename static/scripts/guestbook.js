@@ -12,7 +12,8 @@ let timeOptions = {
 
 async function updateGuestbookRemote() {
     let note  = document.getElementById("guestbook-note").value;
-    
+    let guest = document.getElementById("guestbook-name").value;
+
     // length restrictions are emforced by textarea element itself
 
     
