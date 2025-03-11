@@ -42,13 +42,13 @@ impl IntoResponse for WebsiteError {
     fn into_response(self) -> Response {
         match self {
             WebsiteError::DatabaseErrorGeneral(e) => {
-                error!("Error in database I/O: {:?}", e);
+                println!("Error in database I/O: {:?}", e);
             },
             WebsiteError::DatabaseErrorUrl(e)  => {
-                error!("Database URL misspecified, or DB inaccessible: {:?}", e);
+                println!("Database URL misspecified, or DB inaccessible: {:?}", e);
             },
             WebsiteError::JsonError(e)    => {
-                error!("JSON could not be parsed: {:?}", e);
+                println!("JSON could not be parsed: {:?}", e);
             }
         };
 
