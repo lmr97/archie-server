@@ -15,16 +15,10 @@ use crate::archie_utils;
 
 #[derive(Debug)]
 pub enum WebsiteError {
-    DbErrGeneral(mysql::error::Error),
     DbErrDriver(mysql::error::DriverError), 
     DbErrUrl(mysql::UrlError),
+    DbErrGeneral(mysql::error::Error),
     JsonError(JsonRejection)
-}
-
-impl From<mysql::error::Error> for WebsiteError {
-    fn from(db_err: mysql::Error) -> Self {
-        Self::DbErrGeneral(db_err)
-    }
 }
 
 impl From<mysql::error::DriverError> for WebsiteError {
@@ -39,6 +33,12 @@ impl From<mysql::UrlError> for WebsiteError {
     }
 }
 
+impl From<mysql::error::Error> for WebsiteError {
+    fn from(db_err: mysql::Error) -> Self {
+        Self::DbErrGeneral(db_err)
+    }
+}
+
 impl From<JsonRejection> for WebsiteError {
     fn from(rejection: JsonRejection) -> Self {
         Self::JsonError(rejection)
@@ -48,11 +48,11 @@ impl From<JsonRejection> for WebsiteError {
 impl IntoResponse for WebsiteError {
     fn into_response(self) -> Response {
         match self {
-            WebsiteError::DbErrUrl(e)  => {
-                error!("Database URL misspecified, or DB inaccessible: {:?}", e);
-            },
             WebsiteError::DbErrDriver(e)  => {
                 error!("OS emmitted an error via driver: {:?}", e);
+            },
+            WebsiteError::DbErrUrl(e)  => {
+                error!("Database URL misspecified, or DB inaccessible: {:?}", e);
             },
             WebsiteError::DbErrGeneral(e) => {
                 error!("Error in database I/O: {:?}", e);
