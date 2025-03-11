@@ -48,14 +48,14 @@ impl From<JsonRejection> for WebsiteError {
 impl IntoResponse for WebsiteError {
     fn into_response(self) -> Response {
         match self {
-            WebsiteError::DbErrGeneral(e) => {
-                error!("Error in database I/O: {:?}", e);
-            },
             WebsiteError::DbErrUrl(e)  => {
                 error!("Database URL misspecified, or DB inaccessible: {:?}", e);
             },
             WebsiteError::DbErrDriver(e)  => {
                 error!("OS emmitted an error via driver: {:?}", e);
+            },
+            WebsiteError::DbErrGeneral(e) => {
+                error!("Error in database I/O: {:?}", e);
             },
             WebsiteError::JsonError(e)    => {
                 error!("JSON could not be parsed: {:?}", e);
