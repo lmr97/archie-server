@@ -42,7 +42,6 @@ services:
         MYSQL_ONETIME_PASSWORD: false
         MYSQL_ALLOW_EMPTY_PASSWORD: false
         MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD?}
-        MYSQL_USER: server1
         MYSQL_PASSWORD: ${MYSQL_PASSWORD?} 
   
 secrets:
