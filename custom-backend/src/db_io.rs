@@ -132,7 +132,7 @@ pub async fn log_hit(Json(page_hit): Json<WebpageHit>) -> Result<Response, Websi
     // 1 behind the DB.
     // So, I'm setting a write lock to block the GET that comes on the heels of this INSERT.
     // There is some slight overhead for this, unsuprisingly, but that's acceptable.
-    conn.exec_first::<String, &str, Params>("LOCK TABLE hitLog WRITE", Params::Empty)?;
+    conn.query_first::<String, &str>("LOCK TABLE hitLog WRITE")?;
     tracing::debug!("table lock successful");
     conn.exec_first::<String, &str, Params>(
         r"INSERT INTO hitLog (hitTime, userAgent) VALUES (:time_stamp, :user_agent);",
@@ -142,7 +142,7 @@ pub async fn log_hit(Json(page_hit): Json<WebpageHit>) -> Result<Response, Websi
         }
     )?;
     tracing::debug!("prep'd statement successful");
-    conn.exec_first::<String, &str, Params>("UNLOCK TABLES", Params::Empty)?;
+    conn.query_first::<String, &str>("UNLOCK TABLES")?;
     tracing::debug!("table unlock successful");
     
     info!("New visit from: {}", page_hit.user_agent);
