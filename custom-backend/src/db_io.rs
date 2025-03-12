@@ -136,6 +136,7 @@ pub async fn log_hit(Json(page_hit): Json<WebpageHit>) -> Result<Response, Websi
     // So, I'm setting a write lock to block the GET that comes on the heels of this INSERT.
     // There is some slight overhead for this, unsuprisingly, but that's acceptable.
     tx.exec_first::<String, &str, Params>("LOCK TABLE hitLog WRITE", Params::Empty)?;
+    tracing::debug!("table lock successful");
     tx.exec_first::<String, &str, Params>(
         r"INSERT INTO hitLog (hitTime, userAgent) VALUES (:time_stamp, :user_agent);",
         params! {
@@ -143,8 +144,11 @@ pub async fn log_hit(Json(page_hit): Json<WebpageHit>) -> Result<Response, Websi
             "user_agent" => &page_hit.user_agent
         }
     )?;
+    tracing::debug!("prep'd statement successful");
     tx.exec_first::<String, &str, Params>("UNLOCK TABLES", Params::Empty)?;
+    tracing::debug!("table unlock successful");
     tx.commit()?;
+    tracing::debug!("db commit successful");
     
     info!("New visit from: {}", page_hit.user_agent);
 
