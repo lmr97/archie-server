@@ -32,6 +32,7 @@ async fn main() {
     tracing_subscriber::fmt()
         .with_env_filter(EnvFilter::from_default_env())
         .with_writer(log_file)
+        .with_line_number(true)
         .init();
 
     info!("\n\n\t\t////// Hi there! I'm Archie. Let me get ready for you... //////\n");
