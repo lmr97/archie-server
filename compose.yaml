@@ -1,7 +1,8 @@
 name: archie
 services:
   svr:
-    build: .
+    #build: .
+    image: archie-svr
     ports:
       - "443:4949"
     # if running with sudo, use the --preserve-env option
