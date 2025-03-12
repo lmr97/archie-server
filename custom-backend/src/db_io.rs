@@ -143,7 +143,7 @@ pub async fn log_hit(Json(page_hit): Json<WebpageHit>) -> Result<Response, Websi
         r"INSERT INTO hitLog (hitTime, userAgent) VALUES (:time_stamp, :user_agent);",
         params! {
             "time_stamp" => page_hit.time_stamp, 
-            "user_agent" => &page_hit.user_agent
+            "user_agent" => page_hit.user_agent.clone()
         }
     )?;
     tracing::debug!("prep'd statement successful");

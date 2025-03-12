@@ -10,7 +10,7 @@ services:
     environment:
       # DB host needs to be CONTAINER name not service name
       DB_URL: mysql://server1:${MYSQL_PASSWORD?}@archie-db:3306/archie
-      RUST_LOG: "custom_backend=info"   # for `tracing` logger
+      RUST_LOG: "custom_backend=debug"   # for `tracing` logger
     # allows web content to be loaded in on compose, not requiring rebuild
     volumes:
       - type: bind
