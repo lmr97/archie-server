@@ -125,30 +125,25 @@ pub async fn get_hit_count() -> Result<String, WebsiteError> {
 pub async fn log_hit(Json(page_hit): Json<WebpageHit>) -> Result<Response, WebsiteError> {
 
     let buf_pool = get_db_conn()?;
-    tracing::debug!("pool established");
     let mut conn = buf_pool.get_conn()?;
-    tracing::debug!("conn established");
-    
-    let tx_opts = TxOpts::default()
-        .set_isolation_level(Some(IsolationLevel::Serializable));
-    let mut tx = conn
-        .start_transaction(tx_opts)?; 
-    tracing::debug!("transaction started");
+
     // this function runs async of get_hit_count(), which is called immediately after this one
     // through a GET request to /hits. In practice, this means the hit count it returned was
     // 1 behind the DB.
     // So, I'm setting a write lock to block the GET that comes on the heels of this INSERT.
     // There is some slight overhead for this, unsuprisingly, but that's acceptable.
-    tx.exec_first::<String, &str, Params>(
+    conn.exec_first::<String, &str, Params>("LOCK TABLE hitLog WRITE", Params::Empty)?;
+    tracing::debug!("table lock successful");
+    conn.exec_first::<String, &str, Params>(
         r"INSERT INTO hitLog (hitTime, userAgent) VALUES (:time_stamp, :user_agent);",
         params! {
             "time_stamp" => page_hit.time_stamp, 
-            "user_agent" => page_hit.user_agent.clone()
+            "user_agent" => &page_hit.user_agent
         }
     )?;
     tracing::debug!("prep'd statement successful");
-    tx.commit()?;
-    tracing::debug!("db commit successful");
+    conn.exec_first::<String, &str, Params>("UNLOCK TABLES", Params::Empty)?;
+    tracing::debug!("table unlock successful");
     
     info!("New visit from: {}", page_hit.user_agent);
 
