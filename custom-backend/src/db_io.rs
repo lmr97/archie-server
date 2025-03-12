@@ -125,11 +125,13 @@ pub async fn get_hit_count() -> Result<String, WebsiteError> {
 pub async fn log_hit(Json(page_hit): Json<WebpageHit>) -> Result<Response, WebsiteError> {
 
     let buf_pool = get_db_conn()?;
+    tracing::debug!("pool established");
     let mut conn = buf_pool.get_conn()?;
+    tracing::debug!("conn established");
         
     let mut tx = conn
         .start_transaction(TxOpts::default())?; 
-
+    tracing::debug!("transaction started");
     // this function runs async of get_hit_count(), which is called immediately after this one
     // through a GET request to /hits. In practice, this means the hit count it returned was
     // 1 behind the DB.
