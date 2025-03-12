@@ -130,7 +130,7 @@ pub async fn log_hit(Json(page_hit): Json<WebpageHit>) -> Result<Response, Websi
     tracing::debug!("conn established");
     
     let tx_opts = TxOpts::default()
-        .set_isolation_level(Some(IsolationLevel::ReadCommitted));
+        .set_isolation_level(Some(IsolationLevel::Serializable));
     let mut tx = conn
         .start_transaction(tx_opts)?; 
     tracing::debug!("transaction started");
