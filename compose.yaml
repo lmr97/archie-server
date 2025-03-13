@@ -1,8 +1,8 @@
 name: archie
 services:
   svr:
-    #build: .
-    image: archie-svr
+    # separately-built img to avoid clutter from anon imgs
+    image: archie-svr   
     ports:
       - "443:4949"
     # if running with sudo, use the --preserve-env option
