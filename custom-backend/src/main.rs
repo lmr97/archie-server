@@ -1,5 +1,9 @@
-use std::{net::SocketAddr, str::FromStr};
-use std::fs::OpenOptions;
+use std::{
+    fs::OpenOptions,
+    net::SocketAddr,
+    process::exit,
+    str::FromStr
+};
 use archie_utils::get_env_var;
 use axum::{
     routing::{get, get_service, post}, 
@@ -25,6 +29,25 @@ mod db_io;
 #[tokio::main]
 async fn main() {
 
+    let arg1 = std::env::args().nth(1);
+
+    let no_tls = match arg1 {
+        Some(arg) => {
+            match arg.as_str() {
+                "--no-tls"      => true,
+                "--help" | "-h" => {
+                    print_help();
+                    exit(0);
+                }
+                other => {
+                    print_help();
+                    panic!("Option \"{other}\" is not recognized.");
+                }
+            }
+        },
+        None => false
+    };
+
     let log_file = OpenOptions::new()
         .append(true)
         .open(get_env_var("SERVER_LOG"))
@@ -36,12 +59,6 @@ async fn main() {
         .init();
 
     info!("\n\n\t\t////// Hi there! I'm Archie. Let me get ready for you... //////\n");
-    info!("Loading certificates and keys...");
-    let (cert, pks) = archie_utils::get_auth_paths();
-    let auth_config = RustlsConfig::from_pem_file(cert, pks)
-        .await
-        .unwrap();                  // I don't want to serve the webpage without TLS, so crash okay
-    info!("Authorization loaded!");
 
     info!("Defining routes...");
     let server_root = get_env_var("SERVER_ROOT");
@@ -66,9 +83,32 @@ async fn main() {
         
     let addr = SocketAddr::from_str(&get_env_var("SERVER_SOCKET")).unwrap();
 
-    info!("Serving on {:?}!", addr);
-    axum_server::bind_rustls(addr, auth_config)
-        .serve(routes.into_make_service())
-        .await
-        .unwrap();                  // should cause crash; fatal error to server
+    if no_tls {
+        info!("Serving on {:?}!", addr);
+        let listener = tokio::net::TcpListener::bind(addr).await.unwrap();
+        axum::serve(listener, routes).await.unwrap();
+    } else {
+        
+        info!("Loading certificates and keys...");
+        let (cert, pks) = archie_utils::get_auth_paths();
+        let auth_config = RustlsConfig::from_pem_file(cert, pks)
+            .await
+            .unwrap();                  // I don't want to serve the webpage without TLS, so crash okay
+        info!("Authorization loaded!");
+    
+        info!("Serving on {:?}!", addr);
+        axum_server::bind_rustls(addr, auth_config)
+            .serve(routes.into_make_service())
+            .await
+            .unwrap();                  // should cause crash; fatal error to server
+    }
+}
+
+fn print_help() {
+    println!("Usage:  custom-backend [OPTION]\n");
+    println!("The executable that runs the server.\n");
+    println!("Options:");
+    println!("    --no-tls     Run without TLS. Axum doesn't serve files properly");
+    println!("                 on localhost with TLS, so this is good for demo purposes.");
+    println!("    --help, -h   Print this help message and quit.\n");
 }

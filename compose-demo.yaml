@@ -1,20 +1,23 @@
+# This is meant to run the server locally, and without TLS, 
+# saving the demoing user the trouble of getting certs and keys.
+
 name: archie
 services:
   svr:
-    # separately-built img to avoid clutter from anon imgs
-    image: archie-svr   
+    build: .
     ports:
-      - "443:4949"
+      - "3000:4949"
     # if running with sudo, use the --preserve-env option
     # so that your user shell env is in scope
     environment:
       # DB host needs to be CONTAINER name not service name
       DB_URL: mysql://server1:${MYSQL_PASSWORD?}@archie-db:3306/archie
       RUST_LOG: "custom_backend=debug"   # for `tracing` logger
+    command: ["./target/release/custom-backend", "--no-tls"]
     # allows web content to be loaded in on compose, not requiring rebuild
     volumes:
       - type: bind
-        source: ./archie-server.log
+        source: ./demo.log
         target: /home/server/archie-server.log
       - type: bind
         source: ./pages
@@ -22,16 +25,13 @@ services:
       - type: bind
         source: ./static
         target: /home/server/static
-    secrets:
-      - server-cert
-      - server-priv-key
 
   db:
     image: "mysql:9.2"
     container_name: "archie-db"
     volumes:
       - type: bind
-        source: "./db-init/"
+        source: "./db-init-demo/"
         # all scripts in this directory will be run
         target: "/docker-entrypoint-initdb.d"
       - type: bind
@@ -42,11 +42,6 @@ services:
     environment:
         MYSQL_ONETIME_PASSWORD: false
         MYSQL_ALLOW_EMPTY_PASSWORD: false
-        MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD?}
+        MYSQL_ROOT_PASSWORD: "root"
+        MYSQL_USER: server1
         MYSQL_PASSWORD: ${MYSQL_PASSWORD?} 
-  
-secrets:
-  server-cert:
-    file: fullchain.pem
-  server-priv-key:
-    file: privkey.pem
