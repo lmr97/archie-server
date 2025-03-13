@@ -50,30 +50,6 @@ async function updateGuestbookRemote() {
         alert("Error in recieving guestbook entry, sorry. \nI'll look into this issue as soon as I can!");
         return;
     }
-    try {
-        // catch exceptions thrown by fetch()
-        const response = await fetch(window.location.href+"/entries", 
-            {
-                method: 'POST',
-                headers: {
-                'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(newEntry)
-            }
-        );
-
-        // catch server error responses
-        if (!response.ok) {
-            throw new Error(
-                `POST entry to db failed with status code: ${resp.status}`
-            );
-        }
-    }
-    catch (err) {
-        console.error(`POST entry to db failed, because: ${err}`);
-        alert("Error in recieving guestbook entry, sorry. \nI'll look into this issue as soon as I can!");
-        return;
-    }
     
     // reset fields
     document.getElementById("guestbook-name").value = "";
