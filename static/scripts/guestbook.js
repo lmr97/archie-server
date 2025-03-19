@@ -195,8 +195,3 @@ document
     .addEventListener(
         "click", updateGuestbookRemote
     );
-document
-    .querySelector("button")
-    .addEventListener(
-        "click", updateGuestbookRemote
-    );
