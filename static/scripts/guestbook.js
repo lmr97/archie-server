@@ -34,7 +34,8 @@ async function updateGuestbookRemote() {
                 headers: {
                 'Content-Type': 'application/json'
                 },
-                body: JSON.stringify(newEntry)
+                body: JSON.stringify(newEntry),
+                credentials: "same-origin"          // for local testing
             }
         );
 
@@ -138,7 +139,8 @@ function displayCharCount(guestbookNoteElement) {
 
 function updateGuestbookDisplay() {
     
-    fetch(window.location.href+"/entries")
+    // same-origin creds for local testing
+    fetch(window.location.href+"/entries", {credentials: "same-origin"}) 
         .then(
             response => {
                 if (!response.ok) {
@@ -190,11 +192,6 @@ let noteEntryArea = document.getElementById("guestbook-note");
 noteEntryArea.addEventListener("keydown", function() {displayCharCount(this)});
 noteEntryArea.addEventListener("keyup",   function() {displayCharCount(this)});
 
-document
-    .querySelector("button")
-    .addEventListener(
-        "click", updateGuestbookRemote
-    );
 document
     .querySelector("button")
     .addEventListener(

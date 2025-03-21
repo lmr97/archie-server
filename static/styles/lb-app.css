@@ -1,0 +1,44 @@
+/* 
+details and summary CSS copied from here: 
+https://developer.mozilla.org/en-US/docs/Web/HTML/Element/details 
+*/
+details {
+    border: 1px solid #aaa;
+    background-color: white;
+    border-radius: 4px;
+    padding: 0.5em 0.5em 0;
+}
+
+summary {
+    font-weight: bold;
+    margin: -0.5em -0.5em 0;
+    padding: 0.5em;
+}
+
+details[open] {
+    padding: 0.5em;
+}
+
+details[open] summary {
+    border-bottom: 1px solid #aaa;
+    margin-bottom: 0.5em;
+}
+
+div#lb-url-container, 
+#lb-url, 
+div.lb-list-submit {
+    text-align: center;
+}
+
+#lb-list-submit-button {
+    font-size: 30px; 
+    color: white; 
+    background-color: dodgerblue;
+}
+
+.checkbox-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 1em;
+    padding: 1em;
+}

@@ -1,12 +1,11 @@
 use std::{
     fs::OpenOptions,
     net::SocketAddr,
-    process::exit,
     str::FromStr
 };
 use archie_utils::get_env_var;
 use axum::{
-    routing::{get, get_service, post}, 
+    routing::{get, post}, 
     Router
 };
 use axum_server::tls_rustls::RustlsConfig;
@@ -20,14 +19,15 @@ use tracing_subscriber::EnvFilter;
 mod archie_utils;
 mod err_handling;
 mod db_io;
+mod lb_app_io;
 
 // the frequent usage of unwrap() in main() here is because
 // any panics that happen in main() will cause the server to 
 // crash on startup, and not during subsequent runtime (I made 
 // sure to purge functions that could be called after server 
-// startup of any calls to unwrap()).
+// startup of any calls to unwrap() that could cause a panic).
 #[tokio::main]
-async fn main() {
+async fn main() -> Result<(), std::io::Error> {
 
     let arg1 = std::env::args().nth(1);
 
@@ -37,7 +37,7 @@ async fn main() {
                 "--no-tls"      => true,
                 "--help" | "-h" => {
                     print_help();
-                    exit(0);
+                    return Ok(());
                 }
                 other => {
                     print_help();
@@ -63,30 +63,43 @@ async fn main() {
     info!("Defining routes...");
     let server_root = get_env_var("SERVER_ROOT");
 
+    /* Homepage/general */
     let homepage  = ServeFile::new(format!("{}/pages/home.html", server_root));
     let static_dir = ServeDir::new(format!("{}/static", server_root));
+    let node_mods  = ServeDir::new(format!("{}/node_modules", server_root));
 
+    /* Guestbook */
     let guestbook_page = ServeFile::new(format!("{}/pages/guestbook.html", server_root));
     let guestbook_entries: Router<()> = Router::new()
         .route("/", post(db_io::update_guestbook))
         .route("/", get(db_io::get_guestbook));
-    let guestbook_routes = Router::new()
-        .route_service("/", get_service(guestbook_page))
+    let guestbook_app = Router::new()
+        .route_service("/", guestbook_page)
         .nest("/entries", guestbook_entries);
 
+    /* Letterbocd List Converter */
+    let lb_app_page = ServeFile::new(format!("{}/pages/lb-list-app.html", server_root));
+    let lb_app = Router::new()
+        .route_service("/", lb_app_page)
+        .route("/conv", get(lb_app_io::convert_lb_list));
+
     let routes = Router::new()
-        .route("/", get_service(homepage))
-        .nest("/guestbook", guestbook_routes)
+        .route_service("/", homepage)
+        .nest_service("/static", static_dir)
+        .nest_service("/node_modules", node_mods)
         .route("/hits", post(db_io::log_hit))
         .route("/hits", get(db_io::get_hit_count))
-        .nest_service("/static", get_service(static_dir));
-        
+        .nest("/guestbook", guestbook_app)       // `Router`s must be nested with other routers
+        .nest("/lb-list-conv", lb_app);
+
     let addr = SocketAddr::from_str(&get_env_var("SERVER_SOCKET")).unwrap();
 
     if no_tls {
+
         info!("Serving on {:?}!", addr);
         let listener = tokio::net::TcpListener::bind(addr).await.unwrap();
         axum::serve(listener, routes).await.unwrap();
+
     } else {
         
         info!("Loading certificates and keys...");
@@ -96,12 +109,14 @@ async fn main() {
             .unwrap();                  // I don't want to serve the webpage without TLS, so crash okay
         info!("Authorization loaded!");
     
-        info!("Serving on {:?}!", addr);
+        info!("Serving securely on {:?}!", addr);
         axum_server::bind_rustls(addr, auth_config)
             .serve(routes.into_make_service())
             .await
             .unwrap();                  // should cause crash; fatal error to server
     }
+
+    Ok(())
 }
 
 fn print_help() {
