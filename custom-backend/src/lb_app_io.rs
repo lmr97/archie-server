@@ -6,7 +6,7 @@ use axum::{
 };
 use axum_extra::extract::Query;
 use mysql_common::serde_json;
-use tracing::{info, error};
+use tracing::{info, debug, error};
 
 use crate::err_handling::ServerError;
 use crate::archie_utils::get_env_var;
@@ -31,18 +31,20 @@ pub struct ListInfo {
 // strings with arrays.
 pub async fn convert_lb_list(list_info: Query<ListInfo>) -> Result<Response, ServerError> {
     
-    let list_info = list_info.0;  // extract struct contained in Query struct
+    let list_info = list_info.0;  // extract info struct contained in Query struct
 
-    info!("{:?}", list_info);
+    debug!("Conversion request received.");
+    debug!("{:?}", list_info);
     //return Ok(Response::new(Body::new(String::from("got the query!\n\n"))));
     // establish connection to Python (Docker) container
     let py_cont_sock = get_env_var("PY_CONT_SOCK");
     let mut conn = TcpStream::connect(py_cont_sock)?;
+    info!("Connection with Python container established.");
 
     // send out list info as char byte stream
-    let stringified_json= serde_json::to_string(&list_info)?;
+    let stringified_json = serde_json::to_string(&list_info)?;
     conn.write_all(stringified_json.as_bytes())?;
-    //return Ok(Response::new(Body::new(String::from("sent to Python app!\n\n"))));
+    debug!("Response received from Python container");
 
     // receive CSV text into a string
     let mut csv_text = String::new();
@@ -64,6 +66,7 @@ pub async fn convert_lb_list(list_info: Query<ListInfo>) -> Result<Response, Ser
                 )
             )?
     } else {
+        info!("Response sent off from server!");
         Response::builder()
             .status(200)
             .header("Content-Type", "text/csv")
