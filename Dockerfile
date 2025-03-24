@@ -1,5 +1,5 @@
-# to build (an image named "archie", from repo root):
-# sudo docker build -t archie .
+# to build (an image named "archie-svr", from repo root):
+# sudo docker build -t archie-svr .
 
 # WARNING: this will build, but not run as such without 
 # secrets being manually mounted, when using the default 
