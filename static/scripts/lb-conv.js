@@ -1,72 +1,76 @@
-import {Spinner} from '/node_modules/spin.js/spin.js';
+// I know imports like this are less than ideal, but should 
+// be okay on this scale. If there are more packages than this, 
+// I will probably switch over to the Browserify bundler.
+import '/node_modules/progressbar.js/dist/progressbar.js';
 
-var spinOpts = {
-    lines: 12,
-    length: 30,
-    width: 4,
-    radius: 20,
-    scale: 0.5,
-    corners: 0.2,
-    speed: 1,
-    rotate: 0,
-    animation: "spinner-line-fade-default",
-    direction: 1,
-    color: "#ffffff",
-    fadeColor: "black",
-    shadow: "0 0 1px transparent",
-    zIndex: 2000000000,
-    className: "spinner",
-    position: "relative",
+var barOpts = {
+    strokeWidth: 2, 
+    easing: 'easeOut', 
+    color: '#32CD32',
 };
 
+var loadingBar = new ProgressBar.Line("#button-container", barOpts);
 
-
-// "URL validity", for our purposes, means "returns 200 OK"
-function URLisValid (url) {
+// "URL validity", for our purposes, means "returns 200 OK".
+//
+// In order to not duplicate requests, it returns the 
+// (estimated) number of films in the Letterboxd list 
+// if the URL is valid, `null` if otherwise. 
+//
+// The async/await silliness is because fetch() runs async, 
+// and I need to force it into synchronous exec, because I 
+// need the results of its request before proceeding
+async function URLisValid (url) {
 
     // definitely open to there being a better way to do this
     try {
-        fetch(url, {credentials: "same-origin"}).then(
+        var estNumFilms = 50;   // standard page size limit
+
+        await fetch(url)
+        .then(
             (resp) => {
                 if (!resp.ok) {
                     throw new Error(`Invalid URL: ${resp.url}`)
                 }
-            }
-        );
+                return resp.text();
+            })
+        .then(
+            (htmlBody) => {
+                const fetchedDoc = new DOMParser()
+                    .parseFromString(htmlBody, 'text/html');
+
+                const listPages = fetchedDoc
+                    .getElementsByClassName("paginate-page");
+                
+                estNumFilms *= listPages.length;
+            });
+        
+        return estNumFilms;
     }
     catch (e) {
         console.error(`URL caused the following error: ${e}`);
-        return false
+        return null;
     }
-
-    return true;
 }
 
 
 // displays error message in the HTML, depending on URL validity
 // returns boolean whether the error was displayed or not
-function displayError(url) {
+function displayError() {
     let URLdiv = document.getElementById("lb-url-container");
     let errElement = document.getElementById("err-msg");
 
     // start by removing the error, if it exists.
     if (errElement) URLdiv.removeChild(errElement);
 
-    // If the URL is valid, nothing will be shown,
-    // since the error has already been cleared
-    if (!URLisValid(url)) {
-        // console error reporting handled in URLisValid()
+    // console error reporting handled in URLisValid()
 
-        // add error message to HTML
-        let errorChild = document.createElement("p");
-        errorChild.id = "err-msg";
-        errorChild.style.color = "red";
+    // add error message to HTML
+    let errorChild = document.createElement("p");
+    errorChild.id = "err-msg";
+    errorChild.style.color = "red";
 
-        URLdiv.appendChild(errorChild);
-        return true;
-    } 
-
-    return false;
+    URLdiv.appendChild(errorChild);
 }
 
 
@@ -90,15 +94,31 @@ function save(filename, data) {
 }
 
 
-function getLBlist() {
-    let lbURL  = document.getElementById("lb-url").value;
-    
-    // if there was an error, don't worry about the rest
-    if (displayError(lbURL)) return;  
 
-    // replace button with loading spinner
+async function getLBlist() {
+    let lbURL      = document.getElementById("lb-url").value;
+    let listLength = await URLisValid(lbURL);
+
+    // if there was an error, don't worry about the rest
+    if (!listLength) {
+        displayError(); 
+        return;
+    }  
+
+    // replace button with loading bar
     let button = buttonDiv.removeChild(buttonDiv.children[0]);
-    spinner.spin(buttonDiv);  // defined at bottom of script
+
+    // it's easier to estimate the time (in ms) the process will take,
+    // using a previously measured time and the number of films 
+    // to process, and run the loading bar for that long, than it 
+    // is to stream the data in from the server and compare the 
+    // completed count to the number of remaining films.
+    //
+    // Kinda hacky, I know, but this solution is the best I'm aware of
+    // given the deliberately challenging design.
+
+    const estTime = listLength * 175;  // average over 300 films, with amortized overhead
+    loadingBar.animate(1, {duration: estTime});
 
     let checkedElements = document
         .querySelectorAll('input[type="checkbox"]:checked');
@@ -135,24 +155,23 @@ function getLBlist() {
             if (resp.ok) {return resp.text();}
             else {throw new Error(`Request to ${fetchURL} failed with status code ${resp.status}: ${resp.statusText}`)}
         })
-        .then((csvText) => save(list_name, csvText))
+        .then((csvText) => {
+            loadingBar.animate(1); // complete loading bar
+            save(list_name, csvText);
+        })
         .catch((e) => {
             console.error(`Error occurred in fetching req: ${e}`);
             alert("There was an issue with the server in processing your request. My apologies.");
         })
         .finally(() => {
-            // stop spinner and replace button for another request
-            spinner.stop();
+            // reset loading bar and replace button for another request
+            loadingBar.animate(0, {duration: 100});
             buttonDiv.appendChild(button); 
         }
     );
-    
-    
-    
 }
 
 let buttonDiv = document.getElementById("button-container");
-let spinner = new Spinner(spinOpts);
 
 document
     .querySelector("button")
