@@ -1,7 +1,28 @@
 // I know imports like this are less than ideal, but should 
 // be okay on this scale. If there are more packages than this, 
 // I will probably switch over to the Browserify bundler.
+import {Spinner} from '/node_modules/spin.js/spin.js';
 import '/node_modules/progressbar.js/dist/progressbar.js';
+
+var spinOpts = {
+    lines: 12,
+    length: 30,
+    width: 4,
+    radius: 20,
+    scale: 0.5,
+    corners: 0.2,
+    speed: 1,
+    rotate: 0,
+    animation: "spinner-line-fade-default",
+    direction: 1,
+    color: "#ffffff",
+    fadeColor: "black",
+    shadow: "0 0 1px transparent",
+    zIndex: 2000000000,
+    className: "spinner",
+    position: "relative",
+ 
+};
 
 var barOpts = {
     strokeWidth: 2, 
@@ -9,69 +30,9 @@ var barOpts = {
     color: '#32CD32',
 };
 
-var loadingBar = new ProgressBar.Line("#button-container", barOpts);
-
-// "URL validity", for our purposes, means "returns 200 OK".
-//
-// In order to not duplicate requests, it returns the 
-// (estimated) number of films in the Letterboxd list 
-// if the URL is valid, `null` if otherwise. 
-//
-// The async/await silliness is because fetch() runs async, 
-// and I need to force it into synchronous exec, because I 
-// need the results of its request before proceeding
-async function URLisValid (url) {
-
-    // definitely open to there being a better way to do this
-    try {
-        var estNumFilms = 50;   // standard page size limit
-
-        await fetch(url)
-        .then(
-            (resp) => {
-                if (!resp.ok) {
-                    throw new Error(`Invalid URL: ${resp.url}`)
-                }
-                return resp.text();
-            })
-        .then(
-            (htmlBody) => {
-                const fetchedDoc = new DOMParser()
-                    .parseFromString(htmlBody, 'text/html');
-
-                const listPages = fetchedDoc
-                    .getElementsByClassName("paginate-page");
-                
-                estNumFilms *= listPages.length;
-            });
-        
-        return estNumFilms;
-    }
-    catch (e) {
-        console.error(`URL caused the following error: ${e}`);
-        return null;
-    }
-}
-
-
-// displays error message in the HTML, depending on URL validity
-// returns boolean whether the error was displayed or not
-function displayError() {
-    let URLdiv = document.getElementById("lb-url-container");
-    let errElement = document.getElementById("err-msg");
-
-    // start by removing the error, if it exists.
-    if (errElement) URLdiv.removeChild(errElement);
-
-    // console error reporting handled in URLisValid()
-
-    // add error message to HTML
-    let errorChild = document.createElement("p");
-    errorChild.id = "err-msg";
-    errorChild.style.color = "red";
-
-    URLdiv.appendChild(errorChild);
-}
+let buttonDiv  = document.getElementById("button-container");
+let spinner    = new Spinner(spinOpts);
+let loadingBar = new ProgressBar.Line("#button-container", barOpts);
 
 
 // function from: https://stackoverflow.com/a/33542499
@@ -97,28 +58,11 @@ function save(filename, data) {
 
 async function getLBlist() {
     let lbURL      = document.getElementById("lb-url").value;
-    let listLength = await URLisValid(lbURL);
-
-    // if there was an error, don't worry about the rest
-    if (!listLength) {
-        displayError(); 
-        return;
-    }  
 
     // replace button with loading bar
-    let button = buttonDiv.removeChild(buttonDiv.children[0]);
-
-    // it's easier to estimate the time (in ms) the process will take,
-    // using a previously measured time and the number of films 
-    // to process, and run the loading bar for that long, than it 
-    // is to stream the data in from the server and compare the 
-    // completed count to the number of remaining films.
-    //
-    // Kinda hacky, I know, but this solution is the best I'm aware of
-    // given the deliberately challenging design.
-
-    const estTime = listLength * 175;  // average over 300 films, with amortized overhead
-    loadingBar.animate(1, {duration: estTime});
+    let button = buttonDiv.removeChild(
+        buttonDiv.querySelector("#lb-list-submit-button")
+    );
 
     let checkedElements = document
         .querySelectorAll('input[type="checkbox"]:checked');
@@ -150,28 +94,62 @@ async function getLBlist() {
             .map((a) => "attrs="+a)
             .join("&");
 
-    fetch(fetchURL, {credentials: "same-origin"})   // credentials option for testing
-        .then((resp) => {
-            if (resp.ok) {return resp.text();}
-            else {throw new Error(`Request to ${fetchURL} failed with status code ${resp.status}: ${resp.statusText}`)}
-        })
-        .then((csvText) => {
-            loadingBar.animate(1); // complete loading bar
-            save(list_name, csvText);
-        })
-        .catch((e) => {
-            console.error(`Error occurred in fetching req: ${e}`);
-            alert("There was an issue with the server in processing your request. My apologies.");
-        })
-        .finally(() => {
-            // reset loading bar and replace button for another request
-            loadingBar.animate(0, {duration: 100});
-            buttonDiv.appendChild(button); 
-        }
-    );
-}
+    // add "Converting..." message
+    var convMsg = document.createElement("h3");
+    convMsg.textContent = "Converting...";
+    convMsg.style = "text-align: center";
+    buttonDiv.appendChild(convMsg);
 
-let buttonDiv = document.getElementById("button-container");
+    spinner.spin(buttonDiv);    // run spinner....
+    const evtSource = new EventSource(fetchURL);
+
+    let list = [];
+
+    evtSource.onmessage = (event) => {
+        console.debug(`message: ${event.data}`);
+        var msg_data = JSON.parse(event.data);
+
+        var ratioDone = msg_data["curr_row"]/msg_data["total_rows"];
+        loadingBar.animate(ratioDone, {duration: 500});
+
+        list.push(msg_data["row"]);
+
+        // ...until loading bar loads
+        spinner.stop();
+    };
+
+    // If there is an issue, close out the connection
+    evtSource.onerror = (event) => {
+        // server emits a mystery error event during the conversion stream
+        // (somehow, I sincerely don't know where from), but it is without content.
+        // All the messages (including errors) I defined on the server have content.
+        // So this conditional is a way to filter that phantom error out.
+        if (!event.data) return;
+
+        console.error(`Error occurred in fetching req: ${JSON.stringify(event)}`);
+        evtSource.close();   
+
+        alert("There was an issue with the server in processing your request. My apologies.");
+        
+        // reset loading bar and replace button for another request
+        loadingBar.animate(0, {duration: 100});
+        buttonDiv.removeChild(convMsg);
+        buttonDiv.appendChild(button); 
+    };
+
+    evtSource.addEventListener("complete", (event) => {
+        evtSource.close();
+        console.log("complete");
+        // reset loading bar, remove "Converting...",
+        // and replace button for another request
+        loadingBar.animate(0, {duration: 0});
+        buttonDiv.removeChild(convMsg);
+        buttonDiv.appendChild(button); 
+
+        let csv = list.join("\n");
+        save(`${list_name}.csv`, csv);
+    } );
+}
 
 document
     .querySelector("button")
