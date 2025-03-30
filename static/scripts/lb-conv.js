@@ -57,7 +57,7 @@ function save(filename, data) {
 
 
 async function getLBlist() {
-    let lbURL      = document.getElementById("lb-url").value;
+    let lbURL = document.getElementById("lb-url").value;
 
     // replace button with loading bar
     let button = buttonDiv.removeChild(
@@ -126,7 +126,7 @@ async function getLBlist() {
         // So this conditional is a way to filter that phantom error out.
         if (!event.data) return;
 
-        console.error(`Error occurred in fetching req: ${JSON.stringify(event)}`);
+        console.error(`Error occurred in fetching req: ${event.data}`);
         evtSource.close();   
 
         alert("There was an issue with the server in processing your request. My apologies.");
