@@ -1,11 +1,12 @@
 use std::{
+    io::{Error, ErrorKind},
     fs::OpenOptions,
     net::SocketAddr,
     str::FromStr
 };
 use archie_utils::get_env_var;
 use axum::{
-    routing::{get, post}, 
+    routing::{get, post, any}, 
     Router
 };
 use axum_server::tls_rustls::RustlsConfig;
@@ -21,11 +22,14 @@ mod err_handling;
 mod db_io;
 mod lb_app_io;
 
-// the frequent usage of unwrap() in main() here is because
-// any panics that happen in main() will cause the server to 
-// crash on startup, and not during subsequent runtime (I made 
-// sure to purge functions that could be called after server 
-// startup of any calls to unwrap() that could cause a panic).
+/* The usage of unwrap() in main() here is because
+any panics that happen in main() will cause the server to 
+crash on startup, and not during subsequent runtime. I made 
+sure to purge functions that could be called after server 
+startup of any calls to unwrap() that could cause a panic,
+using explicit error handling by the callers, with the 
+exception of functions that, in their existing contexts,
+cannot panic.*/
 #[tokio::main]
 async fn main() -> Result<(), std::io::Error> {
 
@@ -41,7 +45,12 @@ async fn main() -> Result<(), std::io::Error> {
                 }
                 other => {
                     print_help();
-                    panic!("Option \"{other}\" is not recognized.");
+                    return Err(
+                        Error::new(
+                            ErrorKind::InvalidInput,
+                            format!("Option \"{other}\" is not recognized.")
+                        )
+                    );
                 }
             }
         },
@@ -55,7 +64,6 @@ async fn main() -> Result<(), std::io::Error> {
     tracing_subscriber::fmt()
         .with_env_filter(EnvFilter::from_default_env())
         .with_writer(log_file)
-        .with_line_number(true)
         .init();
 
     info!("\n\n\t\t////// Hi there! I'm Archie. Let me get ready for you... //////\n");
@@ -81,7 +89,7 @@ async fn main() -> Result<(), std::io::Error> {
     let lb_app_page = ServeFile::new(format!("{}/pages/lb-list-app.html", server_root));
     let lb_app = Router::new()
         .route_service("/", lb_app_page)
-        .route("/conv", get(lb_app_io::convert_lb_list));
+        .route("/conv", any(lb_app_io::convert_lb_list));
 
     let routes = Router::new()
         .route_service("/", homepage)
@@ -97,23 +105,21 @@ async fn main() -> Result<(), std::io::Error> {
     if no_tls {
 
         info!("Serving on {:?}!", addr);
-        let listener = tokio::net::TcpListener::bind(addr).await.unwrap();
-        axum::serve(listener, routes).await.unwrap();
+        let listener = tokio::net::TcpListener::bind(addr).await?;
+        axum::serve(listener, routes).await?;
 
     } else {
         
         info!("Loading certificates and keys...");
         let (cert, pks) = archie_utils::get_auth_paths();
         let auth_config = RustlsConfig::from_pem_file(cert, pks)
-            .await
-            .unwrap();                  // I don't want to serve the webpage without TLS, so crash okay
+            .await?;                  // I don't want to serve the webpage without TLS, so crash okay
         info!("Authorization loaded!");
     
         info!("Serving securely on {:?}!", addr);
         axum_server::bind_rustls(addr, auth_config)
             .serve(routes.into_make_service())
-            .await
-            .unwrap();                  // should cause crash; fatal error to server
+            .await?;                  // should cause crash; fatal error to server
     }
 
     Ok(())
