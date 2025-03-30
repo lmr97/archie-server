@@ -53,7 +53,8 @@ git submodule update --init --recursive
 npm install
 docker compose \   
     --file compose-demo.yaml \
-    up --detach
+    up --build \
+	--detach
 ```
 It'll probably take a while to build the images (it took ~5 minutes total on my machine, 3 of which was for the central server image). And once the containers are started, give the database container ~2 minutes to initialize before trying it out (otherwise there will be errors). You can see if the database is ready for connections by running `docker logs archie-db`. 
 
