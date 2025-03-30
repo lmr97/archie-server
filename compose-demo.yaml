@@ -12,7 +12,7 @@ services:
     environment:
       # DB host needs to be CONTAINER name not service name
       DB_URL: mysql://server1:the-pass@archie-db:3306/archie
-      RUST_LOG: "custom_backend=debug"   # for `tracing` logger
+      RUST_LOG: "archie_server=debug"   # for `tracing` logger
       PY_CONT_SOCK: "lb-app:3575"
     command: ["./target/release/archie-server", "--no-tls"]
     # allows web content to be loaded in on compose, not requiring rebuild
