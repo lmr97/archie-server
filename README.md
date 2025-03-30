@@ -49,6 +49,7 @@ Since it's all Dockerized, you can also spin it up locally! If you have Docker r
 ```
 git clone https://github.com/lmr97/archie-server
 cd archie-server
+git submodule update --init --recursive
 npm install
 docker compose \   
     --file compose-demo.yaml \
