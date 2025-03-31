@@ -129,9 +129,16 @@ async function getLBlist() {
         console.error(`Error occurred in fetching req: ${event.data}`);
         evtSource.close();   
 
-        alert("There was an issue with the server in processing your request. My apologies.");
+        var msg = JSON.parse(event.data);
+
+        if (msg['row'] == "400 BAD REQUEST") {
+            alert("The URL entered doesn't appear to be a valid Letterboxd list. Try checking the link and running it again.")
+        } else {
+            alert("There was an issue with the server in processing your request. My apologies.");
+        }
         
         // reset loading bar and replace button for another request
+        spinner.stop();
         loadingBar.animate(0, {duration: 100});
         buttonDiv.removeChild(convMsg);
         buttonDiv.appendChild(button); 

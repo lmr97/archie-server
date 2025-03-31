@@ -75,8 +75,7 @@ fn get_list_row(conn: &mut TcpStream, mut row_json: ListRow) -> Event {
     //
     // After the emission of an error event, the connection will be 
     // terminated by the client
-    let size_read_res = conn.read_exact(&mut row_length_buf);
-    match size_read_res {
+    match conn.read_exact(&mut row_length_buf) {
         // the kind of error encountered here is usually that
         // the buffer was not filled, which ends up working out. 
         // Catching any other errors here and logging them
@@ -85,36 +84,45 @@ fn get_list_row(conn: &mut TcpStream, mut row_json: ListRow) -> Event {
         Err(e) => {error!("Error on read of row-size bytes: {e:?}");}
     };
     debug!("Bytes received: {row_length_buf:?}");
+
     let row_length_u16 = u16::from_be_bytes(row_length_buf);
     let row_length = usize::from(row_length_u16);
     debug!("Indiv. row length received: {:?}", row_length);
 
     let mut row_data_buf = vec![0; row_length];
 
-    let Ok(_) = conn.read_exact(&mut row_data_buf)
-    else {
-        error!("I/O Error: reading a CSV line from Python container failed.");
-
-        return build_err_event(row_json, "500 INTERNAL SERVER ERROR");             
+    match conn.read_exact(&mut row_data_buf) {
+        Ok(_) => {},
+        Err(e) => {
+            error!("I/O Error: reading a CSV line from Python container failed: {e:?}");
+            return build_err_event(row_json, "500 INTERNAL SERVER ERROR");    
+        }         
     };
+
     debug!("{row_data_buf:?}");
+
     let Ok(row_data) = String::from_utf8(row_data_buf) 
     else {
         error!("Conversion Error: bytes read from Python container could not be converted into a (UTF-8) string.");
         error!("Run on Debug mode to see bytes read.");
-
         return build_err_event(row_json, "500 INTERNAL SERVER ERROR");  
     };
     debug!("Indiv. row data received: {:?}", row_data);
     
-    if row_data.starts_with("-- 400 BAD REQUEST --") {
+    if row_data.starts_with("-- 500 INTERNAL SERVER ERROR --") {
 
         error!("Python exception was raised: {row_data}");
-        error!("The row data in question: {row_data:?}");
+        return build_err_event(row_json, "500 INTERNAL SERVER ERROR");  
 
+    } else if row_data.starts_with("-- 400 BAD REQUEST --") {
+
+        error!("Python was unable to handle request: {row_data}");
+        error!("The row data in question: {row_data:?}");
         return build_err_event(row_json, "400 BAD REQUEST");  
 
-    } else if row_data.starts_with("done!") {
+    }
+    else if row_data.starts_with("done!") {
+
         debug!("Event send from DONE! block");
         // signal list completion to the client. Has no data.
         Event::default()
