@@ -1,5 +1,8 @@
 /custom-backend/target
 /db-init/
+/node_modules/
 test*
 *.pem
 *.log
+*.bkup
+*.odt

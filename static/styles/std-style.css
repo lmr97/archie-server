@@ -11,7 +11,7 @@ div.round-box {
     border-radius: 10px;
     box-shadow: 0 30px 40px rgba(0,0,0,0.2);
 }
-button.to-guestbook {
+button {
     font-size: large;
     background-color: dodgerblue;
     color: whitesmoke;

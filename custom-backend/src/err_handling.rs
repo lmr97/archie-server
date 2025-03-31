@@ -8,57 +8,88 @@ use axum::{
         Response
     }
 };
+
 use tracing::error;
 
 use crate::archie_utils;
 
 
 #[derive(Debug)]
-pub enum WebsiteError {
+pub enum ServerError {
     DbErrDriver(mysql::error::DriverError), 
     DbErrUrl(mysql::UrlError),
     DbErrGeneral(mysql::error::Error),
-    JsonError(JsonRejection)
+    JsonRejection(JsonRejection),
+    JsonParseError(mysql_common::serde_json::Error),
+    HttpError(axum::http::Error),
+    IoError(std::io::Error),
 }
 
-impl From<mysql::error::DriverError> for WebsiteError {
+impl From<mysql::error::DriverError> for ServerError {
     fn from(db_err_driver: mysql::DriverError) -> Self {
         Self::DbErrDriver(db_err_driver)
     }
 }
 
-impl From<mysql::UrlError> for WebsiteError {
+impl From<mysql::UrlError> for ServerError {
     fn from(db_err_url: mysql::UrlError) -> Self {
         Self::DbErrUrl(db_err_url)
     }
 }
 
-impl From<mysql::error::Error> for WebsiteError {
+impl From<mysql::error::Error> for ServerError {
     fn from(db_err: mysql::Error) -> Self {
         Self::DbErrGeneral(db_err)
     }
 }
 
-impl From<JsonRejection> for WebsiteError {
+impl From<JsonRejection> for ServerError {
     fn from(rejection: JsonRejection) -> Self {
-        Self::JsonError(rejection)
+        Self::JsonRejection(rejection)
     }
 }
 
-impl IntoResponse for WebsiteError {
+impl From<mysql_common::serde_json::Error> for ServerError {
+    fn from(json_err: mysql_common::serde_json::Error) -> Self {
+        Self::JsonParseError(json_err)
+    }
+}
+
+impl From<axum::http::Error> for ServerError {
+    fn from(http_err: axum::http::Error) -> Self {
+        Self::HttpError(http_err)
+    }
+}
+
+impl From<std::io::Error> for ServerError {
+    fn from(io_err: std::io::Error) -> Self {
+        Self::IoError(io_err)
+    }
+}
+
+impl IntoResponse for ServerError {
     fn into_response(self) -> Response {
         match self {
-            WebsiteError::DbErrDriver(e)  => {
+            ServerError::DbErrDriver(e)  => {
                 error!("OS emmitted an error via driver: {:?}", e);
             },
-            WebsiteError::DbErrUrl(e)  => {
+            ServerError::DbErrUrl(e)  => {
                 error!("Database URL misspecified, or DB inaccessible: {:?}", e);
             },
-            WebsiteError::DbErrGeneral(e) => {
+            ServerError::DbErrGeneral(e) => {
                 error!("Error in database I/O: {:?}", e);
             },
-            WebsiteError::JsonError(e)    => {
-                error!("JSON could not be parsed: {:?}", e);
+            ServerError::JsonRejection(e) => {
+                error!("JSON could not be parsed from HTTP request: {:?}", e);
+            }
+            ServerError::JsonParseError(e) => {
+                error!("JSON could not be parsed within server: {:?}", e);
+            }
+            ServerError::HttpError(e) => {
+                error!("Error in HTTP handling: {:?}", e);
+            }
+            ServerError::IoError(e) => {
+                error!("Error in communication across socket: {:?}", e);
             }
         };
 

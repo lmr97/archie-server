@@ -1,0 +1,4 @@
+[submodule "letterboxd_get_list"]
+	path = letterboxd_get_list
+	url = https://github.com/lmr97/letterboxd_get_list
+	branch = lb-web-app

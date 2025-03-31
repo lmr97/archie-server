@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Letterboxd List Converter</title>
+    <link rel="stylesheet" href="/static/styles/std-style.css">
+    <link rel="stylesheet" href="/static/styles/lb-app.css">
+    <link rel="stylesheet" href="/node_modules/spin.js/spin.css">
+    <meta charset="utf-8">
+</head>
+
+<body>
+<div class="round-box">
+    <h1 id="heading"><i>Letterboxd List Converter</i></h1>
+    <p>Here you can take the URL from Letterboxd and convert it into a 
+        <a href="https://www.howtogeek.com/348960/what-is-a-csv-file-and-how-do-i-open-it/">CSV file.</a>
+        CSV files are very versitile; a lot of different applications can open and use them,
+        including Excel.
+    </p>
+    <details>
+        <summary>Downloading a list you made?</summary>
+        If you want to download lists you've made yourself, <b>and only want the title and year</b> information,
+        your best option is using Letterboxd itself, actually. To download your own lists (bundled with all
+        the rest of your Letterboxd activity), find your account on Letterboxd, then navigate to 
+        <b>Settings</b> > <b>Data</b>, and click <b>Export</b>. That will give you a compressed file of 
+        all your Letterboxd activity.
+    </details>
+    <p>If you'd like to run this utility locally, check out this CLI version I made 
+        <a href="https://github.com/lmr97/letterboxd_get_list">on GitHub</a>! 
+    </p>
+    <label for="lb-url"><h2>Your list's URL:</h2></label>
+    <div id="lb-url-container">
+    <input type="url" id="lb-url" name="list-url"
+        placeholder="url of list goes here..." 
+        pattern="https://letterboxd.com/.*"
+        size="80"
+        maxlength="500"
+        required>
+    </input>
+    </div>
+    <label><h2>The attributes you'd like from it:</h2></label>
+    <div class="checkbox-grid">
+        <label>
+            <input type="checkbox" id="actor"/>actor
+        </label>
+        <label>
+            <input type="checkbox" id="additional-directing"/>additional directing
+        </label>
+        <label>
+            <input type="checkbox" id="additional-photography"/>additional photography
+        </label>
+        <label>
+            <input type="checkbox" id="art-direction"/>art direction
+        </label>
+        <label>
+            <input type="checkbox" id="assistant-director"/>assistant director
+        </label>
+        <label>
+            <input type="checkbox" id="avg-rating"/>average rating
+        </label>
+        <label>
+            <input type="checkbox" id="camera-operator"/>camera operator
+        </label>
+        <label>
+            <input type="checkbox" id="casting"/>casting
+        </label>
+        <label>
+            <input type="checkbox" id="cast-list"/>cast list
+        </label>
+        <label>
+            <input type="checkbox" id="choreography"/>choreography
+        </label>
+        <label>
+            <input type="checkbox" id="cinematography"/>cinematography
+        </label>
+        <label>
+            <input type="checkbox" id="composer"/>composer
+        </label>
+        <label>
+            <input type="checkbox" id="costume-design"/>costume design
+        </label>
+        <label>
+            <input type="checkbox" id="country"/>country
+        </label>
+        <label>
+            <input type="checkbox" id="director"/>director
+        </label>
+        <label>
+            <input type="checkbox" id="editor"/>editor
+        </label>
+        <label>
+            <input type="checkbox" id="executive-producer"/>executive producer
+        </label>
+        <label>
+            <input type="checkbox" id="genre"/>genre
+        </label>
+        <label>
+            <input type="checkbox" id="hairstyling"/>hairstyling
+        </label>
+        <label>
+            <input type="checkbox" id="language"/>language
+        </label>
+        <label>
+            <input type="checkbox" id="lighting"/>lighting
+        </label>
+        <label>
+            <input type="checkbox" id="likes"/>likes
+        </label>
+        <label>
+            <input type="checkbox" id="makeup"/>makeup
+        </label>
+        <label>
+            <input type="checkbox" id="mini-theme"/>mini theme
+        </label>
+        <label>
+            <input type="checkbox" id="original-writer"/>original writer
+        </label>
+        <label>
+            <input type="checkbox" id="producer"/>producer
+        </label>
+        <label>
+            <input type="checkbox" id="production-design"/>production design
+        </label>
+        <label>
+            <input type="checkbox" id="set-decoration"/>set decoration
+        </label>
+        <label>
+            <input type="checkbox" id="songs"/>songs
+        </label>
+        <label>
+            <input type="checkbox" id="sound"/>sound
+        </label>
+        <label>
+            <input type="checkbox" id="special-effects"/>special effects
+        </label>
+        <label>
+            <input type="checkbox" id="studio"/>studio
+        </label>
+        <label>
+            <input type="checkbox" id="stunts"/>stunts
+        </label>
+        <label>
+            <input type="checkbox" id="theme"/>theme
+        </label>
+        <label>
+            <input type="checkbox" id="title-design"/>title design
+        </label>
+        <label>
+            <input type="checkbox" id="visual-effects"/>visual effects
+        </label>
+        <label>
+            <input type="checkbox" id="watches"/>watches
+        </label>
+        <label>
+            <input type="checkbox" id="writer"/>writer
+        </label>
+    </div>
+    <div class="lb-list-submit" id= "button-container" style="padding: 25px;">
+        <button id="lb-list-submit-button" type="submit">Get my list!</button>
+    </div>
+</div>
+
+<script type="module" src="/static/scripts/lb-conv.js"></script>
+
+</body>
+
+</html>

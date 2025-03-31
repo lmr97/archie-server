@@ -11,7 +11,8 @@ const options = {
     headers: {
       'Content-Type': 'application/json'
     },
-    body: JSON.stringify(hit)
+    body: JSON.stringify(hit),
+    credentials: "same-origin"          // for local testing
 };
 
 // POST hit from initial page load...
@@ -24,7 +25,7 @@ fetch(window.location.href + "hits", options)
     .catch(error => console.log(error));
 
 // ...then GET total hits
-fetch(window.location.href + "hits")
+fetch(window.location.href + "hits", {credentials: "same-origin"})
     .then((resp) => { 
         if (!resp.ok) throw new Error(
              `GET /hits failed with status code ${resp.status}`

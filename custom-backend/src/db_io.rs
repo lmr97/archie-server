@@ -1,15 +1,14 @@
 use std::env; 
-use axum::body::Body;
-use axum::response::Response;
 use axum::{
-    response::Html, 
+    body::Body,
+    response::{Response, Html}, 
     Json
 };
 use chrono::prelude::*;
 use mysql::*;
 use mysql::prelude::*;
 use tracing::info;
-use crate::err_handling::WebsiteError;
+use crate::err_handling::ServerError;
 
 #[derive(Debug, serde::Deserialize)] 
 pub struct GuestbookEntry {
@@ -56,7 +55,7 @@ fn get_db_conn() -> Result<mysql::Pool, mysql::Error> {
 
 // it is a simpler, albeit slower, design to establish the connection every
 // time the function is called
-pub async fn get_guestbook() -> Result<Json::<Guestbook>, WebsiteError> {
+pub async fn get_guestbook() -> Result<Json::<Guestbook>, ServerError> {
 
     let buf_pool = get_db_conn()?;
     let mut conn = buf_pool.get_conn()?;
@@ -75,7 +74,7 @@ pub async fn get_guestbook() -> Result<Json::<Guestbook>, WebsiteError> {
     Ok(Json(Guestbook {guestbook: guestbook_table}))
 }
 
-pub async fn update_guestbook(Json(form_entry): Json<GuestbookEntry>) -> Result<Html<String>, WebsiteError> {
+pub async fn update_guestbook(Json(form_entry): Json<GuestbookEntry>) -> Result<Html<String>, ServerError> {
 
     // db connection setup
     let buf_pool = get_db_conn()?;
@@ -104,7 +103,7 @@ pub async fn update_guestbook(Json(form_entry): Json<GuestbookEntry>) -> Result<
 
 
 // adds new hit info to database
-pub async fn get_hit_count() -> Result<String, WebsiteError> {
+pub async fn get_hit_count() -> Result<String, ServerError> {
     
     let buf_pool = get_db_conn()?;
     let mut conn = buf_pool.get_conn()?;
@@ -122,7 +121,7 @@ pub async fn get_hit_count() -> Result<String, WebsiteError> {
 }
 
 
-pub async fn log_hit(Json(page_hit): Json<WebpageHit>) -> Result<Response, WebsiteError> {
+pub async fn log_hit(Json(page_hit): Json<WebpageHit>) -> Result<Response, ServerError> {
 
     let buf_pool = get_db_conn()?;
     let mut conn = buf_pool.get_conn()?;

@@ -11,9 +11,10 @@ services:
     # so that your user shell env is in scope
     environment:
       # DB host needs to be CONTAINER name not service name
-      DB_URL: mysql://server1:${MYSQL_PASSWORD?}@archie-db:3306/archie
-      RUST_LOG: "custom_backend=debug"   # for `tracing` logger
-    command: ["./target/release/custom-backend", "--no-tls"]
+      DB_URL: mysql://server1:the-pass@archie-db:3306/archie
+      RUST_LOG: "archie_server=debug"   # for `tracing` logger
+      PY_CONT_SOCK: "lb-app:3575"
+    command: ["./target/release/archie-server", "--no-tls"]
     # allows web content to be loaded in on compose, not requiring rebuild
     volumes:
       - type: bind
@@ -25,6 +26,9 @@ services:
       - type: bind
         source: ./static
         target: /home/server/static
+      - type: bind
+        source: ./node_modules
+        target: /home/server/node_modules
 
   db:
     image: "mysql:9.2"
@@ -44,4 +48,12 @@ services:
         MYSQL_ALLOW_EMPTY_PASSWORD: false
         MYSQL_ROOT_PASSWORD: "root"
         MYSQL_USER: server1
-        MYSQL_PASSWORD: ${MYSQL_PASSWORD?} 
+        MYSQL_PASSWORD: the-pass 
+
+  lb-app:
+    build: ./letterboxd_get_list
+    container_name: "lb-app"
+    volumes:
+      - type: bind
+        source: "./letterboxd_get_list/valid-lb-attrs.txt"
+        target: "/valid-lb-attrs.txt"

@@ -2,7 +2,7 @@ name: archie
 services:
   svr:
     # separately-built img to avoid clutter from anon imgs
-    image: archie-svr   
+    image: archie-svr:lb-app
     ports:
       - "443:4949"
     # if running with sudo, use the --preserve-env option
@@ -10,8 +10,9 @@ services:
     environment:
       # DB host needs to be CONTAINER name not service name
       DB_URL: mysql://server1:${MYSQL_PASSWORD?}@archie-db:3306/archie
-      RUST_LOG: "custom_backend=debug"   # for `tracing` logger
-    # allows web content to be loaded in on compose, not requiring rebuild
+      RUST_LOG: "archie_server=debug"   # for `tracing` logger
+      PY_CONT_SOCK: "lb-app:3575"
+    # allows web content to be hot-swapped, without rebuild
     volumes:
       - type: bind
         source: ./archie-server.log
@@ -22,6 +23,9 @@ services:
       - type: bind
         source: ./static
         target: /home/server/static
+      - type: bind
+        source: ./node_modules
+        target: /home/server/node_modules
     secrets:
       - server-cert
       - server-priv-key
@@ -44,7 +48,15 @@ services:
         MYSQL_ALLOW_EMPTY_PASSWORD: false
         MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD?}
         MYSQL_PASSWORD: ${MYSQL_PASSWORD?} 
-  
+
+  lb-app:
+    build: ./letterboxd_get_list
+    container_name: "lb-app"
+    volumes:
+      - type: bind
+        source: "./letterboxd_get_list/valid-lb-attrs.txt"
+        target: "/valid-lb-attrs.txt"
+
 secrets:
   server-cert:
     file: fullchain.pem
