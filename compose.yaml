@@ -59,6 +59,7 @@ services:
 
 secrets:
   server-cert:
-    file: fullchain.pem
+    environment: "CRT_FILE"
   server-priv-key:
-    file: privkey.pem
+    environment: "PK_FILE"
+
