@@ -4,7 +4,7 @@ services:
     # separately-built img to avoid clutter from anon imgs
     image: archie-svr:lb-app
     ports:
-      - "443:4949"
+      - "4949:4949"
     # if running with sudo, use the --preserve-env option
     # so that your user shell env is in scope
     environment:
