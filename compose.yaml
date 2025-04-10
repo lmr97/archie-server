@@ -12,6 +12,7 @@ services:
       DB_URL: mysql://server1:${MYSQL_PASSWORD?}@archie-db:3306/archie
       RUST_LOG: "archie_server=debug"   # for `tracing` logger
       PY_CONT_SOCK: "lb-app:3575"
+    command: ["./target/release/archie-server", "--no-tls"]
     # allows web content to be hot-swapped, without rebuild
     volumes:
       - type: bind
