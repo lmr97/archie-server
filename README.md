@@ -18,7 +18,7 @@ Since there's a lot going on to bring the Letterboxd app together, it deserves s
 
 ### 1. Client to Server
 
-Once the user clicks Submit, the JavaScript for the page (`lb-conv.js`) collects the list information and desired attributes, collects the list name and user who made the list out of the URL (not sending a raw URL to my server, thank you), and sends a `GET` request to `/lb-list-conv/conv`, with all all the desired info as query parameters. Then it starts listening for a stream of server-sent events. 
+Once the user clicks Submit, the JavaScript for the page ([`lb-conv.js`](static/scripts/lb-conv.js)) collects the list information and desired attributes, collects the list name and user who made the list out of the URL (not sending a raw URL to my server, thank you), and sends a `GET` request to `/lb-list-conv/conv`, with all all the desired info as query parameters. Then it starts listening for a stream of server-sent events. 
 
 ### 2. Server to App
 
@@ -43,13 +43,14 @@ The request from the client is decoded into JSON text (see example below), and s
 
 The Python container reads 2048 bytes from socket 3575 (the hope is that the request won't be longer than this), and converts it into a `dict`, which it uses to assemble the list URL, and scrape the website for the requested list data. 
 
-When it's ready to send data back, it uses a [type-length-value encoding](https://en.wikipedia.org/wiki/Type%E2%80%93length%E2%80%93value). This encoding structures the stream as a set of frames, each with a set number of bytes containing the type and length of the payload. Since the type of data transmitted is strictly Unicode characters here, however, the type field is omitted, and the number of bytes to carry the payload length is set at 2. The only exception to this encoding is that, before the first row is sent, exactly 2 bytes are sent that contain the total number rows in the list (including header row). After the last row is transmitted, process completion is signaled by one final frame with length bytes set to `0x00 0x05`, and the payload being the string literal `done!`.
+When the container is ready to send data back, it uses a [type-length-value encoding](https://en.wikipedia.org/wiki/Type%E2%80%93length%E2%80%93value). This encoding structures the stream as a set of frames, each with a set number of bytes containing the type and length of the payload. Since the type of data transmitted is strictly Unicode characters here, the type field is omitted, and the number of bytes to carry the payload length is set at 2. The only exception to this encoding is that, before the first row is sent, exactly 2 bytes are sent that contain the total number rows in the list (including header row). After the last row is transmitted, process completion is signaled by one final frame with length bytes set to `0x00 0x05`, and the payload being the string literal `done!`.
 
 ### 4. Server to Client
 
 After the server recieves a row (and decodes it), it bundles it up as a server-sent event ([`axum::response::sse::Event`](https://docs.rs/axum/latest/axum/response/sse/struct.Event.html)), and sends it off to the client, which has been listening for such this whole time. For an example of the payload this event carries, see below (the payload is JSON-formatted text). When a frame with a `done!` payload is received by server from the Python container, an event of type `complete` is sent to the client, and when it is received by the client, the client closes out the connection.
 
 #### Event payload example
+
 ```
 {
     "curr_row": 4,
@@ -57,7 +58,7 @@ After the server recieves a row (and decodes it), it bundles it up as a server-s
     "row": "\"Sorry to Bother You\",2018,Boots Riley,Terel Gibson,Antionette Yoka,Boots Riley",
 }
 ```
-Note that this always includes a title and year entry in the row, in addition to the attributes requested.
+Note that this always includes a title and year entry in the row, in addition to the attributes requested. So if no list attributes are specified, title and year alone will be sent.
 
 ## Local Demo
 
@@ -70,6 +71,7 @@ git submodule update --init --recursive
 npm install
 docker compose --file compose-demo.yaml up --detach
 ```
-It'll probably take a while to build the images (it took ~5 minutes total on my machine, the majority of which was for the central server image). And once the containers are started, give the database container ~2 minutes to initialize before trying it out (otherwise there will be errors). You can see if the database is ready for connections by running `docker logs archie-db`. 
 
-4. Try it out! You can reach the server at `localhost:3000`.
+It'll probably take a while to build the Docker images (it takes ~5 minutes total on my machine, the majority of which was for the central server image). And once the containers are started, give the database container ~2 minutes to initialize before trying it out (otherwise there will be errors). You can see if the database is ready for connections by running `docker logs archie-db`; the container will say "ready for connections" in its output. 
+
+Now you can try it out! The server is listening at `localhost:3000`.
