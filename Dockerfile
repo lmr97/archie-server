@@ -10,13 +10,16 @@
 # Oddly, the method below is the only known way to cache dependency  
 # builds for Rust Docker images. It allows the dependencies and 
 # `main.rs` to be built using separate commands, so the dependency  
-# build command be cached. 
+# build command can be cached. 
 #
-# It works by switching the real `main.rs` for
-# a dummy `main.rs` with an empty `main` function in the manifest,
-# building the dependencies, then swapping substituting the real 
-# main.rs afterwards, then building the whole project -- with the
-# dependencies already found built. 
+# It works by switching the real `main.rs` for a dummy `main.rs` 
+# with an empty `main` function in the Manifest, building the 
+# dependencies, substituting the real `main.rs` afterwards. 
+# Only then does it build the whole project -- with the dependencies 
+# already found to be built. 
+#
+# This behavior can obviously be overriden with the `--no-cache` 
+# option with `docker build`.
 #
 # This method comes from this blog post:
 # https://web.archive.org/web/20221028051630/https://blog.mgattozzi.dev/caching-rust-docker-builds/
