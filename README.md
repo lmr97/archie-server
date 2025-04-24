@@ -54,7 +54,7 @@ After the server recieves a row (and decodes it), it bundles it up as a server-s
 {
 	"curr_row": 4,
 	"total_rows": 45,
-    "row": "\"Sorry to Bother You\",2018,Boots Riley,Terel Gibson,Antionette Yoka,Boots Riley",
+	"row": "\"Sorry to Bother You\",2018,Boots Riley,Terel Gibson,Antionette Yoka,Boots Riley",
 }
 ```
 Note that this always includes a title and year entry in the row, in addition to the attributes requested.
