@@ -28,13 +28,13 @@ The request from the client is decoded into JSON text (see example below), and s
 
 ```
 {
-	"list_name": "my-super-cool-list",
-	"author_user": "xXxbilly_BAxXx",
-	"attrs": [ 
-		"director", 
-		"editor",
-		"hairstyling", 
-		"writer", 
+    "list_name": "my-super-cool-list",
+    "author_user": "xXxbilly_BAxXx",
+    "attrs": [ 
+        "director", 
+        "editor",
+        "hairstyling", 
+        "writer", 
 	],
 }
 ```
@@ -52,9 +52,9 @@ After the server recieves a row (and decodes it), it bundles it up as a server-s
 #### Event payload example
 ```
 {
-	"curr_row": 4,
-	"total_rows": 45,
-	"row": "\"Sorry to Bother You\",2018,Boots Riley,Terel Gibson,Antionette Yoka,Boots Riley",
+    "curr_row": 4,
+    "total_rows": 45,
+    "row": "\"Sorry to Bother You\",2018,Boots Riley,Terel Gibson,Antionette Yoka,Boots Riley",
 }
 ```
 Note that this always includes a title and year entry in the row, in addition to the attributes requested.
