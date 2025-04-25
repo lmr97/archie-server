@@ -16,6 +16,6 @@ mysql = { version = "26.0.0", features = ["chrono"] }
 mysql_common = "0.34.1"
 serde = "1.0.217"
 tokio = { version = "1", features = ["full"] }
-tower-http = { version = "0.6.2", features = ["fs"] }
+tower-http = { version = "0.6.2", features = [ "fs", "compression-br", "compression-deflate", "compression-gzip", "compression-zstd" ] }
 tracing = "0.1.41"
 tracing-subscriber = { version = "0.3.19", features = ["env-filter"] }

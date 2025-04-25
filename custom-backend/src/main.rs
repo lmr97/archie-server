@@ -13,6 +13,7 @@ use axum_server::tls_rustls::RustlsConfig;
 use tower_http::{
     services::ServeDir,
     services::ServeFile,
+    compression::CompressionLayer
 };
 use tracing::info;
 use tracing_subscriber::EnvFilter;
@@ -98,7 +99,8 @@ async fn main() -> Result<(), std::io::Error> {
         .route("/hits", post(db_io::log_hit))
         .route("/hits", get(db_io::get_hit_count))
         .nest("/guestbook", guestbook_app)       // `Router`s must be nested with other routers
-        .nest("/lb-list-conv", lb_app);
+        .nest("/lb-list-conv", lb_app)
+        .layer(CompressionLayer::new());         // compress all responses
 
     let addr = SocketAddr::from_str(&get_env_var("SERVER_SOCKET")).unwrap();
 
