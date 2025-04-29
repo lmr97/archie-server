@@ -19,6 +19,9 @@ services:
     command: ["./target/release/archie-server", "--no-tls"]
     healthcheck:
       test: ["CMD", "curl", "--fail", "http://localhost:4949"]
+      interval: 30s
+      retries: 5
+      start_period: 2s
     volumes:
       - type: bind
         source: ./archie-server.log
