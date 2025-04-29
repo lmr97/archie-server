@@ -29,6 +29,10 @@
 
 FROM rust:1.83.0
 
+RUN useradd -m server
+USER server
+WORKDIR /home/server
+
 RUN echo "fn main() {}" > dummy.rs
 COPY ./custom-backend/Cargo.toml .
 COPY ./custom-backend/Cargo.lock .
