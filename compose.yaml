@@ -1,8 +1,12 @@
 name: archie
 services:
   svr:
-    # separately-built img to avoid clutter from anon imgs
+    # separately-built image to avoid clutter from anonymous images
     image: archie-svr:latest
+    restart: always
+    depends_on:
+      - db
+      - lb-app
     ports:
       - "4949:4949"
     # if running with sudo, use the --preserve-env option
@@ -13,7 +17,8 @@ services:
       RUST_LOG: "archie_server=debug"   # for `tracing` logger
       PY_CONT_SOCK: "lb-app:3575"
     command: ["./target/release/archie-server", "--no-tls"]
-    # allows web content to be hot-swapped, without rebuild
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://localhost:4949"]
     volumes:
       - type: bind
         source: ./archie-server.log
@@ -33,6 +38,7 @@ services:
 
   db:
     image: "mysql:9.2"
+    restart: always
     container_name: "archie-db"
     volumes:
       - type: bind
@@ -44,6 +50,11 @@ services:
         target: "/backup_on_exit.sh"
     entrypoint: ["bash", "backup_on_exit.sh"]
     command: "mysqld"
+    healthcheck:
+      test: ["CMD", "mysql", "-e", "exit"]
+      interval: 30s
+      retries: 5
+      start_period: 1m30s
     environment:
         MYSQL_ONETIME_PASSWORD: false
         MYSQL_ALLOW_EMPTY_PASSWORD: false
@@ -53,6 +64,7 @@ services:
   lb-app:
     build: ./letterboxd_get_list
     container_name: "lb-app"
+    restart: always
     volumes:
       - type: bind
         source: "./letterboxd_get_list/valid-lb-attrs.txt"
