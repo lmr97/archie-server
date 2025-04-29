@@ -54,10 +54,10 @@ services:
     entrypoint: ["bash", "backup_on_exit.sh"]
     command: "mysqld"
     healthcheck:
-      test: ["CMD", "mysql", "-u", "server1", "-p", "${MYSQL_PASSWORD}", "-e", "exit"]
+      test: ["CMD", "mysql", "-u", "server1", "-p", "${MYSQL_PASSWORD?}", "-e", "exit"]
       interval: 30s
       retries: 5
-      start_period: 1m30s
+      start_period: 1m
     environment:
         MYSQL_ONETIME_PASSWORD: false
         MYSQL_ALLOW_EMPTY_PASSWORD: false
