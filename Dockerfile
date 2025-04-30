@@ -43,7 +43,7 @@ COPY ./custom-backend .
 RUN cargo build --release
 
 ENV SERVER_ROOT="/home/server"
-ENV SERVER_LOG="${SERVER_ROOT}/archie-server.log"
+ENV SERVER_LOG="/home/server/archie-server.log"
 ENV SERVER_SOCKET="0.0.0.0:4949"
 ENV CRT_FILE="/run/secrets/server-cert"
 ENV PK_FILE="/run/secrets/server-priv-key"
@@ -51,5 +51,6 @@ ENV PK_FILE="/run/secrets/server-priv-key"
 # make sure the log is fresh for the image
 RUN touch "./archie-server.log"
 
+RUN ls -la && sleep 10
 EXPOSE 4949
 CMD [ "./target/release/archie-server" ]
