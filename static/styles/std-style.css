@@ -27,6 +27,9 @@ p.entry-time {
 p.guest-name {
     text-align: right;
 }
+p.epilogue {
+    text-align: center;
+}
 #char-count {
     margin: 0;
 }
@@ -45,6 +48,9 @@ figure {
     display: inline-block;
     border: 10px;
     border-radius: 5px;
+}
+figcaption {
+    text-align: center;
 }
 textarea {
     color: darkslategray;
