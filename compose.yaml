@@ -54,15 +54,15 @@ services:
     entrypoint: ["bash", "backup_on_exit.sh"]
     command: "mysqld"
     healthcheck:
-      test: ["CMD", "mysql", "-u", "server1", "-p", "${MYSQL_PASSWORD?}", "-e", "exit"]
+      # slight breach of exec form, but `mysql` does not work otherwise
+      test: ["CMD", "mysql", "--user=server1", "--password=${MYSQL_PASSWORD?}", "--execute=exit"]
       interval: 15s
       retries: 3
       start_period: 1m
     environment:
         MYSQL_ONETIME_PASSWORD: false
         MYSQL_ALLOW_EMPTY_PASSWORD: false
-        MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD?}
-        MYSQL_PASSWORD: ${MYSQL_PASSWORD?} 
+        MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD?}   # non-priv user created after startup
 
   lb-app:
     build: ./letterboxd_get_list
