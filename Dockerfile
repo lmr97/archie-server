@@ -1,5 +1,5 @@
 # to build (an image named "archie-svr", from repo root):
-# sudo docker build -t archie-svr .
+# docker build -t archie-svr .
 
 # WARNING: this will build, but not run as such without 
 # secrets being manually mounted, when using the default 
@@ -19,7 +19,7 @@
 # already found to be built. 
 #
 # This behavior can obviously be overriden with the `--no-cache` 
-# option with `docker build`.
+# option on `docker build`.
 #
 # This method comes from this blog post:
 # https://web.archive.org/web/20221028051630/https://blog.mgattozzi.dev/caching-rust-docker-builds/
@@ -43,7 +43,7 @@ COPY ./custom-backend .
 RUN cargo build --release
 
 ENV SERVER_ROOT="/home/server"
-ENV SERVER_LOG="$SERVER_ROOT/archie-server.log"
+ENV SERVER_LOG="${SERVER_ROOT}/archie-server.log"
 ENV SERVER_SOCKET="0.0.0.0:4949"
 ENV CRT_FILE="/run/secrets/server-cert"
 ENV PK_FILE="/run/secrets/server-priv-key"
