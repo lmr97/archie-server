@@ -35,16 +35,28 @@ struct ListRow {
     row: String,
 }
 
+enum ErrMsg {
+    Err400,
+    Err500,
+}
 
-fn build_err_event(mut json: ListRow, msg: &str) -> Event {
+fn build_err_event(mut json: ListRow, err: ErrMsg) -> Event {
+
+    let msg = match err {
+        ErrMsg::Err400 => "400 BAD REQUEST",
+        ErrMsg::Err500 => "500 INTERNAL SERVER ERROR"
+    };
 
     json.row = String::from(msg);
 
-    return Event::default()
+    // all data in this statement's JSON is ASCII: 
+    // - curr_row and total_rows fields are integers (or rendered as such)
+    // - row field can only take on the string values hard-coded above 
+    // so the JSON data is guaranteed serializable, and will not panic
+    Event::default()
         .event("error")
         .json_data(json)
-        // all data in this statement's JSON is ASCII, it is guaranteed serializable
-        .unwrap();  
+        .unwrap() 
 }
 
 
@@ -69,6 +81,9 @@ fn get_list_row(conn: &mut TcpStream, mut row_json: ListRow) -> Event {
 
     let mut row_length_buf = [0; 2];
 
+    
+    /* READ ROW LENGTH BYTES */
+
     // Any read errors need to be manually handled right here;
     // they cannot be passed up through the callers, and I'd prefer
     // to not crash the server with an unwrap()
@@ -85,45 +100,53 @@ fn get_list_row(conn: &mut TcpStream, mut row_json: ListRow) -> Event {
     };
     debug!("Bytes received: {row_length_buf:?}");
 
+
+    /* INTERPRET LENGTH BYTES */
     let row_length_u16 = u16::from_be_bytes(row_length_buf);
     let row_length = usize::from(row_length_u16);
     debug!("Indiv. row length received: {:?}", row_length);
 
+
+    /* READ ROW DATA BYTES */
     let mut row_data_buf = vec![0; row_length];
 
     match conn.read_exact(&mut row_data_buf) {
         Ok(_) => {},
         Err(e) => {
             error!("I/O Error: reading a CSV line from Python container failed: {e:?}");
-            return build_err_event(row_json, "500 INTERNAL SERVER ERROR");    
+            return build_err_event(row_json, ErrMsg::Err500);    
         }         
     };
 
     debug!("{row_data_buf:?}");
 
+
+    /* CONVERT ROW BYTES TO STRING */
     let Ok(row_data) = String::from_utf8(row_data_buf) 
     else {
         error!("Conversion Error: bytes read from Python container could not be converted into a (UTF-8) string.");
         error!("Run on Debug mode to see bytes read.");
-        return build_err_event(row_json, "500 INTERNAL SERVER ERROR");  
+        return build_err_event(row_json, ErrMsg::Err500);  
     };
     debug!("Indiv. row data received: {:?}", row_data);
     
+
+    /* SEND APPROPRIATE EVENT */
     if row_data.starts_with("-- 500 INTERNAL SERVER ERROR --") {
 
         error!("Python exception was raised: {row_data}");
-        return build_err_event(row_json, "500 INTERNAL SERVER ERROR");  
+        return build_err_event(row_json, ErrMsg::Err500);  
 
     } else if row_data.starts_with("-- 400 BAD REQUEST --") {
 
         error!("Python was unable to handle request: {row_data}");
         error!("The row data in question: {row_data:?}");
-        return build_err_event(row_json, "400 BAD REQUEST");  
+        return build_err_event(row_json, ErrMsg::Err400);  
 
     }
     else if row_data.starts_with("done!") {
 
-        debug!("Event send from DONE! block");
+        debug!("Event sent from DONE! block");
         // signal list completion to the client. Has no data.
         Event::default()
             .event("complete")
@@ -134,13 +157,13 @@ fn get_list_row(conn: &mut TcpStream, mut row_json: ListRow) -> Event {
         row_json.row = row_data;
         match Event::default().json_data(&row_json) {
         
-            Ok(event) => {debug!("Event sent successfully."); event},
+            Ok(event) => {debug!("Event built successfully."); event},
             Err(e) => {
                 error!("Error in serializing row JSON: {e:?}");
                 error!("The row in question: {row_json:?}");
 
-                row_json.row=String::new();
-                build_err_event(row_json, "500 INTERNAL SERVER ERROR")
+                row_json.row = String::new();
+                build_err_event(row_json, ErrMsg::Err500)
             }
         }
     }
@@ -156,7 +179,7 @@ fn get_list_row(conn: &mut TcpStream, mut row_json: ListRow) -> Event {
 // on one line means there will be an error on every line, so continuing is no use).
 pub async fn convert_lb_list(list_info: Query<ListInfo>) -> Result<Sse<impl Stream<Item = Result<Event, Infallible>>>, ServerError> {
     
-    let py_cont_sock = get_env_var("PY_CONT_SOCK");
+    let py_cont_sock = get_env_var("PY_CONT_SOCK")?;
     let mut conn = TcpStream::connect(py_cont_sock)?;
     info!("Connection with Python container established.");
 

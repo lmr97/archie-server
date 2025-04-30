@@ -23,17 +23,34 @@ mod err_handling;
 mod db_io;
 mod lb_app_io;
 
-/* The usage of unwrap() in main() here is because
-any panics that happen in main() will cause the server to 
-crash on startup, and not during subsequent runtime. I made 
-sure to purge functions that could be called after server 
-startup of any calls to unwrap() that could cause a panic,
-using explicit error handling by the callers, with the 
-exception of functions that, in their existing contexts,
-cannot panic.*/
+// The only panicking unwraps are here in main(), since, if there are 
+// any problems during startup, I want the server to crash and show me what 
+// went wrong. You may see unwrap() in the rest of the source code, 
+// but these are guaranteed not to panic, either given the Result content,
+// or a restriction on the possible values of the calling function's input.
+
 #[tokio::main]
 async fn main() -> Result<(), std::io::Error> {
 
+    // println!() has to be used here, because the logger is not yet initialized
+    println!("[ PRE-LOG ]: Loading log file...");
+    let log_file = OpenOptions::new()
+        .append(true)
+        .open(get_env_var("SERVER_LOG").unwrap())
+        .unwrap();
+    println!("[ PRE-LOG ]: Log file loaded!");
+
+    println!("[ PRE-LOG ]: Initializing logger...");
+    tracing_subscriber::fmt()
+        .with_env_filter(EnvFilter::from_default_env())
+        .with_writer(log_file)
+        .init();
+    println!("[ PRE-LOG ]: Logger initialized!");
+
+
+    info!("\n\n\t\t////// Hi there! I'm Archie. Let me get ready for you... //////\n");
+
+    // process CLI args
     let arg1 = std::env::args().nth(1);
 
     let no_tls = match arg1 {
@@ -58,19 +75,8 @@ async fn main() -> Result<(), std::io::Error> {
         None => false
     };
 
-    let log_file = OpenOptions::new()
-        .append(true)
-        .open(get_env_var("SERVER_LOG"))
-        .unwrap();
-    tracing_subscriber::fmt()
-        .with_env_filter(EnvFilter::from_default_env())
-        .with_writer(log_file)
-        .init();
-
-    info!("\n\n\t\t////// Hi there! I'm Archie. Let me get ready for you... //////\n");
-
     info!("Defining routes...");
-    let server_root = get_env_var("SERVER_ROOT");
+    let server_root = get_env_var("SERVER_ROOT").unwrap();
 
     /* Homepage/general */
     let homepage  = ServeFile::new(format!("{}/pages/home.html", server_root));
@@ -102,11 +108,11 @@ async fn main() -> Result<(), std::io::Error> {
         .nest("/lb-list-conv", lb_app)
         .layer(CompressionLayer::new());         // compress all responses
 
-    let addr = SocketAddr::from_str(&get_env_var("SERVER_SOCKET")).unwrap();
+    let addr = SocketAddr::from_str(&get_env_var("SERVER_SOCKET").unwrap()).unwrap();
 
     if no_tls {
 
-        info!("Serving on {:?}!", addr);
+        info!("Serving on {:?}! (no TLS)", addr);
         let listener = tokio::net::TcpListener::bind(addr).await?;
         axum::serve(listener, routes).await?;
 

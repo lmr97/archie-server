@@ -1,17 +1,21 @@
 // This is a catch-all file, at this point largely 
 // to fetch environment variables
 
-use std::env;
+use std::env::{self, VarError};
+use tracing::error;
 
-pub fn get_env_var(env_var: &str) -> String {
-    env::var_os(env_var)
-    .unwrap_or_else(
-        || panic!("Environment variable {env_var} needs to be set.")
-    )
-    .into_string()
-    .unwrap()
+pub fn get_env_var(env_var: &str) -> Result<String, VarError> {
+
+    match env::var_os(env_var) {
+        Some(s) => Ok(s.into_string().unwrap()),    // unwrap cannot panic here
+        None => {
+            error!("Environment variable {env_var} needs to be set.");
+            Err(VarError::NotPresent)
+        }
+    }
 }
 
+// unwraps cannot panic here either; Results don't have errors in them
 pub fn get_auth_paths() -> (String, String) {
 
     // load in certs from environment filepaths
