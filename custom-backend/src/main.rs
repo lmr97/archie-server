@@ -33,10 +33,13 @@ mod lb_app_io;
 async fn main() -> Result<(), std::io::Error> {
 
     // println!() has to be used here, because the logger is not yet initialized
-    println!("[ PRE-LOG ]: Loading log file...");
+    println!("[ PRE-LOG ]: Loading log file path from environment...");
+    let log_file_path = get_env_var("SERVER_LOG").unwrap();
+
+    println!("[ PRE-LOG ]: Loading log file at {log_file_path}...");
     let log_file = OpenOptions::new()
         .append(true)
-        .open(get_env_var("SERVER_LOG").unwrap())
+        .open(log_file_path)
         .unwrap();
     println!("[ PRE-LOG ]: Log file loaded!");
 
