@@ -55,8 +55,8 @@ services:
     command: "mysqld"
     healthcheck:
       test: ["CMD", "mysql", "-u", "server1", "-p", "${MYSQL_PASSWORD?}", "-e", "exit"]
-      interval: 30s
-      retries: 5
+      interval: 15s
+      retries: 3
       start_period: 1m
     environment:
         MYSQL_ONETIME_PASSWORD: false
