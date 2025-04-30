@@ -51,6 +51,5 @@ ENV PK_FILE="/run/secrets/server-priv-key"
 # make sure the log is fresh for the image
 RUN touch "./archie-server.log"
 
-RUN ls -la && sleep 10
 EXPOSE 4949
 CMD [ "./target/release/archie-server" ]
