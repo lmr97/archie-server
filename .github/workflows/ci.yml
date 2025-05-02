@@ -17,7 +17,10 @@ jobs:
     - name: Server - unit tests
       run: 
         # guarantee test.log will always be clean
+        # test.log is to be in the repo root, not
+        # the custom-backend crate
         echo > test.log
+        cd custom-backend
         cargo test --lib
     - name: Server - integration tests
       run:

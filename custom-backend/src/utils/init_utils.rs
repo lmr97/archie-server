@@ -125,7 +125,7 @@ mod tests {
 
     #[test]
     fn logging() -> Result<(), Error> {
-        let test_log_path = String::from("/home/martinr/archie-server/test.log");
+        let test_log_path = String::from("../test.log");
         build_logger(test_log_path.clone())?.init();
         println!("[ PRE-LOG ]: Logger initialized!");
 
