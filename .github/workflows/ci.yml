@@ -13,17 +13,17 @@ jobs:
     steps:
     - uses: actions/checkout@v4   # checks out the repo
     - name: Build server
-      run: 
+      run: |
         cd custom-backend
         cargo build --verbose
     - name: Server - unit tests
-      run: 
+      run: |
         # guarantee test.log will always be clean
         # test.log is to be in the `custom-backend` crate
         echo > test.log
         cargo test --lib
     - name: Server - integration tests
-      run:
+      run: |
         cargo test --test tls_on_default --
         cargo test --test tls_off_switch -- --no-tls
       #run: docker build . --file Dockerfile --tag my-image-name:$(date +%s)
