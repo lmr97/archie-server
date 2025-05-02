@@ -2,6 +2,7 @@
 /db-init/
 /node_modules/
 test*
+!/custom-backend/tests
 *.pem
 *.log
 *.bkup
