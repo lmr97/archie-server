@@ -9,17 +9,19 @@ jobs:
   server_tests:
 
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
+        working-directory: ./custom-backend
 
     steps:
     - uses: actions/checkout@v4   # checks out the repo
     - name: Build server
-      run: |
-        cd custom-backend
-        cargo build --verbose
+      run: cargo build
     - name: Server - unit tests
+      # guarantee test.log will always be clean
+      # test.log is to be in the `custom-backend` crate
       run: |
-        # guarantee test.log will always be clean
-        # test.log is to be in the `custom-backend` crate
         echo > test.log
         cargo test --lib
     - name: Server - integration tests
