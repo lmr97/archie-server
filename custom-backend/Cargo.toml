@@ -1,14 +1,10 @@
 [package]
 name = "custom-backend"
-version = "0.7.1"
+version = "0.7.2"
 edition = "2021"
 [[bin]]
 name = "archie-server"
 path = "src/main.rs"
-[[test]]
-name = "logging"
-path = "tests/logging.rs"
-harness = false
 [[test]]
 name = "tls_on_default"
 path = "tests/cli_parsing/tls_on.rs"

@@ -9,7 +9,8 @@ use tracing_subscriber::{
         format::{DefaultFields, Format}, 
         SubscriberBuilder
     }, 
-    EnvFilter
+    EnvFilter,
+    filter::LevelFilter
 };
     
 
@@ -24,8 +25,11 @@ pub fn build_logger(log_file_path: String) -> Result<SubscriberBuilder<DefaultFi
     println!("[ PRE-LOG ]: Log file loaded!");
 
     println!("[ PRE-LOG ]: Initializing logger...");
-    Ok(tracing_subscriber ::fmt()
-        .with_env_filter(EnvFilter::from_default_env())
+    let ef = EnvFilter::builder()
+        .with_default_directive(LevelFilter::DEBUG.into())  // will include INFO level too
+        .from_env_lossy();
+    Ok(tracing_subscriber::fmt()
+        .with_env_filter(ef)
         .with_writer(log_file))
 }
 
@@ -42,6 +46,7 @@ pub fn get_env_var(env_var: &str) -> Result<String, VarError> {
 }
 
 // unwraps cannot panic here either; Results don't have errors in them
+// expect() may panic, but this function is only ever called in main
 pub fn get_auth_paths() -> (String, String) {
 
     // load in certs from environment filepaths
@@ -104,6 +109,8 @@ mod tests {
     // these functions, directly or indirectly. They're closer to sanity 
     // checks than tests
     use super::*;
+    use std::{io::Error, fs::read_to_string};
+    use tracing::{info, debug, warn, error};
 
     #[test]
     fn get_existing_env_var() {
@@ -114,5 +121,26 @@ mod tests {
     #[test]
     fn get_nonexist_env_var() {
         assert_eq!(get_env_var("NONEX_VAR"), Err(VarError::NotPresent));
+    }
+
+    #[test]
+    fn logging() -> Result<(), Error> {
+        let test_log_path = String::from("/home/martinr/archie-server/test.log");
+        build_logger(test_log_path.clone())?.init();
+        println!("[ PRE-LOG ]: Logger initialized!");
+
+        info!("some information");
+        debug!("some debugging info");
+        warn!("a warning");
+        error!("an error");
+
+        let log_string = read_to_string(test_log_path)?;
+
+        assert!(log_string.contains("some information"));
+        assert!(log_string.contains("some debugging info"));
+        assert!(log_string.contains("a warning"));
+        assert!(log_string.contains("an error"));
+
+        Ok(())
     }
 }
