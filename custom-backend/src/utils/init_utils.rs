@@ -1,0 +1,118 @@
+use std::{
+    env::{self, VarError},
+    fs::OpenOptions,
+    io::{Error, ErrorKind}
+};
+use tracing::error;
+use tracing_subscriber::{
+    fmt::{
+        format::{DefaultFields, Format}, 
+        SubscriberBuilder
+    }, 
+    EnvFilter
+};
+    
+
+pub fn build_logger(log_file_path: String) -> Result<SubscriberBuilder<DefaultFields, Format, EnvFilter, std::fs::File>, Error> {
+
+    println!("[ PRE-LOG ]: Loading log file at {log_file_path}...");
+
+    let log_file = OpenOptions::new()
+        .append(true)
+        .open(log_file_path)?;
+
+    println!("[ PRE-LOG ]: Log file loaded!");
+
+    println!("[ PRE-LOG ]: Initializing logger...");
+    Ok(tracing_subscriber ::fmt()
+        .with_env_filter(EnvFilter::from_default_env())
+        .with_writer(log_file))
+}
+
+
+pub fn get_env_var(env_var: &str) -> Result<String, VarError> {
+
+    match env::var_os(env_var) {
+        Some(s) => Ok(s.into_string().unwrap()),    // unwrap cannot panic here
+        None => {
+            error!("Environment variable {env_var} needs to be set.");
+            Err(VarError::NotPresent)
+        }
+    }
+}
+
+// unwraps cannot panic here either; Results don't have errors in them
+pub fn get_auth_paths() -> (String, String) {
+
+    // load in certs from environment filepaths
+    let cert_file = env::var_os("CRT_FILE")
+        .expect("Certificates filepath variable not found in environment.")
+        .into_string()
+        .unwrap();
+    let private_key_file = env::var_os("PK_FILE")
+        .expect("Private keys filepath variable not found in environment.")
+        .into_string()
+        .unwrap();
+
+    (cert_file, private_key_file)
+}
+
+
+fn print_help() {
+    println!("Usage:  custom-backend [OPTION]\n");
+    println!("The executable that runs the server.\n");
+    println!("Options:");
+    println!("    --no-tls     Run without TLS. Axum doesn't serve files properly");
+    println!("                 on localhost with TLS, so this is good for demo purposes.");
+    println!("    --help, -h   Print this help message and quit.\n");
+}
+
+//arg1: Option<String>
+pub fn process_cli_args() -> Result<Option<bool>, Error> {
+
+    let arg1 = std::env::args().nth(1);
+    match arg1 {
+        Some(arg) => {
+            match arg.as_str() {
+                "--no-tls"      => Ok(Some(true)),
+                "--help" | "-h" => {
+                    print_help();
+                    return Ok(None);
+                }
+                other => {
+                    print_help();
+                    return Err(
+                        Error::new(
+                            ErrorKind::InvalidInput,
+                            format!("Option \"{other}\" is not recognized.")
+                        )
+                    );
+                }
+            }
+        },
+        None => Ok(Some(false))
+    }
+}
+
+
+
+#[cfg(test)]
+mod tests {
+
+    // these tests are limited in scope, because the functions they test
+    // only have the values that I provide. Users cannot provide data to
+    // these functions, directly or indirectly. They're closer to sanity 
+    // checks than tests
+    use super::*;
+
+    #[test]
+    fn get_existing_env_var() {
+        let value = String::from("a value/here");
+        assert_eq!(get_env_var("EX_VAR"), Ok(value));
+    }
+
+    #[test]
+    fn get_nonexist_env_var() {
+        assert_eq!(get_env_var("NONEX_VAR"), Err(VarError::NotPresent));
+    }
+}

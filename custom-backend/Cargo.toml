@@ -5,6 +5,20 @@ edition = "2021"
 [[bin]]
 name = "archie-server"
 path = "src/main.rs"
+[[test]]
+name = "logging"
+path = "tests/logging.rs"
+harness = false
+[[test]]
+name = "tls_on_default"
+path = "tests/cli_parsing/tls_on.rs"
+harness = false
+test = false
+[[test]]
+name = "tls_off_switch"
+path = "tests/cli_parsing/tls_off.rs"
+harness = false
+test = false
 
 [dependencies]
 axum = { version = "0.8.1", features = ["json"] }

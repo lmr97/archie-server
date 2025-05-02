@@ -10,9 +10,7 @@ use axum::{
 };
 
 use tracing::error;
-
-use crate::archie_utils;
-
+use crate::utils::init_utils::get_env_var;
 
 #[derive(Debug)]
 pub enum ServerError {
@@ -103,7 +101,7 @@ impl IntoResponse for ServerError {
             }
         };
 
-        let html_500_err = match archie_utils::get_env_var("SERVER_ROOT") {
+        let html_500_err = match get_env_var("SERVER_ROOT") {
 
             Ok(sr) => {
                 // get nice 500 error page...

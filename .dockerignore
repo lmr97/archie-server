@@ -1,6 +1,7 @@
 LICENCE
 README.md
 /custom-backend/target
+/custom-backend/tests
 /db-init/
 *.pem
 *.yaml

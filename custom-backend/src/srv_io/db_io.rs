@@ -8,7 +8,7 @@ use chrono::prelude::*;
 use mysql::*;
 use mysql::prelude::*;
 use tracing::info;
-use crate::err_handling::ServerError;
+use crate::utils::err_handling::ServerError;
 
 #[derive(Debug, serde::Deserialize)] 
 pub struct GuestbookEntry {

@@ -18,8 +18,8 @@ use futures_util::StreamExt;
 use mysql_common::serde_json;
 use tracing::{debug, error, info};
 
-use crate::err_handling::ServerError;
-use crate::archie_utils::get_env_var;
+use crate::utils::err_handling::ServerError;
+use crate::utils::init_utils::get_env_var;
 
 #[derive(Debug, serde::Serialize, serde::Deserialize)] 
 pub struct ListInfo {
