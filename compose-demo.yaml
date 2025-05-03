@@ -45,7 +45,7 @@ services:
     command: "mysqld"
     healthcheck:
       # slight breach of exec form with the options, but `mysqladmin` does not work otherwise
-      test: [ "CMD", "mysqladmin", "ping", "--user=server1", "--password=${MYSQL_PASSWORD?}" ]
+      test: [ "CMD", "mysqladmin", "ping", "--user=server1", "--password=the-pass" ]
       interval: 15s
       retries: 3
       start_period: 1m
