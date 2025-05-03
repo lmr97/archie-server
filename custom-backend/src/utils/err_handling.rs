@@ -14,9 +14,6 @@ use crate::utils::init_utils::get_env_var;
 
 #[derive(Debug)]
 pub enum ServerError {
-    DbErrDriver(mysql::error::DriverError), 
-    DbErrUrl(mysql::UrlError),
-    DbErrGeneral(mysql::error::Error),
     JsonRejection(JsonRejection),
     JsonParseError(mysql_common::serde_json::Error),
     HttpError(axum::http::Error),
@@ -24,23 +21,6 @@ pub enum ServerError {
     EnvVarError,
 }
 
-impl From<mysql::error::DriverError> for ServerError {
-    fn from(db_err_driver: mysql::DriverError) -> Self {
-        Self::DbErrDriver(db_err_driver)
-    }
-}
-
-impl From<mysql::UrlError> for ServerError {
-    fn from(db_err_url: mysql::UrlError) -> Self {
-        Self::DbErrUrl(db_err_url)
-    }
-}
-
-impl From<mysql::error::Error> for ServerError {
-    fn from(db_err: mysql::Error) -> Self {
-        Self::DbErrGeneral(db_err)
-    }
-}
 
 impl From<JsonRejection> for ServerError {
     fn from(rejection: JsonRejection) -> Self {
@@ -74,62 +54,44 @@ impl From<std::env::VarError> for ServerError {
 
 impl IntoResponse for ServerError {
     fn into_response(self) -> Response {
-        match self {
-            ServerError::DbErrDriver(e)  => {
-                error!("OS emmitted an error via driver: {:?}", e);
-            },
-            ServerError::DbErrUrl(e)  => {
-                error!("Database URL misspecified, or DB inaccessible: {:?}", e);
-            },
-            ServerError::DbErrGeneral(e) => {
-                error!("Error in database I/O: {:?}", e);
-            },
-            ServerError::JsonRejection(e) => {
-                error!("JSON could not be parsed from HTTP request: {:?}", e);
-            }
-            ServerError::JsonParseError(e) => {
-                error!("JSON could not be parsed within server: {:?}", e);
-            }
-            ServerError::HttpError(e) => {
-                error!("Error in HTTP handling: {:?}", e);
-            }
-            ServerError::IoError(e) => {
-                error!("Error in communication across socket: {:?}", e);
-            },
-            ServerError::EnvVarError => {
-                // do nothing, error logged in get_env_var()
-            }
-        };
-
-        let html_500_err = match get_env_var("SERVER_ROOT") {
-
-            Ok(sr) => {
-                // get nice 500 error page...
-                read_to_string(format!("{sr}/static/errors/500.html"))
-                    .unwrap_or(     
-                        // ...or the quick 'n' dirty version if otherwise
-                        "<!DOCTYPE html>\n\
-                        <html><head>\n\
-                        <title>500 Error</title>\n\
-                        </head>\n\
-                        <p>500 Error: Internal Server Error</p>\n\
-                        </html>".to_string()
-                    )
-            },
-            // if we can't even find the env var, we're sending the short version
-            Err(_) => {
-                "<!DOCTYPE html>\n\
-                <html><head>\n\
-                <title>500 Error</title>\n\
-                </head>\n\
-                <p>500 Error: Internal Server Error</p>\n\
-                </html>".to_string()
-            }
-        };
         
-        let mut err_resp = Html(html_500_err).into_response();
-        *err_resp.status_mut() = StatusCode::INTERNAL_SERVER_ERROR;
-
-        err_resp
+        error!("{self:?}");
+        make_500_resp()
     } 
+}
+
+// extracting this as public function to use elsewhere
+// breaking up this huge error type into more specific errors 
+// seems like a better idea
+pub fn make_500_resp() -> Response {
+    let html_500_err = match get_env_var("SERVER_ROOT") {
+
+        Ok(sr) => {
+            // get nice 500 error page...
+            read_to_string(format!("{sr}/static/errors/500.html"))
+                .unwrap_or(     
+                    // ...or the quick 'n' dirty version if otherwise
+                    "<!DOCTYPE html>\n\
+                    <html><head>\n\
+                    <title>500 Error</title>\n\
+                    </head>\n\
+                    <p>500 Error: Internal Server Error</p>\n\
+                    </html>".to_string()
+                )
+        },
+        // if we can't even find the env var, we're sending the short version
+        Err(_) => {
+            "<!DOCTYPE html>\n\
+            <html><head>\n\
+            <title>500 Error</title>\n\
+            </head>\n\
+            <p>500 Error: Internal Server Error</p>\n\
+            </html>".to_string()
+        }
+    };
+    
+    let mut err_resp = Html(html_500_err).into_response();
+    *err_resp.status_mut() = StatusCode::INTERNAL_SERVER_ERROR;
+
+    err_resp
 }

@@ -43,6 +43,12 @@ services:
         target: "/backup_on_exit.sh"
     entrypoint: ["bash", "backup_on_exit.sh"]
     command: "mysqld"
+    healthcheck:
+      # slight breach of exec form with the options, but `mysqladmin` does not work otherwise
+      test: [ "CMD", "mysqladmin", "ping", "--user=server1", "--password=${MYSQL_PASSWORD?}" ]
+      interval: 15s
+      retries: 3
+      start_period: 1m
     environment:
         MYSQL_ONETIME_PASSWORD: false
         MYSQL_ALLOW_EMPTY_PASSWORD: false
