@@ -24,7 +24,7 @@ jobs:
     - name: Set up MySQL database
       # uses mock database from repo; allows for 
       run: |
-        docker compose --file ../compose-demo.yaml up --detatch db
+        docker compose --file ../compose-demo.yaml up --detach db
         until [ docker inspect --format="{{ .State.Health.Status }}" -eq "healthy" ]; \
         do sleep 5; done
         
