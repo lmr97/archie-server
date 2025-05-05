@@ -34,6 +34,7 @@ jobs:
         --file ../test-helpers/testing-override.yaml
         up 
         --detach db
+    - name: Show db url
       run: echo $DB_URL && sleep 10
     - name: Server unit tests
       run: |
