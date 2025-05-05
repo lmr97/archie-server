@@ -67,32 +67,43 @@ impl IntoResponse for DbError {
 }
 
 #[derive(Debug, PartialEq)]
-pub struct UserErrorInfo {
-    field: String,
-    db_limit: u16,
-    entry_content: String,
+pub enum UserError { 
+    NameTooLong,
+    NoteTooLong,
 }
 
 // a composite error type to allow both user and DB errors
 // to be raised from a function
+
 #[derive(Debug)]
-pub enum DbIoError {
+pub enum DbOrUserError {
     DbError(DbError),
-    UserError(UserErrorInfo)
+    UserError(UserError),
 }
 
-impl From<mysql::Error> for DbIoError {
-    fn from(mysql_err: mysql::Error) -> DbIoError {
-        DbIoError::DbError(DbError::from(mysql_err))
+impl From<mysql::Error> for DbOrUserError {
+    fn from(mysql_err: mysql::Error) -> DbOrUserError {
+        DbOrUserError::DbError(DbError::from(mysql_err))
     }
 }
 
-impl IntoResponse for DbIoError {
+impl From<UserError> for DbOrUserError {
+    fn from(u_err: UserError) -> DbOrUserError {
+        DbOrUserError::UserError(u_err)
+    }
+}
+
+impl IntoResponse for DbOrUserError {
     fn into_response(self) -> Response {
         
         match self {
-            DbIoError::DbError(e) => DbError::into_response(e),
-            DbIoError::UserError(err_info) => {
+            DbOrUserError::DbError(e) => DbError::into_response(e),
+            DbOrUserError::UserError(ue) => {
+
+                let (entry_field, db_limit) = match ue {
+                    UserError::NameTooLong => { ("Name", 100)  },
+                    UserError::NoteTooLong => { ("Note", 1000) }
+                };
 
                 let too_long_msg = Html(format!(
                     "<!DOCTYPE html>\n\
@@ -102,14 +113,10 @@ impl IntoResponse for DbIoError {
                     </head>\n\
                     <h1>{} too long!</h1>\n\
                     <p>The database limits this field to {} bytes.</p>\n\
-                    <ul><b>Your data</b>: {}</ul>\n\
-                    <ul><b>Its length</b> (in bytes): {}</ul>\n\
                     <p>Try again with a shorter entry for that field!</p>\n\
                     </html>\n",
-                    err_info.field,
-                    err_info.db_limit,
-                    err_info.entry_content,
-                    err_info.entry_content.len()
+                    entry_field,
+                    db_limit
                 ));
             
                 let mut err_resp = Html(too_long_msg).into_response();
@@ -163,7 +170,7 @@ pub async fn get_guestbook() -> Result<Json::<Guestbook>, DbError> {
     Ok(Json(Guestbook {guestbook: guestbook_table}))
 }
 
-pub async fn update_guestbook(Json(mut form_entry): Json<GuestbookEntry>) -> Result<Html<String>, DbIoError> {
+pub async fn update_guestbook(Json(mut form_entry): Json<GuestbookEntry>) -> Result<Html<String>, DbOrUserError> {
 
     // the first two conditionals are redundancies to catch entries that exceed
     // hard-coded VARCHAR limits, since the client-side Javascript is designed
@@ -172,24 +179,12 @@ pub async fn update_guestbook(Json(mut form_entry): Json<GuestbookEntry>) -> Res
     
     if form_entry.name.len() > 150 {  // MySQL uses bytes for length definitions, as does String.len() in Rust
         
-        return Err(
-            DbIoError::UserError(
-                UserErrorInfo {
-                    field: String::from("Name"),
-                    db_limit: 100,
-                    entry_content: form_entry.name,
-        }));
+        return Err(DbOrUserError::UserError(UserError::NameTooLong));
     }
     
     if form_entry.note.len() > 1000 {  // MySQL uses bytes for length definitions, as does String.len() in Rust
         
-        return Err(
-            DbIoError::UserError(
-                UserErrorInfo {
-                    field: String::from("Note"),
-                    db_limit: 1000,
-                    entry_content: form_entry.note,
-        }));
+        return Err(DbOrUserError::UserError(UserError::NoteTooLong));
     }
 
 
@@ -403,7 +398,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn post_null_entry() -> Result<(), DbIoError> {
+    async fn post_null_entry() -> Result<(), DbOrUserError> {
 
         // allows for SQL query to filter all entries later
         // than the start of this function
@@ -440,7 +435,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn post_valid_entry() -> Result<(), DbIoError> {
+    async fn post_valid_entry() -> Result<(), DbOrUserError> {
 
         // allows for SQL query to filter all entries later
         // than the start of this function
@@ -493,7 +488,7 @@ mod tests {
 
 
     #[tokio::test]
-    async fn post_overlong_entry_note()-> Result<(), DbIoError> {
+    async fn post_overlong_entry_note()-> Result<(), DbOrUserError> {
 
         // gonna get real weird with it
         let overlong_entry = GuestbookEntry {
@@ -514,48 +509,44 @@ mod tests {
             ),
         };
 
-        // this part is good as long as it doesn't panic (which it would on Ok)
-        let name_len_err = update_guestbook(Json(overlong_entry.clone())).await.unwrap_err();
-        let correct_err_info = UserErrorInfo { 
-            field: String::from("Note"), 
-            db_limit: 1000, 
-            entry_content: overlong_entry.note
-        };
+        // this part is good as long as it doesn't panic (which it would on anOk variant here)
+        let name_len_err = update_guestbook(Json(overlong_entry.clone()))
+            .await
+            .unwrap_err();
 
-        // gotta do it the hard way, because my error type is complicated
+        // gotta do it the hard way, because mysql::Error, a part of DbOrUserError,
+        // doesn't impl PartialEq
         match name_len_err {
-            DbIoError::DbError(e) => panic!("Wrong error! {:?}", e),
-            DbIoError::UserError(e) => {
-                assert_eq!(e, correct_err_info);
+            DbOrUserError::DbError(e) => panic!("Wrong error! {:?}", e),
+            DbOrUserError::UserError(e) => {
+                assert_eq!(e, UserError::NoteTooLong);
                 Ok(())
             }
         }
     }
     
     #[tokio::test]
-    async fn post_overlong_entry_name()-> Result<(), DbIoError> {
+    async fn post_overlong_entry_name()-> Result<(), DbOrUserError> {
 
         // gonna get real weird with it
-        let overlong_entry = GuestbookEntry {
+        let overlong_name = GuestbookEntry {
             name: String::from(
                 "A name മനുഷ്യരെല്ലാവരും തുല്യാവകാശങ്ങളോടും that is too ᎦᏬᏂᎯᏍᏗ long.
                 so long, in fact, I needed to add all this stuff!"),
             note: String::from("a brief note"),
         };
 
-        // this part is good as long as it doesn't panic (which it would on Ok)
-        let name_len_err = update_guestbook(Json(overlong_entry.clone())).await.unwrap_err();
-        let correct_err_info = UserErrorInfo { 
-            field: String::from("Name"), 
-            db_limit: 100, 
-            entry_content: overlong_entry.name
-        };
+        // this part is good as long as it doesn't panic (which it would on anOk variant here)
+        let name_len_err = update_guestbook(Json(overlong_name.clone()))
+            .await
+            .unwrap_err();
 
-        // gotta do it the hard way, because my error type is complicated
+        // gotta do it the hard way, because mysql::Error, a part of DbOrUserError,
+        // doesn't impl PartialEq
         match name_len_err {
-            DbIoError::DbError(e) => panic!("Wrong error! {:?}", e),
-            DbIoError::UserError(e) => {
-                assert_eq!(e, correct_err_info);
+            DbOrUserError::DbError(e) => panic!("Wrong error! {:?}", e),
+            DbOrUserError::UserError(e) => {
+                assert_eq!(e, UserError::NameTooLong);
                 Ok(())
             }
         }
