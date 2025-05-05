@@ -13,7 +13,7 @@ services:
     # so that your user shell env is in scope
     environment:
       # DB host needs to be CONTAINER name not service name
-      DB_URL: mysql://server1:${MYSQL_PASSWORD?}@archie-db:3306/archie
+      DB_URL: mysql://server1:${MYSQL_PASSWORD:?}@archie-db:3306/archie
       RUST_LOG: "archie_server=debug"   # for `tracing` logger
       PY_CONT_SOCK: "lb-app:3575"
     command: ["./target/release/archie-server", "--no-tls"]
@@ -62,7 +62,7 @@ services:
     environment:
         MYSQL_ONETIME_PASSWORD: false
         MYSQL_ALLOW_EMPTY_PASSWORD: false
-        MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD?}   # non-priv user created after startup
+        MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?}   # non-priv user created after startup
 
   lb-app:
     build: ./letterboxd_get_list
