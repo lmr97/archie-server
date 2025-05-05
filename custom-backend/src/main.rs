@@ -27,12 +27,25 @@ use tracing::info;
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
-    println!("[ PRE-LOG ]: Loading log file path from environment...");
+    // stdout can be suppressed when env var PRE_LOG=1
+    let prelog = match get_env_var("PRE_LOG") {
+        Ok(prelog_val) => {
+            if prelog_val == "0" { false }
+            else { 
+                println!("To suppress pre-log output to stdout, set PRE_LOG=1.");
+                true 
+            }
+        },
+        Err(_) => false
+    };
 
+    if prelog { println!("[ PRE-LOG ]: Loading log file path from environment..."); }
+    
     let log_file_path = get_env_var("SERVER_LOG")?;
-    build_logger(log_file_path)?.init();
+    build_logger(log_file_path, prelog)?.init();
 
-    println!("[ PRE-LOG ]: Logger initialized!");
+    if prelog { println!("[ PRE-LOG ]: Logger initialized!"); }
+    
     
 
     info!("\n\n\t\t////// Hi there! I'm Archie. Let me get ready for you... //////\n");

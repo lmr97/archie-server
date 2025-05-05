@@ -14,17 +14,17 @@ use tracing_subscriber::{
 };
     
 
-pub fn build_logger(log_file_path: String) -> Result<SubscriberBuilder<DefaultFields, Format, EnvFilter, std::fs::File>, Error> {
+pub fn build_logger(log_file_path: String, print_prelog: bool) -> Result<SubscriberBuilder<DefaultFields, Format, EnvFilter, std::fs::File>, Error> {
 
-    println!("[ PRE-LOG ]: Loading log file at {log_file_path}...");
+    if print_prelog { println!("[ PRE-LOG ]: Loading log file at {log_file_path}..."); }
 
     let log_file = OpenOptions::new()
         .append(true)
         .open(log_file_path)?;
 
-    println!("[ PRE-LOG ]: Log file loaded!");
+    if print_prelog { println!("[ PRE-LOG ]: Log file loaded!"); }
 
-    println!("[ PRE-LOG ]: Initializing logger...");
+    if print_prelog { println!("[ PRE-LOG ]: Initializing logger..."); }
     let ef = EnvFilter::builder()
         .with_default_directive(LevelFilter::DEBUG.into())  // will include INFO level too
         .from_env_lossy();
@@ -126,7 +126,7 @@ mod tests {
     #[test]
     fn logging() -> Result<(), Error> {
         let test_log_path = String::from("./test.log");
-        build_logger(test_log_path.clone())?.init();
+        build_logger(test_log_path.clone(), false)?.init();
         println!("[ PRE-LOG ]: Logger initialized!");
 
         info!("some information");
