@@ -11,10 +11,10 @@ services:
     # so that your user shell env is in scope
     environment:
       # DB host needs to be CONTAINER name not service name
-      DB_URL: mysql://server1:the-pass@archie-db:3306/archie
+      DB_URL: mysql://${MYSQL_USER:-server1}:${MYSQL_PASSWORD:-thepass}@archie-db:3306/archie
       RUST_LOG: "archie_server=debug"   # for `tracing` logger
       PY_CONT_SOCK: "lb-app:3575"
-    command: ["./target/release/archie-server", "--no-tls"]
+    command: [ "./target/release/archie-server", "--no-tls" ]
     # allows web content to be loaded in on compose, not requiring rebuild
     volumes:
       - type: bind
@@ -41,11 +41,11 @@ services:
       - type: bind
         source: "./backup_on_exit.sh"
         target: "/backup_on_exit.sh"
-    entrypoint: ["bash", "backup_on_exit.sh"]
+    entrypoint: [ "bash", "backup_on_exit.sh" ]
     command: "mysqld"
     healthcheck:
       # slight breach of exec form with the options, but `mysqladmin` does not work otherwise
-      test: [ "CMD", "mysqladmin", "ping", "--user=server1", "--password=the-pass" ]
+      test: [ "CMD", "mysqladmin", "ping", "--user=server1", "--password=${MYSQL_PASSWORD:-thepass}" ]
       interval: 15s
       retries: 3
       start_period: 1m
@@ -53,8 +53,8 @@ services:
         MYSQL_ONETIME_PASSWORD: false
         MYSQL_ALLOW_EMPTY_PASSWORD: false
         MYSQL_ROOT_PASSWORD: "root"
-        MYSQL_USER: server1
-        MYSQL_PASSWORD: the-pass 
+        MYSQL_USER: ${MYSQL_USER:-server1}
+        MYSQL_PASSWORD: ${MYSQL_PASSWORD:-thepass}
 
   lb-app:
     build: ./letterboxd_get_list
