@@ -15,17 +15,12 @@ jobs:
       MYSQL_USER: server1
       MYSQL_PASSWORD: the-pass
       PRE_LOG: 1                  # suppressed initial stdout, for backgrounding
-      DB_URL: "mysql://${MYSQL_USER}:${MYSQL_PASSWORD}@archie:3306"
+      DB_URL: "mysql://${MYSQL_USER}:${MYSQL_PASSWORD}@127.0.0.1:3306/archie"
 
     defaults:
       run:
         shell: bash
         working-directory: ./custom-backend
-    
-    strategy:
-      matrix:
-        table_name: [ "`guestbook`", "`hitsLog`" ]
-        command:    [ "CREATE TABLE", "INSERT INTO" ]
 
     steps:
     - uses: actions/checkout@v4
@@ -60,7 +55,7 @@ jobs:
         diff ../db-init-demo/db_schema.sql ../db-init-demo/db_schema.sql.bkup && exit 1
     - name: Test DB's dump-on-exit (detailed check)
       run: |
-        for stmnt in ${{ matrix }}
-        do
-          cat ../db-init-demo/db_schema.sql | grep $stmnt
-        done
+        cat ../db-init-demo/db_schema.sql | grep "CREATE TABLE `guestbook`"
+        cat ../db-init-demo/db_schema.sql | grep "INSERT INTO `guestbook`"
+        cat ../db-init-demo/db_schema.sql | grep "CREATE TABLE `hitLog`"
+        cat ../db-init-demo/db_schema.sql | grep "INSERT INTO `hitLog`"
