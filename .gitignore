@@ -5,6 +5,5 @@ test*
 !/custom-backend/tests
 *.pem
 *.log
-*.bkup
 *.odt
 notes.md
