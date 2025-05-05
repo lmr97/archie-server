@@ -4,20 +4,17 @@ on:
   push:
     branches: [ "main", "testing" ]
 
-env:
-      EX_VAR: "a value/here"      # an env var to test env fetches
-      SERVER_SOCKET: "127.0.0.1:4321"
-      MYSQL_USER: server1
-      MYSQL_PASSWORD: the-pass    # this is a test, not real pw; doesnt matter here
-      PRE_LOG: 1                  # suppressed initial stdout, for backgrounding
-
 jobs:
 
   server_tests:
 
     runs-on: ubuntu-latest
     env:
-      DB_URL: "mysql://$MYSQL_USER:$MYSQL_PASSWORD@127.0.0.1:3306/archie"
+      EX_VAR: "a value/here"      # an env var to test env fetches
+      SERVER_SOCKET: "127.0.0.1:4321"
+      PRE_LOG: 1                  # suppressed initial stdout, for backgrounding
+      # this is a test, not real pw; doesnt matter here
+      DB_URL: "mysql://server1:thepass@127.0.0.1:3306/archie"
 
     defaults:
       run:
