@@ -14,6 +14,7 @@ jobs:
       SERVER_SOCKET: "127.0.0.1:4321"
       PRE_LOG: 1                  # suppressed initial stdout, for backgrounding
       MYSQL_PASSWORD: thepass     # not real pw; doesnt matter for testing
+      MYSQL_ROOT_PASSWORD: root
       DB_URL: "mysql://server1:thepass@127.0.0.1:3306/archie"
 
     defaults:
