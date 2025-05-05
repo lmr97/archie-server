@@ -34,8 +34,7 @@ jobs:
         --file ../test-helpers/testing-override.yaml
         up 
         --detach db
-    - name: Build server
-      run: cargo build --release
+      run: echo $DB_URL && sleep 10
     - name: Server unit tests
       run: |
         echo > test.log
