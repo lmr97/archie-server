@@ -1,8 +1,6 @@
 use std::env; 
 use axum::{
-    body::Body,
-    response::{Html, IntoResponse, Response}, 
-    Json
+    body::Body, http::StatusCode, response::{Html, IntoResponse, Response}, Json
 };
 use chrono::prelude::*;
 use mysql::*;
@@ -11,12 +9,13 @@ use tracing::{info, debug, error};
 use crate::utils::err_handling::make_500_resp;
 
 
-#[derive(Debug, serde::Deserialize)] 
+#[derive(Debug, serde::Deserialize, PartialEq, Clone)] 
 pub struct GuestbookEntry {
     name: String,
     note: String,
 }
-#[derive(Debug, serde::Serialize)]
+
+#[derive(Debug, serde::Serialize, PartialEq)]
 pub struct GuestbookEntryStamped {
     // keeping time_stamp as NaiveDateTime for DB I/O,
     // and for time-value sorting to by done by the DB on query
@@ -28,12 +27,12 @@ pub struct GuestbookEntryStamped {
 // This struct exists for organinzing all the JSON 
 // guestbook entries for transmission to the client into a
 // larger JSON object
-#[derive(Debug, serde::Serialize)]
+#[derive(Debug, serde::Serialize, PartialEq)]
 pub struct Guestbook {
     guestbook: Vec<GuestbookEntryStamped>,
 }
 
-#[derive(Debug, serde::Deserialize)]
+#[derive(Debug, serde::Deserialize, PartialEq, Clone)]
 pub struct WebpageHit {
     time_stamp: NaiveDateTime,
     user_agent: String,
@@ -44,7 +43,6 @@ pub struct WebpageHit {
 pub enum DbError { 
     UrlError(mysql::UrlError),
     GenError(mysql::Error), 
-    
 }
 
 impl From<mysql::Error> for DbError {
@@ -68,8 +66,65 @@ impl IntoResponse for DbError {
     }
 }
 
+#[derive(Debug, PartialEq)]
+pub struct UserErrorInfo {
+    field: String,
+    db_limit: u16,
+    entry_content: String,
+}
 
-fn get_db_conn() -> Result<mysql::Pool, mysql::Error> {
+// a composite error type to allow both user and DB errors
+// to be raised from a function
+#[derive(Debug)]
+pub enum DbIoError {
+    DbError(DbError),
+    UserError(UserErrorInfo)
+}
+
+impl From<mysql::Error> for DbIoError {
+    fn from(mysql_err: mysql::Error) -> DbIoError {
+        DbIoError::DbError(DbError::from(mysql_err))
+    }
+}
+
+impl IntoResponse for DbIoError {
+    fn into_response(self) -> Response {
+        
+        match self {
+            DbIoError::DbError(e) => DbError::into_response(e),
+            DbIoError::UserError(err_info) => {
+
+                let too_long_msg = Html(format!(
+                    "<!DOCTYPE html>\n\
+                    <html>\n\
+                    <head>\n\
+                    <title>413 Payload Too Large</title>\n\
+                    </head>\n\
+                    <h1>{} too long!</h1>\n\
+                    <p>The database limits this field to {} bytes.</p>\n\
+                    <ul><b>Your data</b>: {}</ul>\n\
+                    <ul><b>Its length</b> (in bytes): {}</ul>\n\
+                    <p>Try again with a shorter entry for that field!</p>\n\
+                    </html>\n",
+                    err_info.field,
+                    err_info.db_limit,
+                    err_info.entry_content,
+                    err_info.entry_content.len()
+                ));
+            
+                let mut err_resp = Html(too_long_msg).into_response();
+                *err_resp.status_mut() = StatusCode::PAYLOAD_TOO_LARGE;
+
+                err_resp
+            }
+        }
+    }
+}
+
+
+
+
+fn get_db_conn_pool() -> Result<mysql::Pool, mysql::Error> {
     
     // gets URL from the environment to preserve security,
     // since it contains a plain-text password
@@ -77,7 +132,9 @@ fn get_db_conn() -> Result<mysql::Pool, mysql::Error> {
         .unwrap()       // These two unwraps do not panic
         .into_string()
         .unwrap();
-    
+
+    debug!("DB URL to connect with: {url}");
+
     let opts = Opts::from_url(&url)?;
 
     Pool::new(opts)
@@ -88,8 +145,9 @@ fn get_db_conn() -> Result<mysql::Pool, mysql::Error> {
 // time the function is called
 pub async fn get_guestbook() -> Result<Json::<Guestbook>, DbError> {
 
-    let buf_pool = get_db_conn()?;
+    let buf_pool = get_db_conn_pool()?;
     let mut conn = buf_pool.get_conn()?;
+    
     let guestbook_table = conn.query_map(
         "
         SELECT dateSubmitted, guestName, guestNote 
@@ -105,11 +163,43 @@ pub async fn get_guestbook() -> Result<Json::<Guestbook>, DbError> {
     Ok(Json(Guestbook {guestbook: guestbook_table}))
 }
 
-pub async fn update_guestbook(Json(form_entry): Json<GuestbookEntry>) -> Result<Html<String>, DbError> {
+pub async fn update_guestbook(Json(mut form_entry): Json<GuestbookEntry>) -> Result<Html<String>, DbIoError> {
+
+    // the first two conditionals are redundancies to catch entries that exceed
+    // hard-coded VARCHAR limits, since the client-side Javascript is designed
+    // to catch them as well. But they are included here just in case the API
+    // is accessed outside the browser's JS.
+    
+    if form_entry.name.len() > 150 {  // MySQL uses bytes for length definitions, as does String.len() in Rust
+        
+        return Err(
+            DbIoError::UserError(
+                UserErrorInfo {
+                    field: String::from("Name"),
+                    db_limit: 100,
+                    entry_content: form_entry.name,
+        }));
+    }
+    
+    if form_entry.note.len() > 1000 {  // MySQL uses bytes for length definitions, as does String.len() in Rust
+        
+        return Err(
+            DbIoError::UserError(
+                UserErrorInfo {
+                    field: String::from("Note"),
+                    db_limit: 1000,
+                    entry_content: form_entry.note,
+        }));
+    }
+
 
     // db connection setup
-    let buf_pool = get_db_conn()?;
+    let buf_pool = get_db_conn_pool()?;
     let mut conn = buf_pool.get_conn()?;
+
+    // also redundant, since this is delegated to the client JS, 
+    // but included just in case
+    if form_entry.name.is_empty() { form_entry.name = String::from("(anonymous)"); }
 
     // return value needs to be caught so that type can be annotated
     let _: Option<Row> = conn.exec_first(
@@ -136,9 +226,11 @@ pub async fn update_guestbook(Json(form_entry): Json<GuestbookEntry>) -> Result<
 // adds new hit info to database
 pub async fn get_hit_count() -> Result<String, DbError> {
     
-    let buf_pool = get_db_conn()?;
+    let buf_pool = get_db_conn_pool()?;
     let mut conn = buf_pool.get_conn()?;
-        
+    
+    conn.query_first::<String, &str>("LOCK TABLE hitLog READ")?;
+
     let hits = match conn.query_first::<String, &str>(
         r"SELECT COUNT(*) AS hit_count FROM hitLog"
     )? {
@@ -146,6 +238,7 @@ pub async fn get_hit_count() -> Result<String, DbError> {
         None => String::from("0")
     };
 
+    conn.query_first::<String, &str>("UNLOCK TABLES")?;
     debug!("Page hit count retrieved.");
 
     Ok(hits)   
@@ -154,14 +247,16 @@ pub async fn get_hit_count() -> Result<String, DbError> {
 
 pub async fn log_hit(Json(page_hit): Json<WebpageHit>) -> Result<Response, DbError> {
 
-    let buf_pool = get_db_conn()?;
+    let buf_pool = get_db_conn_pool()?;
     let mut conn = buf_pool.get_conn()?;
 
     // this function runs async of get_hit_count(), which is called immediately after this one
     // through a GET request to /hits. In practice, this means the hit count it returned was
     // 1 behind the DB.
-    // So, I'm setting a write lock to block the GET that comes on the heels of this INSERT.
-    // There is some slight overhead for this, unsuprisingly, but that's acceptable.
+    // So, I'm setting a read/write lock on the table to block the GET that comes on the heels 
+    // of this INSERT. There is some slight overhead for this, unsuprisingly, but that's 
+    // acceptable to me.
+    conn.query_first::<String, &str>("LOCK TABLE hitLog READ")?;
     conn.query_first::<String, &str>("LOCK TABLE hitLog WRITE")?;
     debug!("table lock successful");
     conn.exec_first::<String, &str, Params>(
@@ -183,28 +278,287 @@ pub async fn log_hit(Json(page_hit): Json<WebpageHit>) -> Result<Response, DbErr
 
 #[cfg(test)]
 mod tests {
+
     use super::*;
+    use axum::http::StatusCode;
     use chrono::Utc;
 
     #[tokio::test]
-    async fn log_hit_normal() {
-        
-        let page_hit_normal = WebpageHit {
-            time_stamp: Utc::now().naive_utc(),
-            user_agent: String::from("Mozilla Firefox user")
-        };
+    async fn hit_counting() {
 
-        log_hit(Json(page_hit_normal)).await.unwrap();
+        let hits = get_hit_count().await.unwrap();
+
+        // there are precisely 6 hits in the demo DB's log,
+        // and since a lock is requested on the table, 
+        assert_eq!(hits, "6");
     }
 
     #[tokio::test]
-    async fn log_hit_no_ua() {
-
-        let page_hit_no_ua = WebpageHit {
-            time_stamp: Utc::now().naive_utc(),
-            user_agent: String::from("")
+    async fn log_hit_normal() -> Result<(), DbError>{
+        
+        let page_hit_normal = WebpageHit {
+            time_stamp: Utc::now()
+                .naive_utc()
+                .trunc_subsecs(0),    // truncation happens after db insertion/retrieval
+            user_agent: String::from("a user agent string no one uses")
         };
 
-        log_hit(Json(page_hit_no_ua)).await.unwrap();
+        let sent_resp = log_hit(Json(page_hit_normal.clone())).await.unwrap();
+        assert_eq!(sent_resp.status(), StatusCode::OK);  // make sure a successful call sends 200
+
+        // connect
+        let mut conn = get_db_conn_pool()?.get_conn()?;
+
+        // no other entries in the demo database have a user agent like the above
+        let latest_hit = conn.query_map(
+            format!(
+                "SELECT hitTime, userAgent FROM hitLog 
+                WHERE hitTime = STR_TO_DATE('{}', '%Y-%m-%d %H:%i:%S')
+                AND userAgent = '{}'", 
+                /* note that the MYSQL date format does not follow strftime format */
+                page_hit_normal.time_stamp.format("%Y-%m-%d %H:%M:%S").to_string(),
+                page_hit_normal.user_agent,
+            ),
+            |(hit_time, user_agent): (NaiveDateTime, String)| {
+                WebpageHit { time_stamp: hit_time, user_agent, }
+            }
+        )?;
+
+        assert_eq!(latest_hit[0], page_hit_normal);
+
+        Ok(())
     }
+
+    #[tokio::test]
+    async fn log_hit_no_ua() -> Result<(), DbError>{
+
+        let page_hit_no_ua = WebpageHit {
+            time_stamp: Utc::now()
+                .naive_utc()
+                .trunc_subsecs(0),    // truncation happens after db insertion/retrieval,
+            user_agent: String::new()
+        };
+
+        let sent_resp = log_hit(Json(page_hit_no_ua.clone())).await.unwrap();
+        assert_eq!(sent_resp.status(), StatusCode::OK);  // make sure a successful call sends 200
+
+        // connect
+        let mut conn = get_db_conn_pool()?.get_conn()?;
+
+        // no other entries in the demo database have a null user agent
+        let latest_hit = conn.query_map(
+            format!(
+                "SELECT hitTime, userAgent FROM hitLog
+                WHERE hitTime = STR_TO_DATE('{}', '%Y-%m-%d %H:%i:%S')
+                AND userAgent = ''", 
+                page_hit_no_ua.time_stamp.format("%Y-%m-%d %H:%M:%S").to_string()
+            ),
+            |(hit_time, user_agent): (NaiveDateTime, String)| {
+                WebpageHit { time_stamp: hit_time, user_agent, }
+            }
+        )?;
+
+        assert_eq!(latest_hit[0], page_hit_no_ua);
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn getting_guestbook() -> Result<(), DbError> {
+
+        let demo_guestbook = Guestbook {
+            guestbook: vec![
+                GuestbookEntryStamped {
+                    time_stamp: NaiveDateTime::parse_from_str(
+                        "2025-04-20 13:03:59", "%Y-%m-%d %H:%M:%S").unwrap(),
+                    name:       String::from("约翰·塞纳"),
+                    note:       String::from("我很喜欢冰淇淋")
+                },
+                GuestbookEntryStamped {
+                    time_stamp: NaiveDateTime::parse_from_str(
+                        "2025-03-13 03:37:05", "%Y-%m-%d %H:%M:%S").unwrap(),
+                    name:       String::from("Linus"),
+                    note:       String::from("nice os choice!")
+                },
+                GuestbookEntryStamped {
+                    time_stamp: NaiveDateTime::parse_from_str(
+                        "2025-02-28 04:30:57", "%Y-%m-%d %H:%M:%S").unwrap(),
+                    name:       String::from("(anonymous)"),
+                    note:       String::from("you'll never know...")
+                },
+                
+                GuestbookEntryStamped {
+                    time_stamp: NaiveDateTime::parse_from_str(
+                        "2025-02-28 04:22:49", "%Y-%m-%d %H:%M:%S").unwrap(),
+                    name:       String::from("Ada"),
+                    note:       String::from("It's so nice to be here!")
+                },
+            ]
+        };
+
+        let gotten_guestbook = get_guestbook().await.unwrap();
+        assert_eq!(gotten_guestbook.0, demo_guestbook);
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn post_null_entry() -> Result<(), DbIoError> {
+
+        // allows for SQL query to filter all entries later
+        // than the start of this function
+        let proc_start = Utc::now().naive_utc();
+        let mut null_entry = GuestbookEntry {
+            name: String::new(),
+            note: String::new()
+        };
+
+        // this part is good as long as it doesn't throw an error
+        let _ = update_guestbook(Json(null_entry.clone())).await.unwrap();
+
+        // check to see if the entry was posted with 
+        let mut conn = get_db_conn_pool()?.get_conn()?;
+
+        // no other entries in the demo database have a null user agent
+        let fetched_entry = conn.query_map(
+            format!(
+                "SELECT guestName, guestNote FROM guestbook
+                WHERE dateSubmitted >= STR_TO_DATE('{}', '%Y-%m-%d %H:%i:%S')
+                AND guestName = '(anonymous)'", 
+                proc_start.format("%Y-%m-%d %H:%M:%S").to_string()
+            ),
+            |(name, note): (String, String)| {
+                // timestamp not needed if the query finds an entry in terms of proc_start
+                GuestbookEntry { name, note }
+            }
+        )?;
+
+        null_entry.name = String::from("(anonymous)");
+        assert_eq!(fetched_entry[0], null_entry);
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn post_valid_entry() -> Result<(), DbIoError> {
+
+        // allows for SQL query to filter all entries later
+        // than the start of this function
+        let proc_start = Utc::now().naive_utc();
+
+        // gonna get real weird with it
+        let valid_entry = GuestbookEntry {
+            name: String::from("Lettuce % % \\% \\' break some sTuff ⌠ 	⌡ 	⌢ 	⌣ 	⌤"),
+            note: String::from(
+                "ᏣᎳᎩ ᎦᏬᏂᎯᏍᏗ (Cherokee!) \n\\\\% %%' ''
+
+                മനുഷ്യരെല്ലാവരും തുല്യാവകാശങ്ങളോടും അന്തസ്സോടും സ്വാതന്ത്ര്യത്തോടുംകൂടി 
+                ജനിച്ചിട്ടുള്ളവരാണ്‌. അന്യോന്യം ഭ്രാതൃഭാവത്തോടെ പെരുമാറുവാനാണ്‌ മനുഷ്യന് 
+                വിവേകബുദ്ധിയും മനസാക്ഷിയും സിദ്ധമായിരിക്കുന്നത്‌
+                (this says 'All human beings are born free and equal in dignity and rights. 
+                They are endowed with reason and conscience and should act towards one 
+                another in a spirit of brotherhood.' in Malayalam. It comes from the 
+                UN's Universal Declaration on Human Rights)"
+            ),
+        };
+
+        // this part is good as long as it doesn't throw an error
+        let _ = update_guestbook(Json(valid_entry.clone())).await.unwrap();
+
+        // check to see if the entry was posted with 
+        let mut conn = get_db_conn_pool()?.get_conn()?;
+
+        // no other entries in the demo database have a null user agent
+        let fetched_entry = conn.query_map(
+            format!(
+                "SELECT guestName, guestNote FROM guestbook
+                WHERE dateSubmitted >= STR_TO_DATE('{}', '%Y-%m-%d %H:%i:%S')
+                AND guestName LIKE 'Lettuce%'", 
+                proc_start.format("%Y-%m-%d %H:%M:%S").to_string()
+            ),
+            |(name, note): (String, String)| {
+                // timestamp not needed if the query finds an entry in terms of proc_start
+                GuestbookEntry { name, note }
+            }
+        )?;
+
+        assert_eq!(fetched_entry[0], valid_entry);
+
+        Ok(())
+    }
+
+
+    #[tokio::test]
+    async fn post_overlong_name(){}
+
+
+    #[tokio::test]
+    async fn post_overlong_entry_note()-> Result<(), DbIoError> {
+
+        // gonna get real weird with it
+        let overlong_entry = GuestbookEntry {
+            name: String::from("A resonable name"),
+            note: String::from(
+                "ᏣᎳᎩ ᎦᏬᏂᎯᏍᏗ (this is Cherokee!) \n\\\\% %%' ''
+
+                മനുഷ്യരെല്ലാവരും തുല്യാവകാശങ്ങളോടും അന്തസ്സോടും സ്വാതന്ത്ര്യത്തോടുംകൂടി 
+                ജനിച്ചിട്ടുള്ളവരാണ്‌. അന്യോന്യം ഭ്രാതൃഭാവത്തോടെ പെരുമാറുവാനാണ്‌ മനുഷ്യന് 
+                വിവേകബുദ്ധിയും മനസാക്ഷിയും സിദ്ധമായിരിക്കുന്നത്‌
+                (this says 'All human beings are born free and equal in dignity and rights. 
+                They are endowed with reason and conscience and should act towards one 
+                another in a spirit of brotherhood.' in Malayalam. It comes from the 
+                UN's Universal Declaration on Human Rights)
+                
+                Let's stick with this and go further. We need to make sure we have this
+                data exceed 1KB. And now it does."
+            ),
+        };
+
+        // this part is good as long as it doesn't panic (which it would on Ok)
+        let name_len_err = update_guestbook(Json(overlong_entry.clone())).await.unwrap_err();
+        let correct_err_info = UserErrorInfo { 
+            field: String::from("Note"), 
+            db_limit: 1000, 
+            entry_content: overlong_entry.note
+        };
+
+        // gotta do it the hard way, because my error type is complicated
+        match name_len_err {
+            DbIoError::DbError(e) => panic!("Wrong error! {:?}", e),
+            DbIoError::UserError(e) => {
+                assert_eq!(e, correct_err_info);
+                Ok(())
+            }
+        }
+    }
+    
+    #[tokio::test]
+    async fn post_overlong_entry_name()-> Result<(), DbIoError> {
+
+        // gonna get real weird with it
+        let overlong_entry = GuestbookEntry {
+            name: String::from(
+                "A name മനുഷ്യരെല്ലാവരും തുല്യാവകാശങ്ങളോടും that is too ᎦᏬᏂᎯᏍᏗ long.
+                so long, in fact, I needed to add all this stuff!"),
+            note: String::from("a brief note"),
+        };
+
+        // this part is good as long as it doesn't panic (which it would on Ok)
+        let name_len_err = update_guestbook(Json(overlong_entry.clone())).await.unwrap_err();
+        let correct_err_info = UserErrorInfo { 
+            field: String::from("Name"), 
+            db_limit: 100, 
+            entry_content: overlong_entry.name
+        };
+
+        // gotta do it the hard way, because my error type is complicated
+        match name_len_err {
+            DbIoError::DbError(e) => panic!("Wrong error! {:?}", e),
+            DbIoError::UserError(e) => {
+                assert_eq!(e, correct_err_info);
+                Ok(())
+            }
+        }
+    }
+    
 }
