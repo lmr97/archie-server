@@ -33,7 +33,7 @@ DROP TABLE IF EXISTS `guestbook`;
 CREATE TABLE `guestbook` (
   `id` int NOT NULL AUTO_INCREMENT,
   `dateSubmitted` datetime DEFAULT NULL,
-  `guestName` varchar(50) DEFAULT NULL,
+  `guestName` varchar(100) DEFAULT NULL,
   `guestNote` varchar(1000) DEFAULT NULL,
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=7 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
@@ -49,7 +49,8 @@ INSERT INTO `guestbook`
 VALUES 
 (1,'2025-02-28 04:22:49','Ada','It\'s so nice to be here!'),
 (2,'2025-02-28 04:30:57','(anonymous)','you\'ll never know...'),
-(3,'2025-03-13 03:37:05','Linus','nice os choice!');
+(3,'2025-03-13 03:37:05','Linus','nice os choice!'),
+(4,'2025-04-20 13:03:59','约翰·塞纳','我很喜欢冰淇淋');
 /*!40000 ALTER TABLE `guestbook` ENABLE KEYS */;
 UNLOCK TABLES;
 
