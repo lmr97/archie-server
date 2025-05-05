@@ -2,7 +2,7 @@ name: Archie CI
 
 on:
   push:
-    branches: [ "main", "testing" ]
+    branches: [ "testing" ]
 
 jobs:
 
@@ -20,7 +20,6 @@ jobs:
     defaults:
       run:
         shell: bash
-        working-directory: ./custom-backend
 
     steps:
     - uses: actions/checkout@v4
@@ -30,14 +29,13 @@ jobs:
       # the server builds 
       run: 
         docker compose 
-        --file ../compose-demo.yaml 
-        --file ../test-helpers/testing-override.yaml
+        --file compose-demo.yaml 
+        --file test-helpers/testing-override.yaml
         up 
         --detach db
-    - name: Show db url
-      run: echo $DB_URL && sleep 10
     - name: Server unit tests
       run: |
+        cd ./custom-backend
         echo > test.log
         cargo test --lib
         cargo test --test tls_on_default --
@@ -46,16 +44,6 @@ jobs:
       run: |
         echo "developing these tests..."
     - name: Test DB's dump-on-exit (shutdown and prelim check)
-      # the dump did not occur if the dump file is:
-      # - empty,
-      # - identical to the backup file, or
-      # - is missing any of the following combinations of the matrix defined above
-      run:
-        docker compose down
-        diff ../db-init-demo/db_schema.sql ../db-init-demo/db_schema.sql.bkup && exit 1
-    - name: Test DB's dump-on-exit (detailed check)
       run: |
-        cat ../db-init-demo/db_schema.sql | grep "CREATE TABLE `guestbook`"
-        cat ../db-init-demo/db_schema.sql | grep "INSERT INTO `guestbook`"
-        cat ../db-init-demo/db_schema.sql | grep "CREATE TABLE `hitLog`"
-        cat ../db-init-demo/db_schema.sql | grep "INSERT INTO `hitLog`"
+        docker compose down
+        bash test-helpers/validate-dump.sh
