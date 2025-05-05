@@ -12,30 +12,55 @@ jobs:
     env:
       EX_VAR: "a value/here"      # an env var to test env fetches
       SERVER_SOCKET: "127.0.0.1:4321"
+      MYSQL_USER: server1
+      MYSQL_PASSWORD: the-pass
+      PRE_LOG: 1                  # suppressed initial stdout, for backgrounding
+      DB_URL: "mysql://${MYSQL_USER}:${MYSQL_PASSWORD}@archie:3306"
+
     defaults:
       run:
         shell: bash
         working-directory: ./custom-backend
+    
+    strategy:
+      matrix:
+        table_name: [ "`guestbook`", "`hitsLog`" ]
+        command:    [ "CREATE TABLE", "INSERT INTO" ]
 
     steps:
-    - uses: actions/checkout@v4   # checks out the repo
-    # - name: Build server
-    #   run: cargo build
+    - uses: actions/checkout@v4
     - name: Set up MySQL database
-      # uses mock database from repo; allows for 
+      # uses demo db, identical to real db except in content
+      # running this first so that the database can initialize while
+      # the server builds 
+      run: 
+        docker compose 
+        --file ../compose-demo.yaml 
+        --file ../test-helpers/testing-override.yaml
+        up 
+        --detach db
+    - name: Build server
+      run: cargo build --release
+    - name: Server unit tests
       run: |
-        docker compose --file ../compose-demo.yaml up --detach db
-        until [ $(docker inspect --format="{{ .State.Health.Status }}" archie-db) = "healthy" ]; \
-        do sleep 5; done
-        
-    # - name: Server unit tests
-    #   # guarantee test.log will always be clean
-    #   # test.log is to be in the `custom-backend` crate
-    #   run: |
-    #     echo > test.log
-    #     cargo test --lib
-    # - name: Server integration tests
-    #   run: |
-    #     cargo test --test tls_on_default --
-    #     cargo test --test tls_off_switch -- --no-tls
-    #   #run: docker build . --file Dockerfile --tag my-image-name:$(date +%s)
+        echo > test.log
+        cargo test --lib
+        cargo test --test tls_on_default --
+        cargo test --test tls_off_switch -- --no-tls
+    - name: Server integration tests
+      run: |
+        echo "developing these tests..."
+    - name: Test DB's dump-on-exit (shutdown and prelim check)
+      # the dump did not occur if the dump file is:
+      # - empty,
+      # - identical to the backup file, or
+      # - is missing any of the following combinations of the matrix defined above
+      run:
+        docker compose down
+        diff ../db-init-demo/db_schema.sql ../db-init-demo/db_schema.sql.bkup && exit 1
+    - name: Test DB's dump-on-exit (detailed check)
+      run: |
+        for stmnt in ${{ matrix }}
+        do
+          cat ../db-init-demo/db_schema.sql | grep $stmnt
+        done
