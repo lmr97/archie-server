@@ -1,6 +1,5 @@
 use std::fs::read_to_string;
 use axum::{
-    extract::rejection::JsonRejection,
     http::StatusCode, 
     response::{
         Html, 
@@ -9,56 +8,7 @@ use axum::{
     }
 };
 
-use tracing::error;
 use crate::utils::init_utils::get_env_var;
-
-#[derive(Debug)]
-pub enum ServerError {
-    JsonRejection(JsonRejection),
-    JsonParseError(mysql_common::serde_json::Error),
-    HttpError(axum::http::Error),
-    IoError(std::io::Error),
-    EnvVarError,
-}
-
-
-impl From<JsonRejection> for ServerError {
-    fn from(rejection: JsonRejection) -> Self {
-        Self::JsonRejection(rejection)
-    }
-}
-
-impl From<mysql_common::serde_json::Error> for ServerError {
-    fn from(json_err: mysql_common::serde_json::Error) -> Self {
-        Self::JsonParseError(json_err)
-    }
-}
-
-impl From<axum::http::Error> for ServerError {
-    fn from(http_err: axum::http::Error) -> Self {
-        Self::HttpError(http_err)
-    }
-}
-
-impl From<std::io::Error> for ServerError {
-    fn from(io_err: std::io::Error) -> Self {
-        Self::IoError(io_err)
-    }
-}
-
-impl From<std::env::VarError> for ServerError {
-    fn from(_var_err: std::env::VarError) -> Self {
-        Self::EnvVarError
-    }
-}
-
-impl IntoResponse for ServerError {
-    fn into_response(self) -> Response {
-        
-        error!("{self:?}");
-        make_500_resp()
-    } 
-}
 
 // extracting this as public function to use elsewhere
 // breaking up this huge error type into more specific errors 
