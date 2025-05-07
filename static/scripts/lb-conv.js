@@ -104,12 +104,14 @@ async function getLBlist() {
     const evtSource = new EventSource(fetchURL);
 
     let list = [];
+    let rows_received = 0;
 
     evtSource.onmessage = (event) => {
         console.debug(`message: ${event.data}`);
         var msg_data = JSON.parse(event.data);
 
-        var ratioDone = msg_data["curr_row"]/msg_data["total_rows"];
+        rows_received += 1;
+        var ratioDone = rows_received/msg_data["total_rows"];
         loadingBar.animate(ratioDone, {duration: 500});
 
         list.push(msg_data["row"]);
