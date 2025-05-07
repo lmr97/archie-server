@@ -9,8 +9,10 @@ handles the I/O to/from the Python program, streaming out
 its output to the client. */
 
 use std::convert::Infallible;
+use std::env::VarError;
 use std::io::{Read, Write};
 use std::net::TcpStream;
+use axum::response::{IntoResponse, Response};
 use futures_util::stream::{self, Stream};
 use axum::response::{Sse, sse::Event};
 use axum_extra::extract::Query;
@@ -18,7 +20,7 @@ use futures_util::StreamExt;
 use mysql_common::serde_json;
 use tracing::{debug, error, info};
 
-use crate::utils::err_handling::ServerError;
+use crate::utils::err_handling::make_500_resp;
 use crate::utils::init_utils::get_env_var;
 
 #[derive(Debug, serde::Serialize, serde::Deserialize)] 
@@ -30,24 +32,67 @@ pub struct ListInfo {
 
 #[derive(Debug, serde::Serialize)]
 struct ListRow {
-    curr_row: u16,
     total_rows: usize,
-    row: String,
+    row_data: String,
 }
 
-enum ErrMsg {
+enum ErrCode {
     Err400,
     Err500,
 }
 
-fn build_err_event(mut json: ListRow, err: ErrMsg) -> Event {
+
+// Error type for all pre-stream errors in this file,
+// i.e., the ones that occur during the *start* of the 
+// streaming process, since these are the ones that can/should be
+// converted into stand-alone HTTP responses. The errors that occur 
+// in during the stream must be handled in the stream directly, 
+// since JavaScript handles server-sent events, and is best-practice 
+// to my knowledge. In-stream errors are handled through the 
+// `get_list_row` and `build_err_event` functions.
+#[derive(Debug)]
+pub enum LbConvError {
+    EnvVarError(VarError),
+    ContainerIoError(std::io::Error),
+    JsonParseError(serde_json::Error),
+}
+
+impl From<VarError> for LbConvError {
+    fn from(ve: VarError) -> Self {
+        Self::EnvVarError(ve)
+    }
+}
+
+impl From<std::io::Error> for LbConvError {
+    fn from(ioe: std::io::Error) -> Self {
+        Self::ContainerIoError(ioe)
+    }
+}
+
+impl From<serde_json::Error> for LbConvError {
+    fn from(jspe: serde_json::Error) -> Self {
+        Self::JsonParseError(jspe)
+    }
+}
+
+impl IntoResponse for LbConvError {
+    fn into_response(self) -> Response {
+        
+        error!("Error occured prior to stream start: {:?}", self);
+        make_500_resp()
+    }
+}
+
+
+
+fn build_err_event(mut json: ListRow, err: ErrCode) -> Event {
 
     let msg = match err {
-        ErrMsg::Err400 => "400 BAD REQUEST",
-        ErrMsg::Err500 => "500 INTERNAL SERVER ERROR"
+        ErrCode::Err400 => "400 BAD REQUEST",
+        ErrCode::Err500 => "500 INTERNAL SERVER ERROR"
     };
 
-    json.row = String::from(msg);
+    json.row_data = String::from(msg);
 
     // all data in this statement's JSON is ASCII: 
     // - curr_row and total_rows fields are integers (or rendered as such)
@@ -77,10 +122,13 @@ fn build_err_event(mut json: ListRow, err: ErrMsg) -> Event {
 // 
 // Will return an event of type "error" if there are any issues reading
 // from the Python container, or converting the output to a UTF-8 string.
-fn get_list_row(conn: &mut TcpStream, mut row_json: ListRow) -> Event {
+fn get_list_row(conn: &mut TcpStream, total_rows: usize) -> Event {
 
     let mut row_length_buf = [0; 2];
-
+    let mut row_json = ListRow {
+        total_rows, 
+        row_data: String::new()
+    };
     
     /* READ ROW LENGTH BYTES */
 
@@ -114,7 +162,7 @@ fn get_list_row(conn: &mut TcpStream, mut row_json: ListRow) -> Event {
         Ok(_) => {},
         Err(e) => {
             error!("I/O Error: reading a CSV line from Python container failed: {e:?}");
-            return build_err_event(row_json, ErrMsg::Err500);    
+            return build_err_event(row_json, ErrCode::Err500);    
         }         
     };
 
@@ -126,7 +174,7 @@ fn get_list_row(conn: &mut TcpStream, mut row_json: ListRow) -> Event {
     else {
         error!("Conversion Error: bytes read from Python container could not be converted into a (UTF-8) string.");
         error!("Run on Debug mode to see bytes read.");
-        return build_err_event(row_json, ErrMsg::Err500);  
+        return build_err_event(row_json, ErrCode::Err500);  
     };
     debug!("Indiv. row data received: {:?}", row_data);
     
@@ -135,13 +183,13 @@ fn get_list_row(conn: &mut TcpStream, mut row_json: ListRow) -> Event {
     if row_data.starts_with("-- 500 INTERNAL SERVER ERROR --") {
 
         error!("Python exception was raised: {row_data}");
-        return build_err_event(row_json, ErrMsg::Err500);  
+        return build_err_event(row_json, ErrCode::Err500);  
 
     } else if row_data.starts_with("-- 400 BAD REQUEST --") {
 
         error!("Python was unable to handle request: {row_data}");
         error!("The row data in question: {row_data:?}");
-        return build_err_event(row_json, ErrMsg::Err400);  
+        return build_err_event(row_json, ErrCode::Err400);  
 
     }
     else if row_data.starts_with("done!") {
@@ -154,7 +202,7 @@ fn get_list_row(conn: &mut TcpStream, mut row_json: ListRow) -> Event {
 
     } else {
 
-        row_json.row = row_data;
+        row_json.row_data = row_data;
         match Event::default().json_data(&row_json) {
         
             Ok(event) => {debug!("Event built successfully."); event},
@@ -162,8 +210,8 @@ fn get_list_row(conn: &mut TcpStream, mut row_json: ListRow) -> Event {
                 error!("Error in serializing row JSON: {e:?}");
                 error!("The row in question: {row_json:?}");
 
-                row_json.row = String::new();
-                build_err_event(row_json, ErrMsg::Err500)
+                row_json.row_data = String::new();
+                build_err_event(row_json, ErrCode::Err500)
             }
         }
     }
@@ -177,7 +225,10 @@ fn get_list_row(conn: &mut TcpStream, mut row_json: ListRow) -> Event {
 // of a "message" type, and it is expected that the connection will be terminated
 // by the client in such a case (the way the Python app is written, an error
 // on one line means there will be an error on every line, so continuing is no use).
-pub async fn convert_lb_list(list_info: Query<ListInfo>) -> Result<Sse<impl Stream<Item = Result<Event, Infallible>>>, ServerError> {
+//
+// This beast of a return type comes from the documentation; it's the only way I've found
+// to get the server to compile! 
+pub async fn convert_lb_list(list_info: Query<ListInfo>) -> Result<Sse<impl Stream<Item = Result<Event, Infallible>>>, LbConvError> {
     
     let py_cont_sock = get_env_var("PY_CONT_SOCK")?;
     let mut conn = TcpStream::connect(py_cont_sock)?;
@@ -202,27 +253,10 @@ pub async fn convert_lb_list(list_info: Query<ListInfo>) -> Result<Sse<impl Stre
     let total_rows = usize::from(list_length_u16) + 2;  // +1 for header, +1 to read "done!" signal
     debug!("Total row length received: {:?}", total_rows);
 
-    let mut curr_row: u16 = 0;
-    let row_stream = stream::repeat_with(
-        move || {
-            // when the "done!" signal is received, `curr_row` == total_rows+1,
-            // but the id field of the "complete" event will be ignored 
-            // by the client-side JS.
-            curr_row += 1;
-            let list_row = ListRow {
-                curr_row, 
-                total_rows, 
-                row: String::new()
-            };
-            get_list_row(&mut conn, list_row)          
-        })
-        .map(Ok);
-
-    // connection closed when `conn` is dropped
+    // 
+    let row_stream = stream::repeat(
+        Ok(get_list_row(&mut conn, total_rows))
+    );
     
-    Ok(
-        Sse::new(
-            row_stream.take(total_rows)
-        )
-    )
+    Ok(Sse::new(row_stream.take(total_rows)))
 }
