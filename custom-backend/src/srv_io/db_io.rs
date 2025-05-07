@@ -482,11 +482,6 @@ mod tests {
         Ok(())
     }
 
-
-    #[tokio::test]
-    async fn post_overlong_name(){}
-
-
     #[tokio::test]
     async fn post_overlong_entry_note()-> Result<(), DbOrUserError> {
 
