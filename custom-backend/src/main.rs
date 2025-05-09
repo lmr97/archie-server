@@ -7,7 +7,7 @@ use custom_backend::{
     utils::init_utils::*,
 };
 use axum::{
-    routing::{get, post, any}, 
+    routing::{get, post}, 
     Router
 };
 use axum_server::tls_rustls::RustlsConfig;
@@ -81,7 +81,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let lb_app_page = ServeFile::new(format!("{}/pages/lb-list-app.html", server_root));
     let lb_app = Router::new()
         .route_service("/", lb_app_page)
-        .route("/conv", any(lb_app_io::convert_lb_list));
+        .route("/conv", get(lb_app_io::convert_lb_list));
 
     
     /* All routes */

@@ -12,13 +12,11 @@ use std::convert::Infallible;
 use std::env::VarError;
 use std::io::{Read, Write};
 use std::net::TcpStream;
-use axum::response::{IntoResponse, Response};
-use futures_util::stream::{self, Stream};
-use axum::response::{Sse, sse::Event};
+use futures_util::{StreamExt, stream::{self, Stream}};
+use axum::response::{IntoResponse, Sse, sse::Event, Response};
 use axum_extra::extract::Query;
-use futures_util::StreamExt;
 use mysql_common::serde_json;
-use tracing::{debug, error, info};
+use tracing::{debug, error};
 
 use crate::utils::err_handling::make_500_resp;
 use crate::utils::init_utils::get_env_var;
@@ -30,15 +28,19 @@ pub struct ListInfo {
     attrs: Vec<String>,
 }
 
-#[derive(Debug, serde::Serialize)]
+#[derive(Debug, serde::Serialize, serde::Deserialize, PartialEq)]
 struct ListRow {
     total_rows: usize,
     row_data: String,
 }
 
+// These are the HTTP response codes I expect
+// when errors occur.
 enum ErrCode {
-    Err400,
+    Err403,
+    Err422,
     Err500,
+    Err502,
 }
 
 
@@ -49,7 +51,7 @@ enum ErrCode {
 // in during the stream must be handled in the stream directly, 
 // since JavaScript handles server-sent events, and is best-practice 
 // to my knowledge. In-stream errors are handled through the 
-// `get_list_row` and `build_err_event` functions.
+// `receive_list_row` and `build_err_event` functions.
 #[derive(Debug)]
 pub enum LbConvError {
     EnvVarError(VarError),
@@ -88,8 +90,10 @@ impl IntoResponse for LbConvError {
 fn build_err_event(mut json: ListRow, err: ErrCode) -> Event {
 
     let msg = match err {
-        ErrCode::Err400 => "400 BAD REQUEST",
-        ErrCode::Err500 => "500 INTERNAL SERVER ERROR"
+        ErrCode::Err422 => "422 UNPROCESSABLE CONTENT",
+        ErrCode::Err500 => "500 INTERNAL SERVER ERROR",
+        ErrCode::Err502 => "502 BAD GATEWAY",
+        ErrCode::Err403 => "403 FORBIDDEN"
     };
 
     json.row_data = String::from(msg);
@@ -122,7 +126,7 @@ fn build_err_event(mut json: ListRow, err: ErrCode) -> Event {
 // 
 // Will return an event of type "error" if there are any issues reading
 // from the Python container, or converting the output to a UTF-8 string.
-fn get_list_row(conn: &mut TcpStream, total_rows: usize) -> Event {
+fn receive_list_row(conn: &mut TcpStream, total_rows: usize) -> Event {
 
     let mut row_length_buf = [0; 2];
     let mut row_json = ListRow {
@@ -180,17 +184,26 @@ fn get_list_row(conn: &mut TcpStream, total_rows: usize) -> Event {
     
 
     /* SEND APPROPRIATE EVENT */
-    if row_data.starts_with("-- 500 INTERNAL SERVER ERROR --") {
+    if      row_data.starts_with("-- 500 INTERNAL SERVER ERROR --") {
 
         error!("Python exception was raised: {row_data}");
         return build_err_event(row_json, ErrCode::Err500);  
+    } 
+    else if row_data.starts_with("-- 502 BAD GATEWAY --") {
 
-    } else if row_data.starts_with("-- 400 BAD REQUEST --") {
+        error!("Letterboxd server down: {row_data}");
+        return build_err_event(row_json, ErrCode::Err502);  
+    } 
+    else if row_data.starts_with("-- 422 UNPROCESSABLE CONTENT --") {
 
         error!("Python was unable to handle request: {row_data}");
         error!("The row data in question: {row_data:?}");
-        return build_err_event(row_json, ErrCode::Err400);  
+        return build_err_event(row_json, ErrCode::Err422);  
+    }
+    else if row_data.starts_with("-- 403 FORBIDDEN --") {
 
+        error!("The list requested was too long: {row_data}");
+        return build_err_event(row_json, ErrCode::Err403);  
     }
     else if row_data.starts_with("done!") {
 
@@ -199,9 +212,8 @@ fn get_list_row(conn: &mut TcpStream, total_rows: usize) -> Event {
         Event::default()
             .event("complete")
             .data("done!")
-
-    } else {
-
+    } 
+    else {
         row_json.row_data = row_data;
         match Event::default().json_data(&row_json) {
         
@@ -221,18 +233,19 @@ fn get_list_row(conn: &mut TcpStream, total_rows: usize) -> Event {
 // First writes out query as JSON string to Python container, then
 // streams data from Python container on to the client, row by row, 
 // via server-sent events.
+//
 // If there are any issues, the event type returned is an "error" type, instead
 // of a "message" type, and it is expected that the connection will be terminated
 // by the client in such a case (the way the Python app is written, an error
 // on one line means there will be an error on every line, so continuing is no use).
 //
-// This beast of a return type comes from the documentation; it's the only way I've found
-// to get the server to compile! 
+// This beast of a return type comes from the documentation (for axum::response::sse); 
+// it's the only way I've found to get the server to compile! 
 pub async fn convert_lb_list(list_info: Query<ListInfo>) -> Result<Sse<impl Stream<Item = Result<Event, Infallible>>>, LbConvError> {
     
     let py_cont_sock = get_env_var("PY_CONT_SOCK")?;
     let mut conn = TcpStream::connect(py_cont_sock)?;
-    info!("Connection with Python container established.");
+    debug!("Connection with Python container established.");
 
     let list_info = list_info.0;
     let stringified_json = serde_json::to_string(&list_info)?;
@@ -250,13 +263,253 @@ pub async fn convert_lb_list(list_info: Query<ListInfo>) -> Result<Sse<impl Stre
     conn.read_exact(&mut list_length_buf)?;
     let list_length_u16 = u16::from_be_bytes(list_length_buf);
 
-    let total_rows = usize::from(list_length_u16) + 2;  // +1 for header, +1 to read "done!" signal
+    let total_rows = usize::from(list_length_u16) + 2;  // +1 for header, +1 for "done!" signal
     debug!("Total row length received: {:?}", total_rows);
 
-    // 
-    let row_stream = stream::repeat(
-        Ok(get_list_row(&mut conn, total_rows))
+    let row_stream  = stream::repeat_with(
+        move || Ok(receive_list_row(&mut conn, total_rows))
     );
     
-    Ok(Sse::new(row_stream.take(total_rows)))
+    Ok(
+        Sse::new( 
+            row_stream
+            .take(total_rows)
+        )
+    )
+
+
+}
+
+
+
+#[cfg(test)]
+mod tests {
+    
+    // The general form of this unit test comes from an example on the 
+    // Axum repository; and I've found it's not really feasible to test  
+    // any other way, or with any more granularity. I need to simulate 
+    // the server to serve `convert_lb_list`, since neither `Sse` nor 
+    // `Event` structs don't allow for comparison. So the "unit" being 
+    // tested here is composed of the functions in this module, using a 
+    // mocked Python Letterboxd app to supply the data to test.
+    // 
+    // The point of these tests is to ensure that the server is getting
+    // the messages from the Python app, not that these messages are 
+    // correct (this is the point of the Python app tests). The Python 
+    // app is tested separately, and integration-tested separately from
+    // both these tests.
+
+    use super::*;
+    use std::io::Error;
+    use tokio::net::TcpListener;
+    use axum::routing::{get, Router};
+    use eventsource_stream::Eventsource;
+
+
+    async fn spawn_app() -> Result<(), Error> {
+
+        let listener = TcpListener::bind("127.0.0.1:8080")
+            .await?;
+        let lb_list_test = Router::new().route("/", get(convert_lb_list));
+        tokio::spawn(async {
+            axum::serve(listener, lb_list_test)
+            .await
+            .unwrap();    // if this little server can't go up here, it should crash the tests
+        });
+        
+        Ok(())
+    }
+
+    // sends request and then gets stream as a Vec of Events
+    async fn extract_events(url: String) -> Vec<eventsource_stream::Event> {
+
+        // Since these tests run async, I don't know which one will run first,
+        // so I don't know which test will need to initialize the miniserver.
+        // So I'll just check in every function, and ignore connection error 
+        // from spawn_app. This is because if there 
+        // is an error, it means the miniserver is already up, and 
+        // if there isn't, it soon will be. Anything catastrophic
+        // will be caught by the unwrap inside that function and crash
+        // the tests.
+        match spawn_app().await {
+            Ok(_) => (),
+            Err(_) => ()
+        };
+
+        let mut event_stream= reqwest::Client::new()
+            .get(url)
+            .send()
+            .await
+            .unwrap()
+            .bytes_stream()
+            .eventsource();
+
+        let mut event_data: Vec<eventsource_stream::Event> = vec![];
+        while let Some(event) = event_stream.next().await {
+            match event {
+                Ok(event) => {
+                    // break the loop at the end of SSE stream
+                    if event.data == "done!" {
+                        break;
+                    }
+                    event_data.push(event);
+                }
+                Err(_) => {
+                    panic!("Error in event stream");
+                }
+            }
+        }
+
+        event_data
+    }
+
+
+
+    #[tokio::test]
+    async fn too_long_list_req() {
+
+        // This is the data used in the URL query, in JSON format:
+        // {
+        //     list_name: "list-too-long",
+        //     author_user: "user_exists",
+        //     attrs: ["casting", "watches", "likes"]    // all valid attributes
+        // }
+
+        let mini_svr_url= "http://127.0.0.1:8080?\
+            list_name=list-too-long&\
+            author_user=user_exists&\
+            attrs=casting&\
+            attrs=watches&\
+            attrs=likes";
+
+        let event_data = extract_events(String::from(mini_svr_url)).await;
+
+        assert!(event_data[0].event == "error");
+        assert!(event_data[0].data.contains("403 FORBIDDEN"));
+    }
+
+    // for when Letterboxd.com is down, testing sending 502 status to client
+    #[tokio::test]
+    async fn lb_server_down_req(){
+
+        let mini_svr_url= "http://127.0.0.1:8080?\
+            list_name=server-down&\
+            author_user=user_may_exist&\
+            attrs=casting&\
+            attrs=watches&\
+            attrs=likes";
+
+        let event_data = extract_events(String::from(mini_svr_url)).await;
+
+        assert!(event_data[0].event == "error");
+        assert!(event_data[0].data.contains("502 BAD GATEWAY"));
+    }
+
+    #[tokio::test]
+    async fn bad_list_req(){
+
+        // if the user doesn't exist, the list doesn't, 
+        // because it'll turn up a bad URL regardless.
+        // So it only matters whether the list exists or not.
+
+        let mini_svr_url= "http://127.0.0.1:8080?\
+            list_name=list-no-exist&\
+            author_user=user_may_exist&\
+            attrs=casting&\
+            attrs=watches&\
+            attrs=likes";
+
+        let event_data = extract_events(String::from(mini_svr_url)).await;
+
+        assert!(event_data[0].event == "error");
+        assert!(event_data[0].data.contains("422 UNPROCESSABLE CONTENT"));
+    }
+
+    #[tokio::test]
+    async fn app_crashing_req() {
+
+        let mini_svr_url= "http://127.0.0.1:8080?\
+            list_name=this-hurts-you&\
+            author_user=user_may_exist&\
+            attrs=casting&\
+            attrs=watches&\
+            attrs=likes";
+
+        let event_data = extract_events(String::from(mini_svr_url)).await;
+
+        assert!(event_data[0].event == "error");
+        assert!(event_data[0].data.contains("500 INTERNAL SERVER ERROR"));
+    }
+
+    #[tokio::test]
+    async fn bad_attr_req() {
+
+        let mini_svr_url= "http://127.0.0.1:8080?\
+            list_name=list-exists&\
+            author_user=user_exists&\
+            attrs=casting&\
+            attrs=bingus&\
+            attrs=likes";
+
+        let event_data = extract_events(String::from(mini_svr_url)).await;
+
+        assert!(event_data[0].event == "error");
+        assert!(event_data[0].data.contains("422 UNPROCESSABLE CONTENT"));
+
+    }
+    #[tokio::test]
+    async fn no_attr_req() {
+
+        // crate::utils::init_utils::build_logger(String::from("../archie-server.log"), false)
+        //     .unwrap()
+        //     .init();
+
+        let mini_svr_url= "http://127.0.0.1:8080?\
+            list_name=list-exists&\
+            author_user=user_exists&\
+            attrs=none";
+
+        let event_data = extract_events(String::from(mini_svr_url)).await;
+
+        let correct_rows = vec![
+            ListRow {
+                total_rows: 6,
+                row_data: String::from("Title,Year"),
+            },
+            ListRow {
+                total_rows: 6,
+                row_data: String::from("2001: A Space Odyssey,1968"),
+            },
+            ListRow {
+                total_rows: 6,
+                row_data: String::from("Blade Runner,1982"),
+            },
+            ListRow {
+                total_rows: 6,
+                row_data: String::from("The Players vs. Ángeles Caídos,1969"),
+            },
+            ListRow {
+                total_rows: 6,
+                row_data: String::from("8½,1963"),
+            },
+        ];
+
+        println!("{:?}",event_data);
+
+        let received_rows: Vec<ListRow> = event_data
+            .iter()
+            .map(| ev | { 
+                serde_json::from_str::<ListRow>(&ev.data)
+                    .unwrap() 
+            })
+            .collect();
+
+        assert_eq!(correct_rows, received_rows);
+    }
+
+    #[tokio::test]
+    async fn all_attr_req(){}
+
+    #[tokio::test]
+    async fn big_list_req(){}
 }
