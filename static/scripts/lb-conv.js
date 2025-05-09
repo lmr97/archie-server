@@ -77,22 +77,27 @@ async function getLBlist() {
     // the server, since it elimates the opportunity to inject a malicious
     // URL wholesale into the server.
     var lbURLsplit  = lbURL.split("/").slice(0,-1); // last element is a null string
-    const list_name = lbURLsplit.at(-1);  
+    const listName = lbURLsplit.at(-1);  
     const author    = lbURLsplit.at(-3);
 
-    let attr_list = new Array(checkedElements.length);
-    for (let i = 0; i < checkedElements.length; i++) {
-        attr_list[i] = checkedElements[i].id;
+    let attrsUrlForm = "attrs=none";
+
+    if (checkedElements.length > 0) {
+
+        let attr_list = new Array(checkedElements.length);
+        
+        for (let i = 0; i < checkedElements.length; i++) {
+            attr_list[i] = checkedElements[i].id;
+        }
+        attrsUrlForm = attr_list.map((a) => "attrs="+a).join("&");
     }
 
     // attrs array necessitates a custom URL encoding for request query 
     // (camel-case for Rust API)
     let fetchURL = window.location.href + "/conv?"
-        + "list_name="   + list_name + "&"
+        + "list_name="   + listName + "&"
         + "author_user=" + author    + "&"
-        + attr_list
-            .map((a) => "attrs="+a)
-            .join("&");
+        + attrsUrlForm;
 
     // add "Converting..." message
     var convMsg = document.createElement("h3");
