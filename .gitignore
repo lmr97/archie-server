@@ -6,3 +6,6 @@
 *.log
 *.odt
 notes.md
+*venv/
+*build/
+*.egg-info/
