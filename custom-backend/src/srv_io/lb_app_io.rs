@@ -130,7 +130,7 @@ fn receive_list_row(conn: &mut TcpStream, total_rows: usize) -> Event {
 
     let mut row_length_buf = [0; 2];
     let mut row_json = ListRow {
-        total_rows, 
+        total_rows: total_rows - 1,         // exclude "done!" signal addition
         row_data: String::new()
     };
     
@@ -300,7 +300,7 @@ mod tests {
     // both these tests.
 
     use super::*;
-    use std::io::Error;
+    use std::{fs::OpenOptions, io::Error};
     use tokio::net::TcpListener;
     use axum::routing::{get, Router};
     use eventsource_stream::Eventsource;
@@ -362,8 +362,6 @@ mod tests {
 
         event_data
     }
-
-
 
     #[tokio::test]
     async fn too_long_list_req() {
@@ -473,28 +471,26 @@ mod tests {
 
         let correct_rows = vec![
             ListRow {
-                total_rows: 6,
+                total_rows: 5,
                 row_data: String::from("Title,Year"),
             },
             ListRow {
-                total_rows: 6,
+                total_rows: 5,
                 row_data: String::from("2001: A Space Odyssey,1968"),
             },
             ListRow {
-                total_rows: 6,
+                total_rows: 5,
                 row_data: String::from("Blade Runner,1982"),
             },
             ListRow {
-                total_rows: 6,
+                total_rows: 5,
                 row_data: String::from("The Players vs. Ángeles Caídos,1969"),
             },
             ListRow {
-                total_rows: 6,
+                total_rows: 5,
                 row_data: String::from("8½,1963"),
             },
         ];
-
-        println!("{:?}",event_data);
 
         let received_rows: Vec<ListRow> = event_data
             .iter()
@@ -507,9 +503,39 @@ mod tests {
         assert_eq!(correct_rows, received_rows);
     }
 
+    // This exists to test very long (probably maximally long) rows,
+    // with a very long list (~1.5k films)
     #[tokio::test]
-    async fn all_attr_req(){}
+    async fn big_list_req(){
 
-    #[tokio::test]
-    async fn big_list_req(){}
+        let url = "http://127.0.0.1:8080?\
+            list_name=the-big-one&\
+            author_user=user_exists&\
+            attrs=all-of-em";
+
+        let mut test_file_reader = OpenOptions::new()
+            .read(true)
+            .open("../test-helpers/big-list-test.csv")
+            .unwrap();
+
+        let mut correct_list = String::new();
+        test_file_reader
+            .read_to_string(&mut correct_list)
+            .unwrap();
+
+        let event_data = extract_events(String::from(url)).await;
+
+        // Extract row data itself, not entire ListRow structs
+        let received_list  = event_data
+            .iter()
+            .map(| ev | { 
+                let li = serde_json::from_str::<ListRow>(&ev.data)
+                    .unwrap();
+                li.row_data
+            })
+            .collect::<Vec<String>>()
+            .join("");
+
+        assert_eq!(correct_list, received_list);
+    }
 }

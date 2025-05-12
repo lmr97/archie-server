@@ -1,9 +1,14 @@
+"""
+This script mimics the output of letterboxd_get_list/get_list.py.
+"""
+import sys
 import json
 import socket
 
 # parameters for streaming data to server
 ENDIANNESS = 'big'
 SIZE_BYTES = 2
+DEBUG_MODE = False
 
 class RequestError(Exception):
     """
@@ -25,6 +30,11 @@ class ListTooLongError(RequestError):
     not necessarily the computer's processing power).
     """
 
+def debug_print(text: str):
+    """This cleans up the code"""
+    if DEBUG_MODE:
+        print(text)
+
 def send_list_len(list_len: int, conn: socket.socket):
     """
     Simplified version
@@ -39,28 +49,35 @@ def send_line(conn: socket.socket, line: str):
     This function is identical to the one in get_list.py; 
     see that function for notes.
     """
-    print(" -- Sending line --")
+    debug_print(" -- Sending line --")
     byte_row = bytes(line, 'utf-8')
 
     # send row length
     # needs to be byte length of row, to account for multi-byte characters
     row_len  = len(byte_row)
     byte_len = row_len.to_bytes(SIZE_BYTES, ENDIANNESS)
-    print(row_len)
-    print(byte_len)
+    debug_print(row_len)
+    debug_print(byte_len)
     conn.sendall(byte_len)
 
     # send row itself
-    print(byte_row)
+    debug_print(byte_row)
     conn.sendall(byte_row)
 
 
 def main():
-    """Mocks up responses to """
+    """Mocks up responses to web app requests"""
+
+    # this is the lazy way to do it, I know; but it's a mock
+    if len(sys.argv) > 1:
+        if sys.argv[1] == "--debug":
+            global DEBUG_MODE
+            DEBUG_MODE = True
+
     listener = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     listener.bind(('0.0.0.0', 3575))
     listener.listen(1)
-    print("Starting mock Python app...")
+    debug_print("Starting mock Python app...")
 
     try:
         # only expecting 6 messages; this will allow the app to terminate
@@ -70,7 +87,7 @@ def main():
             (conn, _) = listener.accept()
             req = conn.recv(2048).decode("utf-8")
             query = json.loads(req)
-            print(query)
+            debug_print(query)
 
             if (query['list_name'] == "this-hurts-you"):
                 crashing_err = Exception("A crash of some sort")
@@ -122,19 +139,29 @@ def main():
                 send_line(conn, "Title,Year")
 
                 for i in range(total_len):
-                    print(   f"DEBUG: {titles[i]},{years[i]}")
+                    debug_print(   f"DEBUG: {titles[i]},{years[i]}")
                     send_line(conn, f"{titles[i]},{years[i]}")
                 
                 send_line(conn, "done!")
                 continue
 
-            if (len(query["attrs"]) > 20):           # proxy for "all attributes"
+            if (query["list_name"] == "the-big-one"):           # a massive list
+                lines = []
+                with open("big-list-test.csv", "r", encoding="utf-8") as tf:
+                    lines = tf.readlines()
+                
+                send_list_len(len(lines)-1, conn)
+
+                for ln in lines:
+                    send_line(conn, ln)
+
+                send_line(conn, "done!")
                 continue
 
             conn.close()    # sends EOF, so that Rust server can read data sent
             continue
     except Exception as e:
-        print(e)
+        debug_print(e)
         conn.close()
 
 if (__name__ == "__main__"):
