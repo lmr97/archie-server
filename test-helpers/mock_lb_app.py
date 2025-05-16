@@ -82,7 +82,7 @@ def main():
     try:
         # only expecting 6 messages; this will allow the app to terminate
         # automatically and gracefully once the tests are complete.
-        for i in range(7):
+        while(True):
 
             (conn, _) = listener.accept()
             req = conn.recv(2048).decode("utf-8")
