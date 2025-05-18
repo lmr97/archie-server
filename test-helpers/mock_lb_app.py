@@ -147,7 +147,9 @@ def main():
 
             if (query["list_name"] == "the-big-one"):           # a massive list
                 lines = []
-                with open("big-list-test.csv", "r", encoding="utf-8") as tf:
+                # path relative to <repo-root>/custom-backend, where the tests
+                # are run from
+                with open("../test-helpers/big-list-test.csv", "r", encoding="utf-8") as tf:
                     lines = tf.readlines()
                 
                 send_list_len(len(lines)-1, conn)
