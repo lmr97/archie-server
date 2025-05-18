@@ -64,6 +64,7 @@ jobs:
     defaults:
       run:
         shell: bash
+        working-directory: ./lb-app/letterboxd_get_list
     steps:
     - uses: actions/checkout@v4
       with: 
@@ -73,9 +74,7 @@ jobs:
         python-version: '3.13' 
     - name: Install module and dependencies
       run: |
-        cd ./lb-app/letterboxd_get_list/letterboxd_list
-        pip install .[testing]
-        cd ..
+        pip install ./letterboxd_list[testing]
     - name: Run tests
       run: pytest --ignore=./letterboxd_list/tests/test_cli.py --cov -v
       # will include tests for:
