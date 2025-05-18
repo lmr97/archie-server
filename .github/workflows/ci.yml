@@ -71,7 +71,7 @@ jobs:
         python-version: '3.13' 
     - name: Install module and dependencies
       run: |
-        pwd
+        ls -l
         cd ./lb-app/letterboxd_get_list
         pip install ./letterboxd_list[testing]
     - name: Run tests
