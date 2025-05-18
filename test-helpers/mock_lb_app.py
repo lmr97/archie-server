@@ -160,11 +160,9 @@ def main():
                 send_line(conn, "done!")
                 continue
 
-            conn.close()    # sends EOF, so that Rust server can read data sent
-            continue
     except Exception as e:
         debug_print(e)
         conn.close()
 
-if (__name__ == "__main__"):
+if __name__ == "__main__":
     main()
