@@ -15,7 +15,7 @@ use std::net::TcpStream;
 use futures_util::{StreamExt, stream::{self, Stream}};
 use axum::response::{IntoResponse, Sse, sse::Event, Response};
 use axum_extra::extract::Query;
-use mysql_common::serde_json;
+use mysql_common::{serde, serde_json};
 use tracing::{debug, error};
 
 use crate::utils::err_handling::make_500_resp;

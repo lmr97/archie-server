@@ -2,9 +2,12 @@ use std::env;
 use axum::{
     body::Body, http::StatusCode, response::{Html, IntoResponse, Response}, Json
 };
-use chrono::prelude::*;
 use mysql::*;
 use mysql::prelude::*;
+use mysql_common::{
+    chrono::NaiveDateTime,
+    serde
+};
 use tracing::{info, debug, error};
 use crate::utils::err_handling::make_500_resp;
 
@@ -276,7 +279,7 @@ mod tests {
 
     use super::*;
     use axum::http::StatusCode;
-    use chrono::Utc;
+    use mysql_common::chrono::{Utc, NaiveDateTime, SubsecRound};
 
     #[tokio::test]
     async fn hit_counting() {
