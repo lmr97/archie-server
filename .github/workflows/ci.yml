@@ -26,6 +26,8 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
+      with: 
+        submodules: true
     - name: Set up MySQL database
       # uses demo db, identical to real db except in content
       # running this first so that the database can initialize while
