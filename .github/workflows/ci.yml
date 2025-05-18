@@ -26,8 +26,6 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
-      with: 
-        submodules: recursive
     - name: Set up MySQL database
       # uses demo db, identical to real db except in content
       # running this first so that the database can initialize while
@@ -68,6 +66,8 @@ jobs:
         shell: bash
     steps:
     - uses: actions/checkout@v4
+      with: 
+        submodules: recursive
     - uses: actions/setup-python@v5
       with:
         python-version: '3.13' 
