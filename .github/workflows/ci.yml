@@ -1,5 +1,8 @@
 name: Archie CI
 
+# Tests are currently incomplete. See notes near end for 
+# planned tests.
+
 on:
   push:
     branches: [ "testing" ]
@@ -7,7 +10,6 @@ on:
 jobs:
 
   server_tests:
-
     runs-on: ubuntu-latest
     env:
       EX_VAR: "a value/here"      # an env var to test env fetches
@@ -16,6 +18,7 @@ jobs:
       MYSQL_PASSWORD: thepass     # not real pw; doesnt matter for testing
       MYSQL_ROOT_PASSWORD: root
       DB_URL: "mysql://server1:thepass@127.0.0.1:3306/archie"
+      PY_CONT_SOCK: "127.0.0.1:3575"
 
     defaults:
       run:
@@ -33,6 +36,11 @@ jobs:
         --file test-helpers/testing-override.yaml
         up 
         --detach db
+    - uses: actions/setup-python@v5
+      with:
+        python-version: '3.13' 
+    - name: Start mock Python app
+      run: python ./test-helpers/mock_lb_app.py &
     - name: Server unit tests
       run: |
         cd ./custom-backend
@@ -40,6 +48,7 @@ jobs:
         cargo test --lib
         cargo test --test tls_on_default --
         cargo test --test tls_off_switch -- --no-tls
+        cd ..
     - name: Server integration tests
       run: |
         echo "developing these tests..."
@@ -47,3 +56,28 @@ jobs:
       run: |
         docker compose down
         bash test-helpers/validate-dump.sh
+    - name: Cleanup
+      run: killall python
+  
+  letterboxd_app_tests:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
+    steps:
+    - uses: actions/checkout@v4
+    - uses: actions/setup-python@v5
+      with:
+        python-version: '3.13' 
+    - name: Install module and dependencies
+      run: |
+        cd ./lb-app/letterboxd_get_list
+        pip install ./letterboxd_list[testing]
+    - name: Run tests
+      run: pytest --ignore=./letterboxd_list/tests/test_cli.py --cov -v
+      # will include tests for:
+      # - the server I/O driver `lb_app.py`
+      # - the Docker healthcheck script, `healthcheck.py`
+
+  # next job: test frontend JS scripts
+  # final job: full server integration tests
