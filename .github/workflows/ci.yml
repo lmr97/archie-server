@@ -41,6 +41,10 @@ jobs:
         python-version: '3.13' 
     - name: Start mock Python app
       run: python ./test-helpers/mock_lb_app.py --debug &  # printing debugs actually aids connection
+    - name: Build server
+      run: |
+        cd ./custom-backend
+        cargo build --release
     - name: Server unit tests
       run: |
         cd ./custom-backend
