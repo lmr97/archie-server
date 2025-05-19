@@ -45,6 +45,7 @@ jobs:
       run: |
         cd ./custom-backend
         echo > test.log
+        cargo build --release
         cargo test --lib
         cargo test --test tls_on_default --
         cargo test --test tls_off_switch -- --no-tls

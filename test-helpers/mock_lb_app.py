@@ -61,7 +61,8 @@ def send_line(conn: socket.socket, line: str):
     conn.sendall(byte_len)
 
     # send row itself
-    debug_print(byte_row)
+    if len(byte_row) < 250:
+        debug_print(byte_row)
     conn.sendall(byte_row)
 
 
@@ -80,21 +81,12 @@ def main():
     debug_print("Starting mock Python app...")
 
     try:
-        # only expecting 6 messages; this will allow the app to terminate
-        # automatically and gracefully once the tests are complete.
         while True:
 
             (conn, _) = listener.accept()
             req = conn.recv(2048).decode("utf-8")
             query = json.loads(req)
             debug_print(query)
-
-            if query['list_name'] == "this-hurts-you":
-                crashing_err = Exception("A crash of some sort")
-                send_list_len(0, conn)
-                send_line(conn, f"-- 500 INTERNAL SERVER ERROR -- {repr(crashing_err)}")
-                send_line(conn, "done!")
-                continue
 
             if query["list_name"] == "server-down":
                 lb_serr = RequestError(
@@ -105,17 +97,30 @@ def main():
                 send_line(conn, "done!")
                 continue
 
-            if query["list_name"] == "list-no-exist":
-                req_err = RequestError("Error in fetching webpage. Response status: 404")
+            if query['list_name'] == "this-hurts-you":
+                crashing_err = Exception("A crash of some sort")
                 send_list_len(0, conn)
-                send_line(conn, f"-- 422 UNPROCESSABLE CONTENT -- {repr(req_err)}")
+                send_line(conn, f"-- 500 INTERNAL SERVER ERROR -- {repr(crashing_err)}")
                 send_line(conn, "done!")
                 continue
 
-            if "bingus" in query["attrs"]:
-                req_err = RequestError(
-                    f"Invalid attributes submitted. All submitted attributes: {query["attrs"]}"
-                    )
+            if query["list_name"] == "the-big-one":           # a massive list
+                lines = []
+                # path relative to <repo-root>/custom-backend, where the tests
+                # are run from
+                with open("./test-helpers/big-list-test.csv", "r", encoding="utf-8") as tf:
+                    lines = tf.readlines()
+
+                send_list_len(len(lines)-1, conn)
+
+                for ln in lines:
+                    send_line(conn, ln)
+
+                send_line(conn, "done!")
+                continue
+
+            if query["list_name"] == "list-no-exist":
+                req_err = RequestError("Error in fetching webpage. Response status: 404")
                 send_list_len(0, conn)
                 send_line(conn, f"-- 422 UNPROCESSABLE CONTENT -- {repr(req_err)}")
                 send_line(conn, "done!")
@@ -139,24 +144,18 @@ def main():
                 send_line(conn, "Title,Year")
 
                 for i in range(total_len):
-                    debug_print(   f"DEBUG: {titles[i]},{years[i]}")
+                    debug_print(f"DEBUG: {titles[i]},{years[i]}")
                     send_line(conn, f"{titles[i]},{years[i]}")
 
                 send_line(conn, "done!")
                 continue
 
-            if query["list_name"] == "the-big-one":           # a massive list
-                lines = []
-                # path relative to <repo-root>/custom-backend, where the tests
-                # are run from
-                with open("./test-helpers/big-list-test.csv", "r", encoding="utf-8") as tf:
-                    lines = tf.readlines()
-
-                send_list_len(len(lines)-1, conn)
-
-                for ln in lines:
-                    send_line(conn, ln)
-
+            if "bingus" in query["attrs"]:
+                req_err = RequestError(
+                    f"Invalid attributes submitted. All submitted attributes: {query["attrs"]}"
+                    )
+                send_list_len(0, conn)
+                send_line(conn, f"-- 422 UNPROCESSABLE CONTENT -- {repr(req_err)}")
                 send_line(conn, "done!")
                 continue
 

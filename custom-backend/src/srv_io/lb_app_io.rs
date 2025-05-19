@@ -392,10 +392,8 @@ mod tests {
 
         let mini_svr_url= "http://127.0.0.1:8080?\
             list_name=server-down&\
-            author_user=user_may_exist&\
-            attrs=casting&\
-            attrs=watches&\
-            attrs=likes";
+            author_user=some_user&\
+            attrs=stuff";
 
         let event_data = extract_events(String::from(mini_svr_url)).await;
 
@@ -455,12 +453,9 @@ mod tests {
         assert!(event_data[0].data.contains("422 UNPROCESSABLE CONTENT"));
 
     }
+
     #[tokio::test]
     async fn no_attr_req() {
-
-        // crate::utils::init_utils::build_logger(String::from("../archie-server.log"), false)
-        //     .unwrap()
-        //     .init();
 
         let mini_svr_url= "http://127.0.0.1:8080?\
             list_name=list-exists&\
