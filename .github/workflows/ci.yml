@@ -50,7 +50,7 @@ jobs:
         cd ./custom-backend
         echo > test.log
         sleep 1
-        cargo test --lib
+        cargo test --lib -- --test-threads=1
         cargo test --test tls_on_default --
         cargo test --test tls_off_switch -- --no-tls
         cd ..
