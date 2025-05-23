@@ -1,0 +1,288 @@
+"""
+Tests the I/O to the server and exception handling. Also tests the 
+healthcheck run by Docker on the app. 
+
+Note: I can't really test unexpected errors (or 502 response-type 
+errors; the former because I can't expect them, the latter because 
+that requires letterboxd.com, specifically, to respond with a 5xx status,
+and I can't make that happen on demand. I also can't test the signal 
+handlers here, since Python executes all signal handlers in the main thread
+of the interpreter, meaning I cannot simply send a signal to a Python thread
+to terminate it without terminating the whole interpreter. So coverage will 
+be incomplete according to this test, but this functionality is easy to test
+from the command line. 
+"""
+import os
+import socket
+import threading
+import json
+import pytest
+from letterboxd_list import VALID_ATTRS
+import lb_app
+import healthcheck
+
+# define socket object to emulate server data and catch bytes streamed out
+PY_SOCK    = os.getenv("PY_CONT_SOCK", "127.0.0.1:3575")
+(IP, PORT) = PY_SOCK.split(":")
+PORT       = int(PORT)
+ADDRESS    = (IP, PORT)
+
+# app can be stopped by sending a specific string to the bound port
+APP_THREAD_1 = threading.Thread(target=lb_app.main)
+APP_THREAD_1.start()
+
+
+def send_str(msg: str) -> socket.socket:
+    """
+    Send a given string to lb_app.py.
+    """
+    test_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    test_sock.connect(ADDRESS)
+    test_sock.sendall(bytes(msg, "utf-8"))
+    return test_sock
+
+
+def recieve_list_len(connection: socket.socket) -> int:
+    """
+    Receive (and decode) the list length sent from lb_app.py.
+    """
+    byte_len = connection.recv(2)
+    list_len = int.from_bytes(byte_len, byteorder='big', signed=False)
+    return list_len
+
+
+def recieve_decode_row(connection: socket.socket) -> str:
+    """
+    Receives bytes and decodes them as a string the way the server does:
+    use the first 2 bytes to determine the length of 
+    """
+    byte_len   = connection.recv(2)
+    bytes_int  = int.from_bytes(byte_len, byteorder='big', signed=False)
+    decoded    = connection.recv(bytes_int).decode("utf-8")
+    return decoded
+
+
+def recieve_list(connection: socket.socket, correct_len: int) -> list:
+    """
+    Mimic server's algorithm for receiving a list, with the exception 
+    of using a while loop instead of a set-length repeater (that is 
+    a requirement of using SSEs in the Axum framework). Length check
+    assert statement takes place here for convenience.
+    """
+    recieved_len = recieve_list_len(connection)
+    assert correct_len == recieved_len
+
+    lb_list      = []
+    current_row  = recieve_decode_row(connection)
+    while current_row != "done!":
+        # adding newline for easier comparison against touchstone file read in later
+        lb_list.append(current_row+"\n")
+        current_row  = recieve_decode_row(connection)
+
+    return lb_list
+
+
+def test_send_line():
+    """
+    Make sure basic line-sending stream functionality is good.
+    Uses a separate port from $PY_CONT_SOCK.
+    """
+    test_str  = "echo-echo-echo"
+    test_sock = ('127.0.0.1', 3020)
+    reciever  = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    sender    = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    reciever.bind(test_sock)
+    reciever.listen(1)
+    sender.connect(test_sock)
+
+    lb_app.send_line(sender, test_str)
+    (conn, _)    = reciever.accept()
+    recieved_str = recieve_decode_row(conn)
+    conn.close()
+
+    assert test_str == recieved_str
+
+
+def test_check_health_response():
+    """
+    Makes sure the part of the app that responds to the Docker 
+    container healthcheck behaves as expected.
+    """
+    conn      = send_str('{"msg": "are you healthy?"}')
+    response  = recieve_decode_row(conn)
+    sig_done  = recieve_decode_row(conn)    # extra row for "done!" signal
+    conn.close()
+
+    assert "yep, still healthy!" == response
+    assert sig_done == "done!"
+
+
+
+def test_healthy():
+    """
+    Test that the actual healthcheck script responds as it should 
+    when the app is running.
+    """
+    assert healthcheck.is_healthy()
+    with pytest.raises(SystemExit) as se:
+        healthcheck.main()
+
+    # ensure the whole script exited with code 0
+    assert se.value.code == 0
+
+
+def test_rej_overlong_list():
+    """
+    See if the app will reject lists over 10k films long, with a 403 error.
+    """
+    # this list is over 10k films long!
+    too_long_list = {
+        "list_name": "monster-mega-list-2-actual-watch-list-1",
+        "author_user": "maxwren",
+        "attrs": ["director", "assistant-director"]
+    }
+    req_str       = json.dumps(too_long_list)
+    conn          = send_str(req_str)
+
+    # check that list length recieved is 0
+    recvd_length  = recieve_list_len(conn)
+    assert recvd_length == 0
+
+    recieved_str  = recieve_decode_row(conn)
+    done_signal   = recieve_decode_row(conn)    # extra row for "done!" signal
+    conn.close()
+
+    assert "-- 403 FORBIDDEN --" in recieved_str
+    assert done_signal == "done!"
+
+
+def test_rej_bad_attr():
+    """
+    Testing whether the app rejects a request with an invalid attribute, 
+    even if the request is properly formed.
+
+    Genuinely malformed requests are rejected by the server before they 
+    even get to the Python app, so they are tested elsewhere.
+    """
+    # real list, fake attribute
+    bad_attr = {
+        "list_name": "truly-random-films",
+        "author_user": "dialectica972",
+        "attrs": ["director", "bingus"]
+    }
+    request_str   = json.dumps(bad_attr)
+    conn          = send_str(request_str)
+
+    # check that list length recieved is 0
+    recvd_length  = recieve_list_len(conn)
+    assert recvd_length == 0
+
+    recieved_str  = recieve_decode_row(conn)
+    done_signal   = recieve_decode_row(conn)  # extra row of "done!" sent by app
+    conn.close()
+
+    assert "-- 422 UNPROCESSABLE CONTENT --" in recieved_str
+    assert done_signal == "done!"
+
+
+def test_rej_bad_list():
+    """
+    Testing whether the app rejects a request with an nonexistent list, 
+    even if the request is properly formed.
+
+    Genuinely malformed requests are rejected by the server before they 
+    even get to the Python app, so they are tested elsewhere.
+    """
+    # this list doesn't exist
+    bad_list = {
+        "list_name": "dfgjsdflkgdf",
+        "author_user": "sdfkjshd",
+        "attrs": ["director", "watches"]
+    }
+    request_str   = json.dumps(bad_list)
+    conn          = send_str(request_str)
+
+    # check that list length recieved is 0
+    recvd_length  = recieve_list_len(conn)
+    assert recvd_length == 0
+
+    recieved_str  = recieve_decode_row(conn)
+    done_signal   = recieve_decode_row(conn)  # extra row of "done!" sent
+    conn.close()
+
+    assert "-- 422 UNPROCESSABLE CONTENT --" in recieved_str
+    assert done_signal == "done!"
+
+
+def test_long_rows():
+    """
+    Test a short list, but with long rows. The request will contain all 
+    attributes, except for statistics rows (those change frequently).
+    """
+    vattrs_no_stats = VALID_ATTRS   # keep module-level global in tact in this scope
+    vattrs_no_stats.remove("watches")
+    vattrs_no_stats.remove("likes")
+    vattrs_no_stats.remove("avg-rating")
+
+    megarow_list = {
+        "list_name": "test-list-all-attributes",
+        "author_user": "dialectica972",
+        "attrs": VALID_ATTRS
+    }
+
+    request_str  = json.dumps(megarow_list)
+    connection   = send_str(request_str)
+    lb_list      = recieve_list(connection, correct_len=3)
+
+    correct_list = []
+    with open("short-list-all-attrs-no-stats.csv", "r", encoding="utf-8") as list_reader:
+        correct_list = list_reader.readlines()
+
+    # checking row by row to show where any issues are
+    for i, test_row in enumerate(lb_list):
+        assert correct_list[i] == test_row
+
+
+def test_null_attributes():
+    minirow_list = {
+        "list_name": "test-list-all-attributes",
+        "author_user": "dialectica972",
+        "attrs": ["none"]
+    }
+
+    request_str  = json.dumps(minirow_list)
+    connection   = send_str(request_str)
+    lb_list      = recieve_list(connection, correct_len=3)
+
+    correct_list = []
+    with open("short-list-no-attrs.csv", "r", encoding="utf-8") as list_reader:
+        correct_list = list_reader.readlines()
+
+    # checking row by row to show where any issues are
+    for i, test_row in enumerate(lb_list):
+        assert correct_list[i] == test_row
+
+
+def test_shutdown_via_msg():
+    """
+    The app can shut down if sent the string below, if signal-sending
+    is ever cumbersome. This tests that functionality.
+    """
+    conn = send_str('{"msg": "shutdown"}')
+    conn.close()
+    APP_THREAD_1.join()
+    assert not APP_THREAD_1.is_alive()
+
+
+def test_unhealthy():
+    """
+    Test that the actual healthcheck script responds as it should 
+    when the app is NOT running.
+    """
+    assert not healthcheck.is_healthy()
+
+    with pytest.raises(SystemExit) as se:
+        healthcheck.main()
+
+    # ensure the whole script exited with code 1
+    assert se.value.code == 1
