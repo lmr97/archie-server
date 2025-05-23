@@ -113,7 +113,7 @@ def main():
                 lines = []
                 # path relative to <repo-root>/custom-backend, where the tests
                 # are run from
-                with open("./test-helpers/big-list-test.csv", "r", encoding="utf-8") as tf:
+                with open("../test-helpers/big-list-test.csv", "r", encoding="utf-8") as tf:
                     lines = tf.readlines()
 
                 send_list_len(len(lines)-1, conn)
