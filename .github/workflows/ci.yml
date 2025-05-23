@@ -35,11 +35,10 @@ jobs:
       # uses demo db, identical to real db except in content
       # running this first so that the database can initialize while
       # the server builds 
-      run: |
-        cd ..
+      run:
         docker compose 
-        --file compose-demo.yaml 
-        --file test-helpers/testing-override.yaml
+        --file ../compose-demo.yaml 
+        --file ../test-helpers/testing-override.yaml
         up 
         --detach db
     - uses: actions/setup-python@v5
