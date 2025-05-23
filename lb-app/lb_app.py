@@ -22,32 +22,45 @@ for every list row, sending 2 bytes to indicate the row size
 See custom_backend::lb_app_io.rs for how this data is transmitted
 to the client.
 """
-
+import os
+import sys
 import json
 import socket
+import signal
+from letterboxd_list import VALID_ATTRS
 import letterboxd_list.containers as lbl
 
 # parameters for streaming data to server
 ENDIANNESS = 'big'
 SIZE_BYTES = 2
 
-# Superset of TABBED_ATTRS list in letterboxdFilm.py
-VALID_ATTRS = []
-with open("./letterboxd_get_list/valid-lb-attrs.txt", "r", encoding="utf-8") as attr_file:
-    VALID_ATTRS = attr_file.readlines()
 
-VALID_ATTRS = [a.replace("\n", "") for a in VALID_ATTRS]
-
-
-class ListTooLongError(lbl.RequestError):
+class InterruptHandler:
     """
-    Special error for when the Letterboxd list is 
-    over 65,500 films. This is not only an ungodly 
-    amount of films for a list, but also almost over 
-    the 2-byte limit to the amount the server can process 
-    (given its code, not necessarily the computer's 
-    processing power).
+    You'll never believe this, but this class handles OS signals.
     """
+    def __init__(self, main_listener: socket.socket):
+
+        self.kill_now = False
+        # keep a copy of the main connection to close on exit
+        self._main_listener = main_listener
+
+        # define listeners for graceful exit, if in main thread of interpreter
+        # otherwise just hold the listener and a shutdown boolean
+        if __name__ == "__main__":
+            signal.signal(signal.SIGINT, self._sig_exit_handler)
+            signal.signal(signal.SIGTERM, self._sig_exit_handler)
+
+    def _sig_exit_handler(self, signo, _stack_frame):
+        """
+        Called when SIGINT or SIGTERM is recieved by the program.
+        """
+        self.kill_now = True
+        print(f"\n\033[0;33mReceived signal \"{signal.strsignal(signo)}\", exiting...\033[0m")
+        self._main_listener.close()
+
+
+
 
 # get number of films
 def send_list_len(list_len: int, conn: socket.socket):
@@ -61,21 +74,9 @@ def send_list_len(list_len: int, conn: socket.socket):
     """
 
     print(" -- Sending total length --")
-
-    if list_len > 65_500:
-        raise ListTooLongError
+    print(f"List length: {list_len}")
 
     int_as_bytes = list_len.to_bytes(SIZE_BYTES, ENDIANNESS)
-    conn.sendall(int_as_bytes)
-
-
-def send_list_len_err(conn: socket.socket):
-    """
-    List length still needs to be sent regardless, but on an error
-    condition, it can be a constant (0). 
-    """
-    list_len_err = 0
-    int_as_bytes = list_len_err.to_bytes(SIZE_BYTES, ENDIANNESS)
     conn.sendall(int_as_bytes)
 
 
@@ -102,11 +103,22 @@ def send_line(conn: socket.socket, line: str):
     byte_len = row_len.to_bytes(SIZE_BYTES, ENDIANNESS)
     print(row_len)
     print(byte_len)
-    conn.sendall(byte_len)
+
+    try:
+        conn.sendall(byte_len)
+    except OSError as ose:
+        print(f"Could not send back above byte length, printing error here: {repr(ose)}",
+            file=sys.stderr)
+        return
 
     # send row itself
     print(byte_row)
-    conn.sendall(byte_row)
+    try:
+        conn.sendall(byte_row)
+    except OSError as ose:
+        print(f"Could not send back above row, printing error here: {repr(ose)}",
+            file=sys.stderr)
+        return
 
 
 def to_capital_header(attr: str) -> str:
@@ -133,14 +145,12 @@ def get_list_with_attrs(query: dict, conn: socket.socket) -> None:
     # validate attrs. must occur here for a similar reason.
     for attr in attrs:
         if attr not in VALID_ATTRS:
-            send_list_len_err(conn)
             raise lbl.RequestError(f"Invalid attributes submitted: {attr}")
 
     try:
-        lb_list    = lbl.LetterboxdList(lb_list_url)
-    # let main() handle it
+        lb_list = lbl.LetterboxdList(lb_list_url, max_length=10_000)
+    # let main() handle it, whatever it is
     except Exception as e:
-        send_list_len_err(conn)
         raise e
 
     send_list_len(lb_list.length, conn)
@@ -169,45 +179,96 @@ def get_list_with_attrs(query: dict, conn: socket.socket) -> None:
             file_row   = str(list_rank) + "," + file_row
             list_rank += 1
 
-        file_row += "\n"
+        # sends only row data, without newline (to be added at client)
         send_line(conn, file_row)
+
 
 
 def main():
     """See notes at top of file."""
-    listener = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    listener.bind(('0.0.0.0', 3575))
-    listener.listen(1)
-    print(f"Listening on {listener.getsockname()}")
 
-    while True:
-        (conn, _) = listener.accept()
+    py_cont_sock = os.getenv("PY_CONT_SOCK", "127.0.0.1:3575")
+    (ip, port)   = py_cont_sock.split(":")
+    port         = int(port)        # listener.bind() needs tuple of str and int
+
+    listener     = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    listener.bind((ip, port))
+    listener.listen(3)
+
+    shutdown_handler = InterruptHandler(listener)
+
+    print(f"Listening on {py_cont_sock}...")
+
+    while not shutdown_handler.kill_now:
         try:
-            req = conn.recv(2048).decode("utf-8")
+            (conn, _) = listener.accept()
+        # interrupts are most likely to be received while socket.accept() is hanging,
+        # waiting for a new connection. This means the connection (fd) will be closed
+        # while the main loop is awaiting connections, causing an OSError to be thrown
+        # (specifically, Errno 9, "bad file descriptor").
+        #
+        # if somehow an error arose for another reason, we'll try the loop again.
+        except OSError as ose:
+
+            if "Bad file descriptor" in ose.strerror and shutdown_handler.kill_now:
+                print(f"\033[0;32mTCP connection on {py_cont_sock} closed.\033[0m")
+                break
+
+            print(f"Unexpected error while awaiting new connections: {repr(ose)}"
+                "\nReattempting awaiting new connections...",
+                file=sys.stderr)
+            continue
+
+        try:
+            # Receives JSON data of the following format:
+            # {
+            #     "list_name": string,
+            #     "author_user": string,
+            #     "attrs": array of strings
+            # }
+            req = conn.recv(700).decode("utf-8")
             query = json.loads(req)
 
-            # for Docker healthchecks
+            # for Docker healthchecks, no response sent
             if query == {"msg": "are you healthy?"}:
-                print("yep, still healthy!")
-                continue
+                send_line(conn, "yep, still healthy!")
 
-            get_list_with_attrs(query, conn)
-            send_line(conn, "done!")
+            # this is for testing purposes
+            elif query == {"msg": "shutdown"}:
+                shutdown_handler.kill_now = True
 
-        except ListTooLongError as res_too_long:
-            print(res_too_long)
+            else:
+                get_list_with_attrs(query, conn)
+
+        except lbl.ListTooLongError as res_too_long:
+            print(f"{repr(res_too_long)}", file=sys.stderr)
+            send_list_len(0, conn)
             send_line(conn, f"-- 403 FORBIDDEN -- {repr(res_too_long)}")
-            send_list_len_err(conn)
+
         except lbl.RequestError as req_err:
-            print(req_err)
+            print(f"{repr(req_err)}", file=sys.stderr)
+            send_list_len(0, conn)
             send_line(conn, f"-- 422 UNPROCESSABLE CONTENT -- {repr(req_err)}")
+
         except lbl.HTTPError as lb_serr:
-            print(lb_serr)
+            print(f"{repr(lb_serr)}", file=sys.stderr)
+            send_list_len(0, conn)
             send_line(conn, f"-- 502 BAD GATEWAY -- {repr(lb_serr)}")
+
         except Exception as e:
-            print(e)
+            print(f"{repr(e)}", file=sys.stderr)
+            send_list_len(0, conn)
             send_line(conn, f"-- 500 INTERNAL SERVER ERROR -- {repr(e)}")
+
+        # all control paths lead to Rome (this code block)
+        # "done!" signal is sent every single time, no matter what
         finally:
+            if shutdown_handler.kill_now:
+                print("\n\033[0;33mReceived a shutdown signal, exiting...\033[0m")
+                listener.close()
+                print(f"\033[0;32mTCP connection on {py_cont_sock} closed.\033[0m")
+                return
+
             send_line(conn, "done!")
             conn.close()    # sends EOF, so that Rust server can read data sent
             continue
