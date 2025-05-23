@@ -254,7 +254,8 @@ pub async fn convert_lb_list(list_info: Query<ListInfo>) -> Result<Sse<impl Stre
 
     // first thing from Python container will be 2 bytes that hold 
     // total list length (excluding header). I am assuming that lists
-    // will not exceed ~65k films.
+    // will not exceed ~65k films, but I am limiting it to 10k films
+    // for simplicity.
     //
     // Type conversions here are so I can get a `usize` that can be used 
     // in stream.take().
