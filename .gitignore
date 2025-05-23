@@ -2,10 +2,13 @@
 /db-init/
 /node_modules/
 -test*
-*.pem
+certs/
 *.log
 *.odt
 notes.md
 *venv/
 *build/
 *.egg-info/
+.coverage
+*/.pytest_cache/
+**/__pycache__/
