@@ -52,9 +52,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     info!("Reading initialization options...");
 
-    let Some(no_tls) = process_cli_args()?
-    else {
-        return Ok(());
+    let use_tls = match process_cli_args()? {
+        RunMode::PrintHelp => return Ok(()),
+        RunMode::NoTls => false,
+        RunMode::Tls => true
     };
 
     info!("Defining routes...");
@@ -98,8 +99,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let addr = SocketAddr::from_str(&get_env_var("SERVER_SOCKET").unwrap()).unwrap();
 
 
-    /* Determine whether to use TLS or not */
-    if no_tls {
+    if !use_tls {
 
         info!("Serving on {:?}! (no TLS)", addr);
         let listener = tokio::net::TcpListener::bind(addr).await?;

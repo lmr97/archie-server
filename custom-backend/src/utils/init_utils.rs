@@ -12,7 +12,12 @@ use tracing_subscriber::{
     EnvFilter,
     filter::LevelFilter
 };
-    
+
+pub enum RunMode {
+    Tls,
+    NoTls,
+    PrintHelp
+}
 
 pub fn build_logger(log_file_path: String, print_prelog: bool) -> Result<SubscriberBuilder<DefaultFields, Format, EnvFilter, std::fs::File>, Error> {
 
@@ -73,16 +78,16 @@ fn print_help() {
 }
 
 //arg1: Option<String>
-pub fn process_cli_args() -> Result<Option<bool>, Error> {
+pub fn process_cli_args() -> Result<RunMode, Error> {
 
     let arg1 = std::env::args().nth(1);
     match arg1 {
         Some(arg) => {
             match arg.as_str() {
-                "--no-tls"      => Ok(Some(true)),
+                "--no-tls"      => Ok(RunMode::NoTls),
                 "--help" | "-h" => {
                     print_help();
-                    return Ok(None);
+                    return Ok(RunMode::PrintHelp);
                 }
                 other => {
                     print_help();
@@ -95,7 +100,7 @@ pub fn process_cli_args() -> Result<Option<bool>, Error> {
                 }
             }
         },
-        None => Ok(Some(false))
+        None => Ok(RunMode::Tls)
     }
 }
 
