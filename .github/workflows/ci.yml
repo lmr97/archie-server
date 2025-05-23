@@ -60,7 +60,6 @@ jobs:
     - name: Server integration tests (no TLS)
       # TODO: find executable for server in Action
       run: |
-        tree target
         ./target/debug/archie-server --no-tls &
         cargo test integration -- --no-tls
         killall archie-server
