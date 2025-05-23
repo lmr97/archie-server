@@ -42,9 +42,9 @@ jobs:
         up 
         --detach db
     - uses: actions/setup-python@v5
-    - name: Start mock Python app
       with:
         python-version: '3.13' 
+    - name: Start mock Python app
       run: python ../test-helpers/mock_lb_app.py &
     - uses: actions-rs/toolchain@v1
       with: 
