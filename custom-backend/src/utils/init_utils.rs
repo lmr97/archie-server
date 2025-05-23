@@ -13,6 +13,7 @@ use tracing_subscriber::{
     filter::LevelFilter
 };
 
+#[derive(Debug, PartialEq)]
 pub enum RunMode {
     Tls,
     NoTls,
