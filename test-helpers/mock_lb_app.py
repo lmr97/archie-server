@@ -1,6 +1,7 @@
 """
 This script mimics the output of letterboxd_get_list/get_list.py.
 """
+import os
 import sys
 import json
 import socket
@@ -75,8 +76,12 @@ def main():
             global DEBUG_MODE
             DEBUG_MODE = True
 
+    py_cont_sock = os.getenv("PY_CONT_SOCK", "127.0.0.1:3575")
+    (ip, port) = py_cont_sock.split(":")
+    port = int(port)
+    
     listener = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    listener.bind(('0.0.0.0', 3575))
+    listener.bind((ip, port))
     listener.listen(1)
     debug_print("Starting mock Python app...")
 
@@ -84,7 +89,7 @@ def main():
         while True:
 
             (conn, _) = listener.accept()
-            req = conn.recv(2048).decode("utf-8")
+            req = conn.recv(700).decode("utf-8")
             query = json.loads(req)
             debug_print(query)
 
