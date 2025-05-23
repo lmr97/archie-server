@@ -15,6 +15,16 @@ name = "tls_off_switch"
 path = "tests/cli_parsing/tls_off.rs"
 harness = false
 test = false
+[[test]]
+name = "test_hits"
+path = "tests/integration/db/test_hits.rs"
+harness = false
+test = true
+[[test]]
+name = "test_guestbook"
+path = "tests/integration/db/test_guestbook.rs"
+harness = false
+test = true
 
 [dependencies]
 axum = { version = "0.8.1", features = ["json"] }
@@ -31,5 +41,5 @@ tracing = "0.1.41"
 tracing-subscriber = { version = "0.3.19", features = ["env-filter"] }
 
 [dev-dependencies]
-reqwest = { version = "0.12.15", features = ["stream"] }
+reqwest = { version = "0.12.15", features = ["json", "stream", "default-tls"] }
 eventsource-stream = "0.2.3"
