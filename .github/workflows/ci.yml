@@ -12,17 +12,22 @@ jobs:
   server_tests:
     runs-on: ubuntu-latest
     env:
-      EX_VAR: "a value/here"      # an env var to test env fetches
+      EX_VAR: "a value/here"           # an env var to test env fetches
       SERVER_SOCKET: "127.0.0.1:4321"
-      PRE_LOG: 1                  # suppressed initial stdout, for backgrounding
-      MYSQL_PASSWORD: thepass     # not real pw; doesnt matter for testing
+      CLIENT_SOCKET: "127.0.0.1:4321"  # may need to be different, since reqwest parses differently
+      PRE_LOG: 0                       # suppressed initial stdout, for backgrounding
+      MYSQL_PASSWORD: thepass          # not real pw; doesnt matter for testing
       MYSQL_ROOT_PASSWORD: root
       DB_URL: "mysql://server1:thepass@127.0.0.1:3306/archie"
       PY_CONT_SOCK: "127.0.0.1:3575"
+      PK_FILE: "./certs/server.key"    # will be installed during runtime
+      CRT_FILE: "./certs/server.pem"
+      CLIENT_PK_FILE: "./certs/client.pem"
 
     defaults:
       run:
         shell: bash
+        working-directory: ./custom-backend
 
     steps:
     - uses: actions/checkout@v4
@@ -30,7 +35,8 @@ jobs:
       # uses demo db, identical to real db except in content
       # running this first so that the database can initialize while
       # the server builds 
-      run: 
+      run: |
+        cd ..
         docker compose 
         --file compose-demo.yaml 
         --file test-helpers/testing-override.yaml
@@ -40,20 +46,34 @@ jobs:
       with:
         python-version: '3.13' 
     - name: Start mock Python app
-      run: python ./test-helpers/mock_lb_app.py --debug &  # printing debugs actually aids connection
+      run: python ../test-helpers/mock_lb_app.py --debug &  # printing debugs actually aids connection
     - name: Server unit tests
       run: |
-        cd ./custom-backend
         echo > test.log
-        cargo test --lib -- --test-threads=1
+        cargo test --release --lib -- --test-threads=1
         cargo test --test tls_on_default --
         cargo test --test tls_off_switch -- --no-tls
-        cd ..
-    - name: Server integration tests
+    - name: Server integration tests (no TLS)
       run: |
-        echo "developing these tests..."
+        ./target/release/archie-server --no-tls &
+        cargo test integration -- --no-tls
+        killall archie-server
+    # uses a brilliantly simple Python module called `trustme`
+    # from here: https://github.com/python-trio/trustme
+    - name: Set up self-signed certificates
+      run: |
+        pip install -U trustme
+        mkdir certs
+        cd certs
+        python -m trustme
+    - name: Server integration tests (with TLS)
+      run: |
+        ./target/release/archie-server &
+        cargo test integration
+        killall archie-server
     - name: Test DB's dump-on-exit (shutdown and prelim check)
       run: |
+        cd ..
         docker compose down
         bash test-helpers/validate-dump.sh
     - name: Cleanup
@@ -65,6 +85,7 @@ jobs:
       run:
         shell: bash
         working-directory: ./lb-app/letterboxd_get_list
+
     steps:
     - uses: actions/checkout@v4
       with: 
@@ -75,11 +96,13 @@ jobs:
     - name: Install module and dependencies
       run: |
         pip install ./letterboxd_list[testing]
-    - name: Run tests
+    - name: Run tests on letterboxd_list module
       run: pytest --ignore=./letterboxd_list/tests/test_cli.py --cov -v
-      # will include tests for:
-      # - the server I/O driver `lb_app.py`
-      # - the Docker healthcheck script, `healthcheck.py`
+    - name: Run tests on app's I/O driver
+      # tests and config are in outer directory
+      run: |
+        cd ..
+        pytest -v --cov --cov-report=term-missing
 
   # next job: test frontend JS scripts
   # final job: full server integration tests
