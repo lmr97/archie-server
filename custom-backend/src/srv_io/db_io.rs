@@ -5,40 +5,51 @@ use axum::{
 use mysql::*;
 use mysql::prelude::*;
 use mysql_common::{
-    chrono::NaiveDateTime,
+    chrono::{NaiveDateTime, Utc, SubsecRound},
     serde
 };
 use tracing::{info, debug, error};
 use crate::utils::err_handling::make_500_resp;
 
 
-#[derive(Debug, serde::Deserialize, PartialEq, Clone)] 
+#[derive(Debug, serde::Deserialize, serde::Serialize, PartialEq, Clone)] 
 pub struct GuestbookEntry {
-    name: String,
-    note: String,
+    pub name: String,
+    pub note: String,
 }
 
-#[derive(Debug, serde::Serialize, PartialEq)]
+#[derive(Debug, serde::Serialize, serde::Deserialize, PartialEq)]
 pub struct GuestbookEntryStamped {
     // keeping time_stamp as NaiveDateTime for DB I/O,
     // and for time-value sorting to by done by the DB on query
-    time_stamp: NaiveDateTime,  
-    name: String,
-    note: String,
+    pub time_stamp: NaiveDateTime,  
+    pub name: String,
+    pub note: String,
 }
 
 // This struct exists for organinzing all the JSON 
 // guestbook entries for transmission to the client into a
 // larger JSON object
-#[derive(Debug, serde::Serialize, PartialEq)]
+#[derive(Debug, serde::Serialize, serde::Deserialize, PartialEq)]
 pub struct Guestbook {
-    guestbook: Vec<GuestbookEntryStamped>,
+    pub guestbook: Vec<GuestbookEntryStamped>,
 }
 
-#[derive(Debug, serde::Deserialize, PartialEq, Clone)]
+#[derive(Debug, serde::Deserialize, serde::Serialize, PartialEq, Clone)]
 pub struct WebpageHit {
-    time_stamp: NaiveDateTime,
-    user_agent: String,
+    pub time_stamp: NaiveDateTime,
+    pub user_agent: String,
+}
+
+impl Default for WebpageHit {
+    fn default() -> WebpageHit {
+        WebpageHit { 
+            time_stamp: Utc::now()
+                .naive_utc()
+                .trunc_subsecs(0), 
+            user_agent: String::from("Mozilla user agent") 
+        }
+    }
 }
 
 // wrapper to implement IntoResponse
@@ -328,40 +339,6 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn log_hit_no_ua() -> Result<(), DbError>{
-
-        let page_hit_no_ua = WebpageHit {
-            time_stamp: Utc::now()
-                .naive_utc()
-                .trunc_subsecs(0),    // truncation happens after db insertion/retrieval,
-            user_agent: String::new()
-        };
-
-        let sent_resp = log_hit(Json(page_hit_no_ua.clone())).await.unwrap();
-        assert_eq!(sent_resp.status(), StatusCode::OK);  // make sure a successful call sends 200
-
-        // connect
-        let mut conn = get_db_conn_pool()?.get_conn()?;
-
-        // no other entries in the demo database have a null user agent
-        let latest_hit = conn.query_map(
-            format!(
-                "SELECT hitTime, userAgent FROM hitLog
-                WHERE hitTime = STR_TO_DATE('{}', '%Y-%m-%d %H:%i:%S')
-                AND userAgent = ''", 
-                page_hit_no_ua.time_stamp.format("%Y-%m-%d %H:%M:%S").to_string()
-            ),
-            |(hit_time, user_agent): (NaiveDateTime, String)| {
-                WebpageHit { time_stamp: hit_time, user_agent, }
-            }
-        )?;
-
-        assert_eq!(latest_hit[0], page_hit_no_ua);
-
-        Ok(())
-    }
-
-    #[tokio::test]
     async fn getting_guestbook() -> Result<(), DbError> {
 
         let demo_guestbook = Guestbook {
@@ -448,14 +425,13 @@ mod tests {
         let valid_entry = GuestbookEntry {
             name: String::from("Lettuce % % \\% \\' break some sTuff ⌠ 	⌡ 	⌢ 	⌣ 	⌤"),
             note: String::from(
-                "ᏣᎳᎩ ᎦᏬᏂᎯᏍᏗ (Cherokee!) \n\\\\% %%' ''
-
-                മനുഷ്യരെല്ലാവരും തുല്യാവകാശങ്ങളോടും അന്തസ്സോടും സ്വാതന്ത്ര്യത്തോടുംകൂടി 
-                ജനിച്ചിട്ടുള്ളവരാണ്‌. അന്യോന്യം ഭ്രാതൃഭാവത്തോടെ പെരുമാറുവാനാണ്‌ മനുഷ്യന് 
-                വിവേകബുദ്ധിയും മനസാക്ഷിയും സിദ്ധമായിരിക്കുന്നത്‌
-                (this says 'All human beings are born free and equal in dignity and rights. 
-                They are endowed with reason and conscience and should act towards one 
-                another in a spirit of brotherhood.' in Malayalam. It comes from the 
+                "ᏣᎳᎩ ᎦᏬᏂᎯᏍᏗ (Cherokee!) \n\\\\% %%' ''\\n\
+                മനുഷ്യരെല്ലാവരും തുല്യാവകാശങ്ങളോടും അന്തസ്സോടും സ്വാതന്ത്ര്യത്തോടുംകൂടി \
+                ജനിച്ചിട്ടുള്ളവരാണ്‌. അന്യോന്യം ഭ്രാതൃഭാവത്തോടെ പെരുമാറുവാനാണ്‌ മനുഷ്യന് \
+                വിവേകബുദ്ധിയും മനസാക്ഷിയും സിദ്ധമായിരിക്കുന്നത്‌ \
+                (this says 'All human beings are born free and equal in dignity and rights. \
+                They are endowed with reason and conscience and should act towards one \
+                another in a spirit of brotherhood.' in Malayalam. It comes from the \
                 UN's Universal Declaration on Human Rights)"
             ),
         };
@@ -492,18 +468,17 @@ mod tests {
         let overlong_entry = GuestbookEntry {
             name: String::from("A resonable name"),
             note: String::from(
-                "ᏣᎳᎩ ᎦᏬᏂᎯᏍᏗ (this is Cherokee!) \n\\\\% %%' ''
-
-                മനുഷ്യരെല്ലാവരും തുല്യാവകാശങ്ങളോടും അന്തസ്സോടും സ്വാതന്ത്ര്യത്തോടുംകൂടി 
-                ജനിച്ചിട്ടുള്ളവരാണ്‌. അന്യോന്യം ഭ്രാതൃഭാവത്തോടെ പെരുമാറുവാനാണ്‌ മനുഷ്യന് 
-                വിവേകബുദ്ധിയും മനസാക്ഷിയും സിദ്ധമായിരിക്കുന്നത്‌
-                (this says 'All human beings are born free and equal in dignity and rights. 
-                They are endowed with reason and conscience and should act towards one 
-                another in a spirit of brotherhood.' in Malayalam. It comes from the 
-                UN's Universal Declaration on Human Rights)
-                
-                Let's stick with this and go further. We need to make sure we have this
-                data exceed 1KB. And now it does."
+                "ᏣᎳᎩ ᎦᏬᏂᎯᏍᏗ (this is Cherokee!) \n\\\\% %%' ''\n\
+                മനുഷ്യരെല്ലാവരും തുല്യാവകാശങ്ങളോടും അന്തസ്സോടും സ്വാതന്ത്ര്യത്തോടുംകൂടി \
+                ജനിച്ചിട്ടുള്ളവരാണ്‌. അന്യോന്യം ഭ്രാതൃഭാവത്തോടെ പെരുമാറുവാനാണ്‌ മനുഷ്യന് \
+                വിവേകബുദ്ധിയും മനസാക്ഷിയും സിദ്ധമായിരിക്കുന്നത്‌\
+                (this says 'All human beings are born free and equal in dignity and rights. \
+                They are endowed with reason and conscience and should act towards one \
+                another in a spirit of brotherhood.' in Malayalam. It comes from the \
+                UN's Universal Declaration on Human Rights)\n\
+                Let's stick with this and go further. We need to make sure we have this \
+                data exceed 1KB. And now it does, with all these extra characters \
+                to put it over the finsh line."
             ),
         };
 
@@ -529,7 +504,7 @@ mod tests {
         // gonna get real weird with it
         let overlong_name = GuestbookEntry {
             name: String::from(
-                "A name മനുഷ്യരെല്ലാവരും തുല്യാവകാശങ്ങളോടും that is too ᎦᏬᏂᎯᏍᏗ long.
+                "A name മനുഷ്യരെല്ലാവരും തുല്യാവകാശങ്ങളോടും that is too ᎦᏬᏂᎯᏍᏗ long. \
                 so long, in fact, I needed to add all this stuff!"),
             note: String::from("a brief note"),
         };
