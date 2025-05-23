@@ -61,7 +61,7 @@ jobs:
       # TODO: find executable for server in Action
       run: |
         tree target
-        ./target/release/archie-server --no-tls &
+        ./target/debug/archie-server --no-tls &
         cargo test integration -- --no-tls
         killall archie-server
     # uses a brilliantly simple Python module called `trustme`
