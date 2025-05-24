@@ -45,7 +45,7 @@ async fn main() {
         .await
         .unwrap();
 
-    // demo data starts with 6 hits, the unit tests add 2 more,
-    // and the above code adds one more: 6+2+1 == 9
-    assert_eq!(hit_count, "9");
+    // demo data starts with 6 hits, the unit tests add 1 more,
+    // and the above code adds one more: 6+1+1 == 8
+    assert_eq!(hit_count, "8");
 }
