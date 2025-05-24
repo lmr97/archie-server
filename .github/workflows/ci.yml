@@ -61,7 +61,7 @@ jobs:
       # TODO: find executable for server in Action
       run: |
         ./target/debug/archie-server --no-tls &
-        cargo test integration -- --no-tls
+        cargo test --test integ_* -- --no-tls
         killall archie-server
     # uses a brilliantly simple Python module called `trustme`
     # from here: https://github.com/python-trio/trustme
@@ -74,7 +74,7 @@ jobs:
     - name: Server integration tests (with TLS)
       run: |
         ./target/release/archie-server &
-        cargo test integration
+        cargo test --test integ_*
         killall archie-server
     - name: Test DB's dump-on-exit
       run: |

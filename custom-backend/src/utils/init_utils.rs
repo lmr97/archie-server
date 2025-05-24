@@ -70,12 +70,11 @@ pub fn get_auth_paths() -> (String, String) {
 
 
 fn print_help() {
-    println!("Usage:  custom-backend [OPTION]\n");
+    println!("\nUsage:  archie-server [OPTION]\n");
     println!("The executable that runs the server.\n");
     println!("Options:");
-    println!("    --no-tls     Run without TLS. Axum doesn't serve files properly");
-    println!("                 on localhost with TLS, so this is good for demo purposes.");
-    println!("    --help, -h   Print this help message and quit.\n");
+    println!("    --no-tls     Run without TLS; serve over HTTP");
+    println!("    --help, -h   Print this help message and quit\n");
 }
 
 //arg1: Option<String>
