@@ -14,6 +14,7 @@ jobs:
     env:
       EX_VAR: "a value/here"           # an env var to test env fetches
       SERVER_SOCKET: "127.0.0.1:4321"
+      SERVER_LOG: "test.log"
       CLIENT_SOCKET: "127.0.0.1:4321"  # may need to be different, since reqwest parses differently
       PRE_LOG: 0                       # suppressed initial stdout, for backgrounding
       MYSQL_PASSWORD: thepass          # not real pw; doesnt matter for testing

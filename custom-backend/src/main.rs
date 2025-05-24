@@ -110,13 +110,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         info!("Loading certificates and keys...");
         let (cert, pks) = get_auth_paths();
         let auth_config = RustlsConfig::from_pem_file(cert, pks)
-            .await?;                  // I don't want to serve the webpage without TLS, so crash okay
+            .await?;
         info!("Authorization loaded!");
     
         info!("Serving securely on {:?}!", addr);
         axum_server::bind_rustls(addr, auth_config)
             .serve(routes.into_make_service())
-            .await?;                  // should cause crash; fatal error to server
+            .await?;
     }
 
     Ok(())
