@@ -42,7 +42,7 @@ def send_str(msg: str) -> socket.socket:
     return test_sock
 
 
-def recieve_list_len(connection: socket.socket) -> int:
+def receive_list_len(connection: socket.socket) -> int:
     """
     Receive (and decode) the list length sent from lb_app.py.
     """
@@ -51,7 +51,7 @@ def recieve_list_len(connection: socket.socket) -> int:
     return list_len
 
 
-def recieve_decode_row(connection: socket.socket) -> str:
+def receive_decode_row(connection: socket.socket) -> str:
     """
     Receives bytes and decodes them as a string the way the server does:
     use the first 2 bytes to determine the length of 
@@ -62,22 +62,22 @@ def recieve_decode_row(connection: socket.socket) -> str:
     return decoded
 
 
-def recieve_list(connection: socket.socket, correct_len: int) -> list:
+def receive_list(connection: socket.socket, correct_len: int) -> list:
     """
     Mimic server's algorithm for receiving a list, with the exception 
     of using a while loop instead of a set-length repeater (that is 
     a requirement of using SSEs in the Axum framework). Length check
     assert statement takes place here for convenience.
     """
-    recieved_len = recieve_list_len(connection)
-    assert correct_len == recieved_len
+    received_len = receive_list_len(connection)
+    assert correct_len == received_len
 
     lb_list      = []
-    current_row  = recieve_decode_row(connection)
+    current_row  = receive_decode_row(connection)
     while current_row != "done!":
         # adding newline for easier comparison against touchstone file read in later
         lb_list.append(current_row+"\n")
-        current_row  = recieve_decode_row(connection)
+        current_row  = receive_decode_row(connection)
 
     return lb_list
 
@@ -89,18 +89,18 @@ def test_send_line():
     """
     test_str  = "echo-echo-echo"
     test_sock = ('127.0.0.1', 3020)
-    reciever  = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    receiver  = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     sender    = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    reciever.bind(test_sock)
-    reciever.listen(1)
+    receiver.bind(test_sock)
+    receiver.listen(1)
     sender.connect(test_sock)
 
     lb_app.send_line(sender, test_str)
-    (conn, _)    = reciever.accept()
-    recieved_str = recieve_decode_row(conn)
+    (conn, _)    = receiver.accept()
+    received_str = receive_decode_row(conn)
     conn.close()
 
-    assert test_str == recieved_str
+    assert test_str == received_str
 
 
 def test_check_health_response():
@@ -109,8 +109,8 @@ def test_check_health_response():
     container healthcheck behaves as expected.
     """
     conn      = send_str('{"msg": "are you healthy?"}')
-    response  = recieve_decode_row(conn)
-    sig_done  = recieve_decode_row(conn)    # extra row for "done!" signal
+    response  = receive_decode_row(conn)
+    sig_done  = receive_decode_row(conn)    # extra row for "done!" signal
     conn.close()
 
     assert "yep, still healthy!" == response
@@ -144,15 +144,15 @@ def test_rej_overlong_list():
     req_str       = json.dumps(too_long_list)
     conn          = send_str(req_str)
 
-    # check that list length recieved is 0
-    recvd_length  = recieve_list_len(conn)
+    # check that list length received is 0
+    recvd_length  = receive_list_len(conn)
     assert recvd_length == 0
 
-    recieved_str  = recieve_decode_row(conn)
-    done_signal   = recieve_decode_row(conn)    # extra row for "done!" signal
+    received_str  = receive_decode_row(conn)
+    done_signal   = receive_decode_row(conn)    # extra row for "done!" signal
     conn.close()
 
-    assert "-- 403 FORBIDDEN --" in recieved_str
+    assert "-- 403 FORBIDDEN --" in received_str
     assert done_signal == "done!"
 
 
@@ -173,15 +173,15 @@ def test_rej_bad_attr():
     request_str   = json.dumps(bad_attr)
     conn          = send_str(request_str)
 
-    # check that list length recieved is 0
-    recvd_length  = recieve_list_len(conn)
+    # check that list length received is 0
+    recvd_length  = receive_list_len(conn)
     assert recvd_length == 0
 
-    recieved_str  = recieve_decode_row(conn)
-    done_signal   = recieve_decode_row(conn)  # extra row of "done!" sent by app
+    received_str  = receive_decode_row(conn)
+    done_signal   = receive_decode_row(conn)  # extra row of "done!" sent by app
     conn.close()
 
-    assert "-- 422 UNPROCESSABLE CONTENT --" in recieved_str
+    assert "-- 422 UNPROCESSABLE CONTENT --" in received_str
     assert done_signal == "done!"
 
 
@@ -202,15 +202,15 @@ def test_rej_bad_list():
     request_str   = json.dumps(bad_list)
     conn          = send_str(request_str)
 
-    # check that list length recieved is 0
-    recvd_length  = recieve_list_len(conn)
+    # check that list length received is 0
+    recvd_length  = receive_list_len(conn)
     assert recvd_length == 0
 
-    recieved_str  = recieve_decode_row(conn)
-    done_signal   = recieve_decode_row(conn)  # extra row of "done!" sent
+    received_str  = receive_decode_row(conn)
+    done_signal   = receive_decode_row(conn)  # extra row of "done!" sent
     conn.close()
 
-    assert "-- 422 UNPROCESSABLE CONTENT --" in recieved_str
+    assert "-- 422 UNPROCESSABLE CONTENT --" in received_str
     assert done_signal == "done!"
 
 
@@ -232,7 +232,7 @@ def test_long_rows():
 
     request_str  = json.dumps(megarow_list)
     connection   = send_str(request_str)
-    lb_list      = recieve_list(connection, correct_len=3)
+    lb_list      = receive_list(connection, correct_len=3)
 
     correct_list = []
     with open("short-list-all-attrs-no-stats.csv", "r", encoding="utf-8") as list_reader:
@@ -252,7 +252,7 @@ def test_null_attributes():
 
     request_str  = json.dumps(minirow_list)
     connection   = send_str(request_str)
-    lb_list      = recieve_list(connection, correct_len=3)
+    lb_list      = receive_list(connection, correct_len=3)
 
     correct_list = []
     with open("short-list-no-attrs.csv", "r", encoding="utf-8") as list_reader:
