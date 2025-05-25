@@ -83,7 +83,7 @@ def main():
     listener = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     listener.bind((ip, port))
     listener.listen(1)
-    debug_print("Starting mock Python app...")
+    debug_print(f"Starting mock Python app on {listener.getsockname()}...")
 
     try:
         while True:

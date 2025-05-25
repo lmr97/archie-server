@@ -244,8 +244,8 @@ fn receive_list_row(conn: &mut TcpStream, total_rows: usize) -> Event {
 pub async fn convert_lb_list(list_info: Query<ListInfo>) -> Result<Sse<impl Stream<Item = Result<Event, Infallible>>>, LbConvError> {
     
     let py_cont_sock = get_env_var("PY_CONT_SOCK")?;
-    let mut conn = TcpStream::connect(py_cont_sock)?;
-    debug!("Connection with Python container established.");
+    let mut conn = TcpStream::connect(&py_cont_sock)?;
+    debug!("Connection with Python container established at {py_cont_sock}");
 
     let list_info = list_info.0;
     let stringified_json = serde_json::to_string(&list_info)?;
@@ -309,7 +309,7 @@ mod tests {
 
     async fn spawn_app() -> Result<(), Error> {
 
-        let listener = TcpListener::bind("127.0.0.1:8080")
+        let listener = TcpListener::bind("127.0.0.1:8017")
             .await?;
         let lb_list_test = Router::new().route("/", get(convert_lb_list));
         tokio::spawn(async {
@@ -374,7 +374,7 @@ mod tests {
         //     attrs: ["casting", "watches", "likes"]    // all valid attributes
         // }
 
-        let mini_svr_url= "http://127.0.0.1:8080?\
+        let mini_svr_url= "http://127.0.0.1:8017?\
             list_name=list-too-long&\
             author_user=user_exists&\
             attrs=casting&\
@@ -391,7 +391,7 @@ mod tests {
     #[tokio::test]
     async fn lb_server_down_req(){
 
-        let mini_svr_url= "http://127.0.0.1:8080?\
+        let mini_svr_url= "http://127.0.0.1:8017?\
             list_name=server-down&\
             author_user=some_user&\
             attrs=stuff";
@@ -409,7 +409,7 @@ mod tests {
         // because it'll turn up a bad URL regardless.
         // So it only matters whether the list exists or not.
 
-        let mini_svr_url= "http://127.0.0.1:8080?\
+        let mini_svr_url= "http://127.0.0.1:8017?\
             list_name=list-no-exist&\
             author_user=user_may_exist&\
             attrs=casting&\
@@ -425,7 +425,7 @@ mod tests {
     #[tokio::test]
     async fn app_crashing_req() {
 
-        let mini_svr_url= "http://127.0.0.1:8080?\
+        let mini_svr_url= "http://127.0.0.1:8017?\
             list_name=this-hurts-you&\
             author_user=user_may_exist&\
             attrs=casting&\
@@ -441,7 +441,7 @@ mod tests {
     #[tokio::test]
     async fn bad_attr_req() {
 
-        let mini_svr_url= "http://127.0.0.1:8080?\
+        let mini_svr_url= "http://127.0.0.1:8017?\
             list_name=list-exists&\
             author_user=user_exists&\
             attrs=casting&\
@@ -458,7 +458,7 @@ mod tests {
     #[tokio::test]
     async fn no_attr_req() {
 
-        let mini_svr_url= "http://127.0.0.1:8080?\
+        let mini_svr_url= "http://127.0.0.1:8017?\
             list_name=list-exists&\
             author_user=user_exists&\
             attrs=none";
@@ -504,7 +504,7 @@ mod tests {
     #[tokio::test]
     async fn big_list_req(){
 
-        let url = "http://127.0.0.1:8080?\
+        let url = "http://127.0.0.1:8017?\
             list_name=the-big-one&\
             author_user=user_exists&\
             attrs=all-of-em";
