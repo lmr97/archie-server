@@ -75,7 +75,7 @@ jobs:
         python -m trustme
     - name: Server integration tests (with TLS)
       run: |
-        ./target/release/archie-server &
+        ./target/debug/archie-server &
         cargo test --test integ_*
         killall archie-server
     - name: Test DB's dump-on-exit
