@@ -1,28 +1,17 @@
 use tokio;
 use reqwest::{self, StatusCode};
 use mysql_common::serde_json;
-use custom_backend::{
-    utils::init_utils::{
-        get_env_var, 
-        process_cli_args, 
-        RunMode
-    },
-    srv_io::db_io::WebpageHit
-};
+use custom_backend::srv_io::db_io::WebpageHit;
+mod client_config;
 
 
 #[tokio::main]
 async fn main() {
 
-    /* Sort out protocol to use */
-    let protocol = match process_cli_args().unwrap() {
-        RunMode::NoTls => "http",
-        _ => "https"
-    };
-    let domain = get_env_var("CLIENT_SOCKET").unwrap();
-    let url    = format!("{protocol}://{domain}/hits");
+    let (protocol, mut url) = client_config::get_base_url();
+    url.push_str("/hits");
+    let req_client = client_config::config_client(protocol);
 
-    let req_client = reqwest::Client::new();
     let new_hit = WebpageHit::default();
 
     let post_hit_resp = req_client

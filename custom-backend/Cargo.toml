@@ -17,12 +17,12 @@ harness = false
 test = false
 [[test]]
 name = "integ_test_hits"
-path = "tests/integration/db/integ_test_hits.rs"
+path = "tests/integration/integ_test_hits.rs"
 harness = false
 test = true
 [[test]]
 name = "integ_test_guestbook"
-path = "tests/integration/db/integ_test_guestbook.rs"
+path = "tests/integration/integ_test_guestbook.rs"
 harness = false
 test = true
 
