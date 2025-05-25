@@ -238,9 +238,33 @@ def test_long_rows():
     with open("short-list-all-attrs-no-stats.csv", "r", encoding="utf-8") as list_reader:
         correct_list = list_reader.readlines()
 
+    films_in_list = [
+        "Avengers: Endgame",
+        "Top Gun: Maverick",
+        "Avatar: The Way of Water"
+        ]
     # checking row by row to show where any issues are
     for i, test_row in enumerate(lb_list):
-        assert correct_list[i] == test_row
+
+        true_row = correct_list[i]
+
+        # Sometimes the rows are not exactly identical only because the order of some names
+        # in attributes may change on Letterboxd.com itself. This means that the test values
+        # are fetched from different database than the touchstone data. This block is a
+        # "closer look" to verify whether the content differs, or simply the order.
+        try:
+            assert true_row == test_row
+        except AssertionError:
+            # divide rows into cells, and check each cell for a difference in content.
+            true_row = true_row.replace("\n", "")
+            test_row = test_row.replace("\n", "")
+            for true_val, test_val in zip(true_row.split(","), test_row.split(",")):
+                true_no_quotes = true_val.replace("\"","")
+                test_no_quotes = test_val.replace("\"","")
+
+                # if this fails, then there IS a meaningful difference between cell values.
+                assert set(true_no_quotes.split("; ")) == set(test_no_quotes.split("; ")), \
+                    f"film \"{films_in_list[i]}\" failed assertion."
 
 
 def test_null_attributes():
