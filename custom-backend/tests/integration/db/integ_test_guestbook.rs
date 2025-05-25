@@ -84,15 +84,17 @@ async fn getting_guestbook(client: &reqwest::Client, url: &String) {
     // since I don't know when the extra entries were added,
     // and the accuracy is checked in the get_guestbook() unit test
     // we're only comparing content without timestamps
-    let test_guestbook_vec = vec![
-        GuestbookEntry {
-            name: String::from("a normal name"),
-            note: String::from(
-                "A moderately sized note. Not much special going on here, \
-                aside from some non-ASCII Unicode (UTF-8): ગુજરાતી લિપિ \
-                (this is Gujarati!)."
-            )
-        },
+
+    let latest_entry = GuestbookEntry {
+        name: String::from("a normal name"),
+        note: String::from(
+            "A moderately sized note. Not much special going on here, \
+            aside from some non-ASCII Unicode (UTF-8): ગુજરાતી લિપિ \
+            (this is Gujarati!)."
+        )
+    };
+    let test_guestbook_vec0 = vec![
+        latest_entry.clone(),
         GuestbookEntry {
             name: String::from("(anonymous)"),
             note: String::new()
@@ -128,6 +130,12 @@ async fn getting_guestbook(client: &reqwest::Client, url: &String) {
         },
     ];
 
+    // first entry may be duplicated, depending on whether this is run
+    // the first time (no TLS) or the second time (with TLS), since 
+    // post_valid_entry (only) runs before this function
+    let mut test_guestbook_vec1 = test_guestbook_vec0.clone(); 
+    test_guestbook_vec1.insert(0, latest_entry);
+
     let resp = client
         .get(url)
         .send()
@@ -150,8 +158,8 @@ async fn getting_guestbook(client: &reqwest::Client, url: &String) {
             note: ent.note
         }
     }).collect();
-    
-    assert_eq!(test_guestbook_vec, gb_no_ts_vec);
+
+    assert!(test_guestbook_vec0 == gb_no_ts_vec || test_guestbook_vec1 == gb_no_ts_vec);
 }
 
 async fn post_overlong_entry_note(client: &reqwest::Client, url: &String) {

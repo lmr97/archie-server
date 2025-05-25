@@ -47,5 +47,7 @@ async fn main() {
 
     // demo data starts with 6 hits, the unit tests add 1 more,
     // and the above code adds one more: 6+1+1 == 8
-    assert_eq!(hit_count, "8");
+    // 
+    // A previous run without TLS will add 1 more, so it may also be 9
+    assert!(hit_count == "8" || hit_count == "9");
 }
