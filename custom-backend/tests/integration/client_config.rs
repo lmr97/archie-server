@@ -33,7 +33,7 @@ pub fn config_client(protocol: String) -> reqwest::Client {
 
     if protocol == "https" {
         
-        let client_pk_file = get_env_var("CLIENT_PK_FILE").unwrap();
+        let client_pk_file = get_env_var("CLIENT_CRT_FILE").unwrap();
         let mut pk_buf = Vec::new();
         File::open(client_pk_file)
             .unwrap()

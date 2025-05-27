@@ -25,6 +25,11 @@ name = "integ_test_guestbook"
 path = "tests/integration/integ_test_guestbook.rs"
 harness = false
 test = true
+[[test]]
+name = "integ_test_lb_app"
+path = "tests/integration/integ_test_lb_app.rs"
+harness = false
+test = true
 
 [dependencies]
 axum = { version = "0.8.1", features = ["json"] }

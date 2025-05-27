@@ -29,9 +29,9 @@ pub struct ListInfo {
 }
 
 #[derive(Debug, serde::Serialize, serde::Deserialize, PartialEq)]
-struct ListRow {
-    total_rows: usize,
-    row_data: String,
+pub struct ListRow {
+    pub total_rows: usize,
+    pub row_data: String,
 }
 
 // These are the HTTP response codes I expect
@@ -423,7 +423,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn app_crashing_req() {
+    async fn req_to_crashed_app() {
 
         let mini_svr_url= "http://127.0.0.1:8017?\
             list_name=this-hurts-you&\
