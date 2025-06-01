@@ -1,6 +1,6 @@
 [package]
 name = "custom-backend"
-version = "0.7.2"
+version = "0.8.0"
 edition = "2021"
 [[bin]]
 name = "archie-server"
