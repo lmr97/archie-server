@@ -1,0 +1,36 @@
+.char-count {
+    margin: 0;
+}
+.too-long {
+    color: #e74c3c
+}
+.shine-box {
+    border-radius: 6px;
+    padding: 8px;
+}
+.your-entry {
+    box-shadow: 0px 0px 18px rgba(255, 217, 0, 0);
+    animation-name: new-entry-raz;
+    animation-duration: 2s;
+    animation-iteration-count: 2; /* forward and back */
+    animation-direction: alternate;
+}
+@keyframes new-entry-raz {
+    from {
+        box-shadow: 0px 0px 3px 0px rgba(255, 217, 0, 0);
+    }
+    to {
+        box-shadow: 0px 0px 18px 20px rgba(255, 217, 0, 1);
+    }
+}
+p.entry {
+    margin-top: 4px;
+    margin-bottom: 4px;
+    font-family: Arial, Helvetica, sans-serif;
+}
+p.entry-time {
+    font-weight: bold;
+}
+p.guest-name {
+    text-align: right;
+}

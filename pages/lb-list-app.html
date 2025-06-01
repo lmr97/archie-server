@@ -2,9 +2,9 @@
 <html>
 <head>
     <title>Letterboxd List Converter</title>
-    <link rel="stylesheet" href="/static/styles/std-style.css">
-    <link rel="stylesheet" href="/static/styles/lb-app.css">
-    <link rel="stylesheet" href="/node_modules/spin.js/spin.css">
+    <link rel="stylesheet" href="../static/styles/std-style.css">
+    <link rel="stylesheet" href="../static/styles/lb-app.css">
+    <link rel="stylesheet" href="../node_modules/spin.js/spin.css">
     <meta charset="utf-8">
 </head>
 
@@ -28,8 +28,8 @@
         <a href="https://github.com/lmr97/letterboxd_get_list">on GitHub</a>! 
     </p>
     <label for="lb-url"><h2>Your list's URL:</h2></label>
-    <div id="lb-url-container">
-    <input type="url" id="lb-url" name="list-url"
+    <div class="lb-url-container">
+    <input type="url" class="lb-url" name="list-url"
         placeholder="url of list goes here..." 
         pattern="https://letterboxd.com/.*"
         size="80"
@@ -154,12 +154,12 @@
             <input type="checkbox" id="writer"/>writer
         </label>
     </div>
-    <div class="lb-list-submit" id= "button-container" style="padding: 25px;">
-        <button id="lb-list-submit-button" type="submit">Get my list!</button>
+    <div class="lb-list-submit" id="button-container" style="padding: 25px;">
+        <button class="lb-list-submit-button" type="submit">Get my list!</button>
     </div>
 </div>
 
-<script type="module" src="/static/scripts/lb-conv.js"></script>
+<script type="module" src="../static/scripts/lb-conv.js"></script>
 
 </body>
 

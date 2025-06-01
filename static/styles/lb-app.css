@@ -24,21 +24,22 @@ details[open] summary {
     margin-bottom: 0.5em;
 }
 
-div#lb-url-container, 
-#lb-url, 
-div.lb-list-submit {
+.lb-url-container, 
+.lb-url, 
+.lb-list-submit {
     text-align: center;
 }
 
-#lb-list-submit-button {
+.lb-list-submit-button {
     font-size: 30px; 
-    color: white; 
     background-color: dodgerblue;
+    color: white; 
 }
 
 .checkbox-grid {
     display: grid;
     grid-template-columns: 1fr 1fr 1fr;
-    gap: 1em;
+    row-gap: 1em;
+    column-gap: 1em;
     padding: 1em;
 }

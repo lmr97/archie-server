@@ -2,36 +2,12 @@
 <html>
 <head>
     <title>Archie's Guestbook</title>
-    <link rel="stylesheet" href="./static/styles/std-style.css">
+    <link rel="stylesheet" href="../static/styles/std-style.css">
+    <link rel="stylesheet" href="../static/styles/guestbook-style.css">
     <meta charset="utf-8">
 </head>
 
 
-<body>
-    <div class="round-box">
-        <h1 id="heading"><i>Guestbook</i></h1>
-        <div style="text-align:center;"></div>
-            <p><b>Leave a message to show you were here!</b></p></div>
-            <div class="round-box">
-            <h2 id="msg-heading"><i>Your entry</i></h2>
-            <p>
-                <label for="guestbook-note">What's your name? (you can leave it blank) </label>
-                <input type="text" id="guestbook-name" name="name" maxlength="50"> 
-            </p>
-            <p>
-                <label for="guestbook-note">What would you like to say?</label>
-                <textarea id="guestbook-note" name="note" rows="4" cols="65" maxlength="1000"></textarea>
-            </p>
-            <p id="char-count">Character count: 0/1000</p>
-            <div class="buttons">
-                <button type="submit">Submit</button>
-            </div>
-            </div>
-        </div>
-    </div>
-    <div class="round-box" id="entry-log">
-        <h2 id="heading"><i>Entries so far</i></h2>
-    </div>
-</body>
-<script src="./static/scripts/guestbook.js"></script>
+<body id="react-root"></body>
+<script type="module" src="../static/scripts/guestbook/index.jsx"></script>
 </html>

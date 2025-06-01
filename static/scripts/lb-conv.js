@@ -1,8 +1,8 @@
 // I know imports like this are less than ideal, but should 
 // be okay on this scale. If there are more packages than this, 
 // I will probably switch over to the Browserify bundler.
-import {Spinner} from '/node_modules/spin.js/spin.js';
-import '/node_modules/progressbar.js/dist/progressbar.js';
+import { Spinner } from 'spin.js';
+import ProgressBar from 'progressbar.js';
 
 var spinOpts = {
     lines: 12,
@@ -32,7 +32,7 @@ var barOpts = {
 
 let buttonDiv  = document.getElementById("button-container");
 let spinner    = new Spinner(spinOpts);
-let loadingBar = new ProgressBar.Line("#button-container", barOpts);
+let loadingBar = new ProgressBar.Line(".button-container", barOpts);
 
 
 // function from: https://stackoverflow.com/a/33542499
@@ -55,13 +55,84 @@ function save(filename, data) {
 }
 
 
+function resetLoadingBar(convMsg, originalButton) {
+    spinner.stop();
+    loadingBar.animate(0, {duration: 0});
+    buttonDiv.removeChild(convMsg);
+    buttonDiv.appendChild(originalButton);
+}
+
+function errorNotify(message) {
+    console.error(`Error occurred in fetching req: ${message}`);
+    if (message['row'] == "422 UNPROCESSABLE CONTENT") {
+        alert("The URL entered doesn't appear to be a valid Letterboxd list. \
+            Try checking the link and running it again.");
+    } 
+    else if (message['row'] == "403 FORBIDDEN") {
+        alert("The server does not accept conversion requests for \
+            lists over 10,000 films long. Is there a shorter list we can try?");
+    }
+    else { alert("There was an issue with the server in processing your request. \
+        My apologies."); }
+}
+
+function collectSaveList(fetchUrl, listName, originalButton) {
+    // add "Converting..." message
+    var convMsg = document.createElement("h3");
+    convMsg.textContent = "Converting...";
+    convMsg.style = "text-align: center";
+    buttonDiv.appendChild(convMsg);
+
+    spinner.spin(buttonDiv);    // run spinner until loading bar loads
+    const evtSource = new EventSource(fetchUrl);
+
+    let list = [];
+    let rowsReceived = 0;
+
+    evtSource.onmessage = (event) => {
+        console.debug(`message: ${event.data}`);
+        var msgData = JSON.parse(event.data);
+
+        rowsReceived += 1;
+        var ratioDone = rowsReceived/msgData.totalRows;
+        loadingBar.animate(ratioDone, {duration: 500});
+
+        list.push(msgData.rowData);
+        spinner.stop();
+    };
+
+    // If there is an issue, close out the connection
+    evtSource.onerror = (event) => {
+        // server emits a mystery error event during the conversion stream
+        // (somehow, I sincerely don't know where from), but it is without content.
+        // All the messages (including errors) I defined on the server have content.
+        // So this conditional is a way to filter that phantom error out.
+        if (!event.data) return;  
+        var msg = JSON.parse(event.data);
+        errorNotify(msg);
+        
+        // reset loading bar and replace button for another request
+        resetLoadingBar(convMsg, originalButton); 
+        evtSource.close(); 
+    };
+
+    evtSource.addEventListener("complete", (_) => {
+        console.log("Stream complete");
+        resetLoadingBar(convMsg, originalButton); 
+
+        let csv = list.join("\n");
+        save(`${listName}.csv`, csv);
+        evtSource.close();
+    } );
+}
+
 
 async function getLBlist() {
     let lbURL = document.getElementById("lb-url").value;
 
     // replace button with loading bar
     let button = buttonDiv.removeChild(
-        buttonDiv.querySelector("#lb-list-submit-button")
+        buttonDiv.querySelector(".lb-list-submit-button")
     );
 
     let checkedElements = document
@@ -84,85 +155,21 @@ async function getLBlist() {
 
     if (checkedElements.length > 0) {
 
-        let attr_list = new Array(checkedElements.length);
-        
+        let attrList = new Array(checkedElements.length);
         for (let i = 0; i < checkedElements.length; i++) {
-            attr_list[i] = checkedElements[i].id;
+            attrList[i] = checkedElements[i].id;
         }
-        attrsUrlForm = attr_list.map((a) => "attrs="+a).join("&");
+        attrsUrlForm = attrList.map((a) => "attrs="+a).join("&");
     }
 
     // attrs array necessitates a custom URL encoding for request query 
-    // (camel-case for Rust API)
-    let fetchURL = window.location.href + "/conv?"
-        + "list_name="   + listName + "&"
+    // (snake-case for URL, for Rust API)
+    let fetchURL = "/lb-list-app/conv?"
+        + "list_name="   + listName  + "&"
         + "author_user=" + author    + "&"
         + attrsUrlForm;
-
-    // add "Converting..." message
-    var convMsg = document.createElement("h3");
-    convMsg.textContent = "Converting...";
-    convMsg.style = "text-align: center";
-    buttonDiv.appendChild(convMsg);
-
-    spinner.spin(buttonDiv);    // run spinner....
-    const evtSource = new EventSource(fetchURL);
-
-    let list = [];
-    let rows_received = 0;
-
-    evtSource.onmessage = (event) => {
-        console.debug(`message: ${event.data}`);
-        var msg_data = JSON.parse(event.data);
-
-        rows_received += 1;
-        var ratioDone = rows_received/msg_data["total_rows"];
-        loadingBar.animate(ratioDone, {duration: 500});
-
-        list.push(msg_data["row"]);
-
-        // ...until loading bar loads
-        spinner.stop();
-    };
-
-    // If there is an issue, close out the connection
-    evtSource.onerror = (event) => {
-        // server emits a mystery error event during the conversion stream
-        // (somehow, I sincerely don't know where from), but it is without content.
-        // All the messages (including errors) I defined on the server have content.
-        // So this conditional is a way to filter that phantom error out.
-        if (!event.data) return;
-
-        console.error(`Error occurred in fetching req: ${event.data}`);
-        evtSource.close();   
-
-        var msg = JSON.parse(event.data);
-
-        if (msg['row'] == "400 BAD REQUEST") {
-            alert("The URL entered doesn't appear to be a valid Letterboxd list. Try checking the link and running it again.")
-        } else {
-            alert("There was an issue with the server in processing your request. My apologies.");
-        }
-        
-        // reset loading bar and replace button for another request
-        spinner.stop();
-        loadingBar.animate(0, {duration: 100});
-        buttonDiv.removeChild(convMsg);
-        buttonDiv.appendChild(button); 
-    };
-
-    evtSource.addEventListener("complete", (event) => {
-        evtSource.close();
-        console.log("complete");
-        // reset loading bar, remove "Converting...",
-        // and replace button for another request
-        loadingBar.animate(0, {duration: 0});
-        buttonDiv.removeChild(convMsg);
-        buttonDiv.appendChild(button); 
-
-        let csv = list.join("\n");
-        save(`${list_name}.csv`, csv);
-    } );
+    
+    collectSaveList(fetchURL, listName, button);
 }
 
 document

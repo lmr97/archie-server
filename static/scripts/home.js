@@ -6,7 +6,7 @@ const hit = {
     user_agent: navigator.userAgent
 };
 
-const options = {
+const postOptions = {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json'
@@ -15,29 +15,34 @@ const options = {
     credentials: "same-origin"          // for local testing
 };
 
-// POST hit from initial page load...
-fetch(window.location.href + "hits", options)
-    .then(resp => {
-        if (!resp.ok) throw new Error(
-            `POST hit to /hits failed with status code ${resp.status}`
-        );
-    })
-    .catch(error => console.log(error));
+async function updateHits() {
+    // POST hit from initial page load...
+    await fetch("/hits", postOptions)
+        .then(resp => {
+            if (!resp.ok) throw new Error(
+                `POST hit to /hits failed with status code ${resp.status}`
+            );
+        })
+        .catch(error => console.log(error));
 
-// ...then GET total hits
-fetch(window.location.href + "hits", {credentials: "same-origin"})
-    .then((resp) => { 
-        if (!resp.ok) throw new Error(
-             `GET /hits failed with status code ${resp.status}`
-        );
-        return resp.text();
-    })
-    .then(result => 
-        hitsElement.innerText = `Visits so far: ${result}`
-    )
-    .catch(error => {
-        console.log(error);
-        hitsElement.innerText = "(unable to get visit count)";
-    }
-);
+    // ...then GET total hits
+    await fetch("/hits", {credentials: "same-origin"})
+        .then((resp) => { 
+            if (!resp.ok) throw new Error(
+                `GET /hits failed with status code ${resp.status}`
+            );
+            return resp.text();
+        })
+        .then(result => 
+            hitsElement.innerText = `Visits so far: ${result}`
+        )
+        .catch(error => {
+            console.log(error);
+            hitsElement.innerText = "(unable to get visit count)";
+        }
+    );  
+}
+
+updateHits();
+
 

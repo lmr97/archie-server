@@ -16,22 +16,8 @@ button {
     background-color: dodgerblue;
     color: whitesmoke;
 }
-p.entry {
-    margin-top: 4px;
-    margin-bottom: 4px;
-    font-family: Arial, Helvetica, sans-serif;
-}
-p.entry-time {
-    font-weight: bold;
-}
-p.guest-name {
-    text-align: right;
-}
 p.epilogue {
     text-align: center;
-}
-#char-count {
-    margin: 0;
 }
 div.buttons {
     display: flex;

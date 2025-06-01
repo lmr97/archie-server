@@ -9,16 +9,33 @@ let timeOptions = {
     day: 'numeric' 
 }
 
+async function postEntry(newEntry) {
+    return fetch("/guestbook/entries", 
+        {
+            method: 'POST',
+            headers: {
+            'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(newEntry),
+            credentials: "same-origin"          // for local testing
+        }
+    );
+}
+
+function addNewEntryToPage(newEntry) {
+    // add entry to page, at the top of the list
+    newEntry["time_stamp"] = new Date().toISOString().slice(0, -1);  // shave off Z
+
+    const entryNode        = populateEntry(newEntry);
+    let entries            = document.getElementsByClassName("guestbook-entry");
+    entries[0].before(entryNode);
+}
 
 async function updateGuestbookRemote() {
     let note  = document.getElementById("guestbook-note").value;
     let guest = document.getElementById("guestbook-name").value;
 
     // length restrictions are emforced by textarea element itself
-
-    
-    // length restrictions are emforced by textarea element itself
-
     let newEntry = {
         "name": guest,
         "note": note
@@ -27,23 +44,12 @@ async function updateGuestbookRemote() {
     if (newEntry.name.length == 0) newEntry.name = "(anonymous)";
 
     try {
-        // catch exceptions thrown by fetch()
-        const response = await fetch(window.location.href+"/entries", 
-            {
-                method: 'POST',
-                headers: {
-                'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(newEntry),
-                credentials: "same-origin"          // for local testing
-            }
-        );
+        // catch exceptions thrown by fetch() itself
+        const response = await postEntry(newEntry);
 
         // catch server error responses
         if (!response.ok) {
-            throw new Error(
-                `POST entry to db failed with status code: ${resp.status}`
-            );
+            throw new Error(`POST entry to db failed with status code: ${response.status}`);
         }
     }
     catch (err) {
@@ -55,15 +61,8 @@ async function updateGuestbookRemote() {
     // reset fields
     document.getElementById("guestbook-name").value = "";
     document.getElementById("guestbook-note").value = "";
-    
     alert("Entry recieved. Thank you for leaving a note!");
-
-    // add entry to page, at the top of the list
-    newEntry["time_stamp"] = new Date().toISOString().slice(0, -1);  // shave off Z
-
-    const entryNode        = populateEntry(newEntry);
-    let entries            = document.getElementsByClassName("guestbook-entry");
-    entries[0].before(entryNode);
+    addNewEntryToPage(newEntry);
 }
 
 
@@ -76,12 +75,12 @@ function populateEntry(entryData) {
     // this maps the JSON object keys to the HTML classes 
     // for the page
     let keysToClasses = {
-        time_stamp: "entry-time", 
+        timeStamp: "entry-time", 
         note: "guest-note",
         name: "guest-name"
     };
 
-    // this keeps track of the p elements,
+    // this keeps track of the <p> elements,
     // so I can append them to the div in a specific order
     let entryObject = new Object();
 
@@ -104,10 +103,11 @@ function populateEntry(entryData) {
         
         entryObject[key] = child;
     }
+    console.log(entryObject);
 
-    entryElement.appendChild(entryObject["time_stamp"]);
-    entryElement.appendChild(entryObject["note"]);
-    entryElement.appendChild(entryObject["name"]);
+    entryElement.appendChild(entryObject.timeStamp);
+    entryElement.appendChild(entryObject.note);
+    entryElement.appendChild(entryObject.name);
     
     return entryElement;
 }
@@ -125,64 +125,43 @@ function displayCharCount(guestbookNoteElement) {
     }
 }
 
-function displayCharCount(guestbookNoteElement) {
-    let countElement = document.getElementById("char-count");
-    let entryLength = guestbookNoteElement.value.length;
 
-    countElement.textContent = `Charcter count: ${entryLength}/1000`;
+function displayGuestbook(entriesResp) {
+    let allEntries = JSON.parse(entriesResp).guestbook;
+    let entryDisplay = document.getElementById("entry-log");
 
-    // using >= cuz you never know
-    if (entryLength >= 1000) {
-        countElement.textContent = "Charcter count: 1000/1000 (maximum reached)";
+    for (let i = 0; i < allEntries.length; i++) {
+        let entryElement = populateEntry(allEntries[i.toString()]);
+        entryDisplay.appendChild(entryElement);
     }
+}
+
+function displayErrorMessage(error) {
+    let entryDisplay = document.getElementById("entry-log");
+
+    let pageErrElement = document.createElement("p");
+    pageErrElement.textContent = "(cannot retrieve other entries)";
+    pageErrElement.style["font-style"] = "italic";
+
+    entryDisplay.appendChild(pageErrElement);
+    console.error(error);
 }
 
 function updateGuestbookDisplay() {
     
     // same-origin creds for local testing
-    fetch(window.location.href+"/entries", {credentials: "same-origin"}) 
+    fetch("/guestbook/entries", {credentials: "same-origin"}) 
         .then(
             response => {
                 if (!response.ok) {
                     throw new Error(
                         `Error in retrieving entries. Status code: ${response.status}`
-                    )
+                    );
                 } 
                 return response.text();
             }
-        ).then(
-            respBody => {
-                let allEntries = JSON.parse(respBody)["guestbook"];
-                let entryDisplay = document.getElementById("entry-log");
-
-                for (let i = 0; i < allEntries.length; i++) {
-                    let entryElement = populateEntry(allEntries[i.toString()]);
-                    entryDisplay.appendChild(entryElement);
-                }
-            }
-        ).catch(
-            err => {
-                let entryDisplay = document.getElementById("entry-log");
-
-                let pageErrElement = document.createElement("p");
-                pageErrElement.textContent = "(cannot retrieve other entries)";
-                pageErrElement.style["font-style"] = "italic";
-
-                entryDisplay.appendChild(pageErrElement);
-                console.error(err);
-            }
-        ).catch(
-            err => {
-                let entryDisplay = document.getElementById("entry-log");
-
-                let pageErrElement = document.createElement("p");
-                pageErrElement.textContent = "(cannot retrieve other entries)";
-                pageErrElement.style["font-style"] = "italic";
-
-                entryDisplay.appendChild(pageErrElement);
-                console.error(err);
-            }
-        );
+        ).then(respBody => { displayGuestbook(respBody); })
+        .catch(err => { displayErrorMessage(err); });
 }
 
 

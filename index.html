@@ -18,23 +18,23 @@
         the server and database each running in their own containers, orchestrated via Docker Compose.</p>
     <p>You can see all the code used to serve this webpage <a href="https://github.com/lmr97/archie-server">on GitHub</a>.</p>
     <h2>
-        <a href="guestbook">
+        <a href="pages/guestbook.html">
             <button>Sign the guestbook!</button>
         </a>
     </h2>
     <h2>
-        <a href="lb-list-conv">
+        <a href="pages/lb-list-app.html">
             <button>Download a Letterboxd list!</button>
         </a>
     </h2>
     <br>
     <div class="images">
         <figure>
-            <img src="static/images/the-server.jpg" alt="The laptop in question" style="float:left;" width="230" height="310" />
+            <img src="./static/images/the-server.jpg" alt="The laptop in question" style="float:left;" width="230" height="310" />
             <figcaption>This is what serves this webpage!</figcaption>
         </figure> 
         <figure>
-            <img src="static/images/arch-logo.png" alt="Arch Linux logo" style="float:right;" width="200" height="200"/>
+            <img src="./static/images/arch-logo.png" alt="Arch Linux logo" style="float:right;" width="200" height="200"/>
             <figcaption>Running on Arch (btw)</figcaption>
         </figure>   
     </div>
@@ -42,7 +42,7 @@
     <p class="epilogue"><i>I hope you enjoy this little project of mine &mdash; I sure have!</i></p>
 </div>
 
-<script src="/static/scripts/home.js"></script>
+<script type="module" src="./static/scripts/home.js"></script>
 
 </body>
 
