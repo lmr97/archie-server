@@ -35,15 +35,18 @@ test = true
 axum = { version = "0.8.1", features = ["json"] }
 axum-extra = { version = "0.10.0", features = ["query"] }
 axum-server = { version = "0.7.1", features = ["tls-rustls"] }
+bytes = "1.10.1"
 futures = "0.3.31"
 futures-util = { version = "0.3.31" }
 mysql = { version = "26.0.0", features = ["chrono"] }
-mysql_common = "0.34.1"
+mysql_common = { version = "0.34.1", features = ["chrono"] }
 serde = "1.0.217"
 tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
 tower-http = { version = "0.6.2", features = [ "fs", "compression-br", "compression-deflate", "compression-gzip", "compression-zstd" ] }
 tracing = "0.1.41"
 tracing-subscriber = { version = "0.3.19", features = ["env-filter"] }
+ts-rs = { version = "10.1.0", features = [ "serde-json-impl", "chrono-impl" ] }
+vite-rs = "0.1.0"
 
 [dev-dependencies]
 reqwest = { version = "0.12.15", features = ["json", "stream", "default-tls"] }

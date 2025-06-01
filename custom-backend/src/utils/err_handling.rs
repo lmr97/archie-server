@@ -1,10 +1,9 @@
-use std::fs::read_to_string;
 use axum::{
     http::StatusCode, 
     response::{Html, IntoResponse, Response}
 };
 
-use crate::utils::init_utils::get_env_var;
+use crate::srv_io::vite_io;
 
 // extracting this as public function to use elsewhere
 // breaking up this huge error type into more specific errors 
@@ -18,18 +17,13 @@ pub fn make_500_resp() -> Response {
                     <p>500 Error: Internal Server Error</p>\n\
                     </html>".to_string();
 
-    let html_500_err = match get_env_var("SERVER_ROOT") {
+    let html_500_err = match vite_io::VitePage::get("static/errors/500.html") {
 
-        Ok(sr) => {
-            // get nice 500 error page...
-            read_to_string(format!("{sr}/static/errors/500.html"))
-                .unwrap_or(     
-                    // ...or the quick 'n' dirty version if otherwise
-                    default_error
-                )
+        Some(err_page) => {
+            String::from_utf8(err_page.bytes.to_vec()).unwrap_or(default_error)
         },
         // if we can't even find the env var, we're sending the short version
-        Err(_) => default_error
+        None => default_error
     };
     
     let mut err_resp = Html(html_500_err).into_response();

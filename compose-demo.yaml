@@ -1,24 +1,31 @@
-# This is meant to run the server locally, and without TLS, 
-# saving the demoing user the trouble of getting certs and keys.
-
 name: archie
 services:
   svr:
-    build: .
+    # separately-built image to avoid clutter from anonymous images
+    image: .
+    restart: always
+    depends_on:
+      - db
+      - lb-app
     ports:
       - "3000:4949"
     # if running with sudo, use the --preserve-env option
     # so that your user shell env is in scope
     environment:
+      PRE_LOG: 1
       # DB host needs to be CONTAINER name not service name
-      DB_URL: mysql://${MYSQL_USER:-server1}:${MYSQL_PASSWORD:-thepass}@archie-db:3306/archie
+      DB_URL: mysql://server1:${MYSQL_PASSWORD:?}@archie-db:3306/archie
       RUST_LOG: "archie_server=debug"   # for `tracing` logger
       PY_CONT_SOCK: "lb-app:3575"
-    command: [ "./target/release/archie-server", "--no-tls" ]
-    # allows web content to be loaded in on compose, not requiring rebuild
+    command: [ "./target/release/archie-server", "--no-tls"]
+    healthcheck:
+      test: [ "CMD", "curl", "--fail", "http://localhost:4949" ]
+      interval: 30s
+      retries: 5
+      start_period: 2s
     volumes:
       - type: bind
-        source: ./demo.log
+        source: ./archie-server.log
         target: /home/server/archie-server.log
       - type: bind
         source: ./pages
@@ -32,6 +39,7 @@ services:
 
   db:
     image: "mysql:9.2"
+    restart: always
     container_name: "archie-db"
     volumes:
       - type: bind
@@ -41,25 +49,20 @@ services:
       - type: bind
         source: "./backup_on_exit.sh"
         target: "/backup_on_exit.sh"
-    entrypoint: [ "bash", "backup_on_exit.sh" ]
+    entrypoint: ["bash", "backup_on_exit.sh"]
     command: "mysqld"
     healthcheck:
       # slight breach of exec form with the options, but `mysqladmin` does not work otherwise
-      test: [ "CMD", "mysqladmin", "ping", "--user=server1", "--password=${MYSQL_PASSWORD:-thepass}" ]
+      test: [ "CMD", "mysqladmin", "ping", "--user=server1", "--password=${MYSQL_PASSWORD?}" ]
       interval: 15s
       retries: 3
       start_period: 1m
     environment:
         MYSQL_ONETIME_PASSWORD: false
         MYSQL_ALLOW_EMPTY_PASSWORD: false
-        MYSQL_ROOT_PASSWORD: "root"
-        MYSQL_USER: ${MYSQL_USER:-server1}
-        MYSQL_PASSWORD: ${MYSQL_PASSWORD:-thepass}
+        MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?}   # non-priv user created after startup
 
   lb-app:
-    build: ./letterboxd_get_list
+    build: ./lb-app
     container_name: "lb-app"
-    volumes:
-      - type: bind
-        source: "./letterboxd_get_list/valid-lb-attrs.txt"
-        target: "/valid-lb-attrs.txt"
+    restart: always

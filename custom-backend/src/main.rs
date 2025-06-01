@@ -2,10 +2,6 @@ use std::{
     net::SocketAddr,
     str::FromStr
 };
-use custom_backend::{
-    srv_io::{db_io, lb_app_io},
-    utils::init_utils::*,
-};
 use axum::{
     routing::{get, post}, 
     Router
@@ -13,10 +9,15 @@ use axum::{
 use axum_server::tls_rustls::RustlsConfig;
 use tower_http::{
     services::ServeDir,
-    services::ServeFile,
     compression::CompressionLayer
 };
 use tracing::info;
+use custom_backend::{
+    srv_io::{vite_io, db_io, lb_app_io},
+    utils::init_utils::*,
+};
+
+
 
 // The only panicking unwraps are here in main(), since, if there are 
 // any problems during startup, I want the server to crash and show me what 
@@ -62,42 +63,37 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let server_root = get_env_var("SERVER_ROOT").unwrap();
 
 
-    /* Homepage/general */
-    let homepage  = ServeFile::new(format!("{}/pages/home.html", server_root));
-    let static_dir = ServeDir::new(format!("{}/static", server_root));
-    let node_mods  = ServeDir::new(format!("{}/node_modules", server_root));
-
-
     /* Guestbook */
-    let guestbook_page = ServeFile::new(format!("{}/pages/guestbook.html", server_root));
     let guestbook_entries: Router<()> = Router::new()
         .route("/", post(db_io::update_guestbook))
         .route("/", get(db_io::get_guestbook));
     let guestbook_app = Router::new()
-        .route_service("/", guestbook_page)
+        .route("/", get(vite_io::guestbook_page))
         .nest("/entries", guestbook_entries);
 
 
-    /* Letterbocd List Converter */
-    let lb_app_page = ServeFile::new(format!("{}/pages/lb-list-app.html", server_root));
+    /* Letterboxd List Converter */
+    let converter = Router::new().route("/conv", get(lb_app_io::convert_lb_list));
     let lb_app = Router::new()
-        .route_service("/", lb_app_page)
-        .route("/conv", get(lb_app_io::convert_lb_list));
+        .route("/", get(vite_io::lb_app_page))
+        .nest("/conv", converter);
 
     
     /* All routes */
     let routes = Router::new()
-        .route_service("/", homepage)
-        .nest_service("/static", static_dir)
-        .nest_service("/node_modules", node_mods)
+        .route("/", get(vite_io::homepage))
+        .nest_service("/assets", ServeDir::new(format!("{}/dist/assets", server_root)))
         .route("/hits", post(db_io::log_hit))
         .route("/hits", get(db_io::get_hit_count))
         .nest("/guestbook", guestbook_app)       // `Router`s must be nested with other routers
         .nest("/lb-list-conv", lb_app)
         .layer(CompressionLayer::new());         // compress all responses
 
-    let addr = SocketAddr::from_str(&get_env_var("SERVER_SOCKET").unwrap()).unwrap();
+    // Start Vite dev server (debug only)
+    let _guard = vite_io::VitePage::start_dev_server(true);  
+    
 
+    let addr = SocketAddr::from_str(&get_env_var("SERVER_SOCKET").unwrap()).unwrap();
 
     if !use_tls {
 

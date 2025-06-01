@@ -1,7 +1,7 @@
 use mysql_common::serde_json;
 use tokio;
 use reqwest::StatusCode;
-use custom_backend::srv_io::db_io::{Guestbook, GuestbookEntry};
+use custom_backend::types::db_io_types::{EntryReceipt, Guestbook, GuestbookEntry};
 mod client_config;
 
 #[tokio::main]
@@ -20,6 +20,8 @@ async fn main() {
 async fn post_valid_entry(client: &reqwest::Client, url: &String) {
     
     let valid_entry = GuestbookEntry {
+        id: None,
+		time_stamp: None,
         name: String::from("a normal name"),
         note: String::from(
             "A moderately sized note. Not much special going on here, \
@@ -35,9 +37,10 @@ async fn post_valid_entry(client: &reqwest::Client, url: &String) {
         .await
         .unwrap();
 
-    // only checking whether the post was successful; 
-    // whether it's retrievable is tested in getting_guestbook()
+    // only checking whether the post was successful, and an EntryReceipt
+    // was received. whether it's retrievable is tested in getting_guestbook()
     assert_eq!(resp.status(), StatusCode::OK);
+    resp.json::<EntryReceipt>().await.unwrap();  // as long as this runs without error, it's good
 }
 
 async fn getting_guestbook(client: &reqwest::Client, url: &String) {
@@ -47,6 +50,8 @@ async fn getting_guestbook(client: &reqwest::Client, url: &String) {
     // we're only comparing content without timestamps
 
     let latest_entry = GuestbookEntry {
+        id: None,
+		time_stamp: None,
         name: String::from("a normal name"),
         note: String::from(
             "A moderately sized note. Not much special going on here, \
@@ -57,10 +62,14 @@ async fn getting_guestbook(client: &reqwest::Client, url: &String) {
     let test_guestbook_vec0 = vec![
         latest_entry.clone(),
         GuestbookEntry {
+            id: None,
+            time_stamp: None,
             name: String::from("(anonymous)"),
             note: String::new()
         },
         GuestbookEntry {
+            id: None,
+            time_stamp: None,
             name: String::from("Lettuce % % \\% \\' break some sTuff ⌠ 	⌡ 	⌢ 	⌣ 	⌤"),
             note: String::from(
                 "ᏣᎳᎩ ᎦᏬᏂᎯᏍᏗ (Cherokee!) \n\\\\% %%' ''\\n\
@@ -74,18 +83,26 @@ async fn getting_guestbook(client: &reqwest::Client, url: &String) {
             )
         },
         GuestbookEntry {
+            id: None,
+            time_stamp: None,
             name: String::from("约翰·塞纳"),
             note: String::from("我很喜欢冰淇淋")
         },
         GuestbookEntry {
+            id: None,
+            time_stamp: None,
             name: String::from("Linus"),
             note: String::from("nice os choice!")
         },
         GuestbookEntry {
+            id: None,
+            time_stamp: None,
             name: String::from("(anonymous)"),
             note: String::from("you'll never know...")
         },
         GuestbookEntry {
+            id: None,
+            time_stamp: None,
             name: String::from("Ada"),
             note: String::from("It's so nice to be here!")
         },
@@ -105,7 +122,7 @@ async fn getting_guestbook(client: &reqwest::Client, url: &String) {
 
     assert_eq!(resp.status(), StatusCode::OK);
 
-    // remove timestamps; we can't know all their values
+    // remove timestamps and IDs; we can't know all their values
     // when this function is run
     let resp_body = resp.text()
         .await
@@ -115,6 +132,8 @@ async fn getting_guestbook(client: &reqwest::Client, url: &String) {
         .into_iter()
         .map(|ent| {
         GuestbookEntry {
+            id: None,
+            time_stamp: None,
             name: ent.name,
             note: ent.note
         }
@@ -127,6 +146,8 @@ async fn post_overlong_entry_note(client: &reqwest::Client, url: &String) {
 
     // gonna get real weird with it
     let overlong_entry = GuestbookEntry {
+        id: None,
+		time_stamp: None,
         name: String::from("A resonable name"),
         note: String::from(
             "ᏣᎳᎩ ᎦᏬᏂᎯᏍᏗ (this is Cherokee!) \n\\\\% %%' ''
@@ -160,6 +181,8 @@ async fn post_overlong_entry_name(client: &reqwest::Client, url: &String) {
 
     // gonna get real weird with it
     let overlong_name = GuestbookEntry {
+        id: None,
+		time_stamp: None,
         name: String::from(
             "A name മനുഷ്യരെല്ലാവരും തുല്യാവകാശങ്ങളോടും that is too ᎦᏬᏂᎯᏍᏗ long.
             so long, in fact, I needed to add all this stuff!"),

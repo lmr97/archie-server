@@ -1,7 +1,7 @@
 use tokio;
 use reqwest::{self, StatusCode};
 use mysql_common::serde_json;
-use custom_backend::srv_io::db_io::WebpageHit;
+use custom_backend::types::db_io_types::WebpageHit;
 mod client_config;
 
 

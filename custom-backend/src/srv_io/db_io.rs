@@ -4,53 +4,10 @@ use axum::{
 };
 use mysql::*;
 use mysql::prelude::*;
-use mysql_common::{
-    chrono::{NaiveDateTime, Utc, SubsecRound},
-    serde
-};
+use mysql_common::chrono::Utc;
 use tracing::{info, debug, error};
 use crate::utils::err_handling::make_500_resp;
-
-
-#[derive(Debug, serde::Deserialize, serde::Serialize, PartialEq, Clone)] 
-pub struct GuestbookEntry {
-    pub name: String,
-    pub note: String,
-}
-
-#[derive(Debug, serde::Serialize, serde::Deserialize, PartialEq)]
-pub struct GuestbookEntryStamped {
-    // keeping time_stamp as NaiveDateTime for DB I/O,
-    // and for time-value sorting to by done by the DB on query
-    pub time_stamp: NaiveDateTime,  
-    pub name: String,
-    pub note: String,
-}
-
-// This struct exists for organinzing all the JSON 
-// guestbook entries for transmission to the client into a
-// larger JSON object
-#[derive(Debug, serde::Serialize, serde::Deserialize, PartialEq)]
-pub struct Guestbook {
-    pub guestbook: Vec<GuestbookEntryStamped>,
-}
-
-#[derive(Debug, serde::Deserialize, serde::Serialize, PartialEq, Clone)]
-pub struct WebpageHit {
-    pub time_stamp: NaiveDateTime,
-    pub user_agent: String,
-}
-
-impl Default for WebpageHit {
-    fn default() -> WebpageHit {
-        WebpageHit { 
-            time_stamp: Utc::now()
-                .naive_utc()
-                .trunc_subsecs(0), 
-            user_agent: String::from("Mozilla user agent") 
-        }
-    }
-}
+use crate::types::db_io_types::*;
 
 // wrapper to implement IntoResponse
 #[derive(Debug)]
@@ -123,7 +80,9 @@ impl IntoResponse for DbOrUserError {
                     "<!DOCTYPE html>\n\
                     <html>\n\
                     <head>\n\
-                    <title>413 Payload Too Large</title>\n\
+                    \t<title>413 Payload Too Large</title>\n\
+                    \t<link rel=\"stylesheet\" href=\"../static/styles/err-style.css\">\n\
+                    \t<meta charset=\"utf-8\">\n\
                     </head>\n\
                     <h1>{} too long!</h1>\n\
                     <p>The database limits this field to {} bytes.</p>\n\
@@ -171,11 +130,11 @@ pub async fn get_guestbook() -> Result<Json::<Guestbook>, DbError> {
     
     let guestbook_table = conn.query_map(
         "
-        SELECT dateSubmitted, guestName, guestNote 
+        SELECT id, dateSubmitted, guestName, guestNote 
         FROM guestbook
         ORDER BY dateSubmitted DESC", // let the DB do the sorting
-        |(time_stamp, name, note)| {
-            GuestbookEntryStamped {time_stamp, name, note}
+        |(id, time_stamp, name, note)| {
+            GuestbookEntry {id: Some(id), time_stamp: Some(time_stamp), name, note}
         }
     )?;
 
@@ -184,7 +143,7 @@ pub async fn get_guestbook() -> Result<Json::<Guestbook>, DbError> {
     Ok(Json(Guestbook {guestbook: guestbook_table}))
 }
 
-pub async fn update_guestbook(Json(mut form_entry): Json<GuestbookEntry>) -> Result<Html<String>, DbOrUserError> {
+pub async fn update_guestbook(Json(mut form_entry): Json<GuestbookEntry>) -> Result<Json<EntryReceipt>, DbOrUserError> {
 
     // the first two conditionals are redundancies to catch entries that exceed
     // hard-coded VARCHAR limits, since the client-side Javascript is designed
@@ -210,25 +169,32 @@ pub async fn update_guestbook(Json(mut form_entry): Json<GuestbookEntry>) -> Res
     // but included just in case
     if form_entry.name.is_empty() { form_entry.name = String::from("(anonymous)"); }
 
-    // return value needs to be caught so that type can be annotated
+    // while the UTC_TIMESTAMP() in the query will theorietically not be precisely
+    // the same as Utc::now() invoked here, they will be close enough
+    // and it simplifies the code.
+    form_entry.time_stamp = Some(Utc::now().naive_utc());
     let _: Option<Row> = conn.exec_first(
         r"INSERT INTO guestbook (dateSubmitted, guestName, guestNote)
                 VALUES (UTC_TIMESTAMP(), :name, :note)",
         params! {
-            "name" => &form_entry.name, 
-            "note" =>  form_entry.note
+            "name"      => &form_entry.name, 
+            "note"      => &form_entry.note
         }
     )?;
 
+    let new_entry_id: String = match conn.query_first(
+        "SELECT LAST_INSERT_ID()")? {
+        Some(id) => id,
+        None => { String::from("0") }
+    };
+
     info!("New entry in the guestbook from {}!", form_entry.name);
-    Ok(Html(String::from(
-        "<!DOCTYPE html>\n\
-        <html><head>\n\
-        <title>Entry Received!</title>\n\
-        </head>\n\
-        <p>Thanks for leaving a note on my website!</p>\n\
-        </html>"
-    )))
+    Ok(Json(EntryReceipt {
+        // nwrapping here is safe, because I set this field to Some()
+        // a few lines before in this function
+        time_stamp: form_entry.time_stamp.unwrap(), 
+        id: new_entry_id,
+    }))
 }
 
 
@@ -343,28 +309,32 @@ mod tests {
 
         let demo_guestbook = Guestbook {
             guestbook: vec![
-                GuestbookEntryStamped {
-                    time_stamp: NaiveDateTime::parse_from_str(
-                        "2025-04-20 13:03:59", "%Y-%m-%d %H:%M:%S").unwrap(),
+                GuestbookEntry {
+                    id: Some(String::from("4")),
+                    time_stamp: Some(NaiveDateTime::parse_from_str(
+                        "2025-04-20 13:03:59", "%Y-%m-%d %H:%M:%S").unwrap()),
                     name:       String::from("约翰·塞纳"),
                     note:       String::from("我很喜欢冰淇淋")
                 },
-                GuestbookEntryStamped {
-                    time_stamp: NaiveDateTime::parse_from_str(
-                        "2025-03-13 03:37:05", "%Y-%m-%d %H:%M:%S").unwrap(),
+                GuestbookEntry {
+                    id: Some(String::from("3")),
+                    time_stamp: Some(NaiveDateTime::parse_from_str(
+                        "2025-03-13 03:37:05", "%Y-%m-%d %H:%M:%S").unwrap()),
                     name:       String::from("Linus"),
                     note:       String::from("nice os choice!")
                 },
-                GuestbookEntryStamped {
-                    time_stamp: NaiveDateTime::parse_from_str(
-                        "2025-02-28 04:30:57", "%Y-%m-%d %H:%M:%S").unwrap(),
+                GuestbookEntry {
+                    id: Some(String::from("2")),
+                    time_stamp: Some(NaiveDateTime::parse_from_str(
+                        "2025-02-28 04:30:57", "%Y-%m-%d %H:%M:%S").unwrap()),
                     name:       String::from("(anonymous)"),
                     note:       String::from("you'll never know...")
                 },
                 
-                GuestbookEntryStamped {
-                    time_stamp: NaiveDateTime::parse_from_str(
-                        "2025-02-28 04:22:49", "%Y-%m-%d %H:%M:%S").unwrap(),
+                GuestbookEntry {
+                    id: Some(String::from("1")),
+                    time_stamp: Some(NaiveDateTime::parse_from_str(
+                        "2025-02-28 04:22:49", "%Y-%m-%d %H:%M:%S").unwrap()),
                     name:       String::from("Ada"),
                     note:       String::from("It's so nice to be here!")
                 },
@@ -384,12 +354,19 @@ mod tests {
         // than the start of this function
         let proc_start = Utc::now().naive_utc();
         let mut null_entry = GuestbookEntry {
+            id: Some(String::from("7")), 
+            time_stamp: None,
             name: String::new(),
             note: String::new()
         };
 
-        // this part is good as long as it doesn't throw an error
-        let _ = update_guestbook(Json(null_entry.clone())).await.unwrap();
+        // Running this in series, this entry should be ID == 7,
+        // since the last auto-increment ID insert in this connection
+        // since DB initialization (and that's the counter measured)
+        // happened with posting the 6th hit, so the auto-increment counter
+        // is now at 7.
+        let receipt = update_guestbook(Json(null_entry.clone())).await.unwrap();
+        assert_eq!(receipt.0.id, "7");
 
         // check to see if the entry was posted with 
         let mut conn = get_db_conn_pool()?.get_conn()?;
@@ -397,14 +374,15 @@ mod tests {
         // no other entries in the demo database have a null user agent
         let fetched_entry = conn.query_map(
             format!(
-                "SELECT guestName, guestNote FROM guestbook
+                "SELECT id, guestName, guestNote FROM guestbook
                 WHERE dateSubmitted >= STR_TO_DATE('{}', '%Y-%m-%d %H:%i:%S')
                 AND guestName = '(anonymous)'", 
                 proc_start.format("%Y-%m-%d %H:%M:%S").to_string()
             ),
-            |(name, note): (String, String)| {
+            |(id, name, note): (String, String, String)| {
                 // timestamp not needed if the query finds an entry in terms of proc_start
-                GuestbookEntry { name, note }
+                // ID should be 5.
+                GuestbookEntry { id: Some(id), time_stamp: None, name, note }
             }
         )?;
 
@@ -423,6 +401,8 @@ mod tests {
 
         // gonna get real weird with it
         let valid_entry = GuestbookEntry {
+            id: Some(String::from("8")), 
+            time_stamp: None,
             name: String::from("Lettuce % % \\% \\' break some sTuff ⌠ 	⌡ 	⌢ 	⌣ 	⌤"),
             note: String::from(
                 "ᏣᎳᎩ ᎦᏬᏂᎯᏍᏗ (Cherokee!) \n\\\\% %%' ''\\n\
@@ -436,8 +416,9 @@ mod tests {
             ),
         };
 
-        // this part is good as long as it doesn't throw an error
-        let _ = update_guestbook(Json(valid_entry.clone())).await.unwrap();
+        // run in series, this entry should have ID == 8, see post_null_entry()
+        let receipt = update_guestbook(Json(valid_entry.clone())).await.unwrap();
+        assert_eq!(receipt.0.id, "8");  
 
         // check to see if the entry was posted with 
         let mut conn = get_db_conn_pool()?.get_conn()?;
@@ -445,14 +426,14 @@ mod tests {
         // no other entries in the demo database have a null user agent
         let fetched_entry = conn.query_map(
             format!(
-                "SELECT guestName, guestNote FROM guestbook
+                "SELECT id, guestName, guestNote FROM guestbook
                 WHERE dateSubmitted >= STR_TO_DATE('{}', '%Y-%m-%d %H:%i:%S')
                 AND guestName LIKE 'Lettuce%'", 
                 proc_start.format("%Y-%m-%d %H:%M:%S").to_string()
             ),
-            |(name, note): (String, String)| {
+            |(id, name, note): (String, String, String)| {
                 // timestamp not needed if the query finds an entry in terms of proc_start
-                GuestbookEntry { name, note }
+                GuestbookEntry { id: Some(id), time_stamp: None, name, note }
             }
         )?;
 
@@ -466,6 +447,8 @@ mod tests {
 
         // gonna get real weird with it
         let overlong_entry = GuestbookEntry {
+            id: None, 
+            time_stamp: None,
             name: String::from("A resonable name"),
             note: String::from(
                 "ᏣᎳᎩ ᎦᏬᏂᎯᏍᏗ (this is Cherokee!) \n\\\\% %%' ''\n\
@@ -503,6 +486,8 @@ mod tests {
 
         // gonna get real weird with it
         let overlong_name = GuestbookEntry {
+            id: None, 
+            time_stamp: None,
             name: String::from(
                 "A name മനുഷ്യരെല്ലാവരും തുല്യാവകാശങ്ങളോടും that is too ᎦᏬᏂᎯᏍᏗ long. \
                 so long, in fact, I needed to add all this stuff!"),
