@@ -55,10 +55,10 @@ After the server recieves a row (and decodes it), it bundles it up as a server-s
 {
     "curr_row": 4,
     "total_rows": 45,
-    "row": "\"Sorry to Bother You\",2018,Boots Riley,Terel Gibson,Antionette Yoka,Boots Riley",
+    "row": "\"Sorry to Bother You\",2018,\"Boots Riley\",\"Terel Gibson\",\"Antionette Yoka\",\"Boots Riley\"",
 }
 ```
-Note that this always includes a title and year entry in the row, in addition to the attributes requested. So if no list attributes are specified, title and year alone will be sent.
+Note that this always includes a title and year entry in the row, in addition to the attributes requested. So if no list attributes are specified, title and year alone will be sent. Each non-numeric field is also quote-enclosed to make the CSV file parse correctly.
 
 ## Local Demo
 
@@ -72,6 +72,6 @@ npm install
 docker compose --file compose-demo.yaml up --detach
 ```
 
-It'll probably take a while to build the Docker images (it takes ~5 minutes total on my machine, the majority of which was for the central server image). And once the containers are started, give the database container ~2 minutes to initialize before trying it out (otherwise there will be errors). You can see if the database is ready for connections by running `docker logs archie-db`; the container will say "ready for connections" in its output. 
+It'll probably take a while to build the Docker images (it takes ~5 minutes total on my machine, the majority of which was for the central server image). And once the containers are started, give the database container ~2 minutes to initialize before trying it out (otherwise there will be errors). You can see if the database is ready by running `docker container ls` looking for whether the `archie-db` container is marked healthy or not.
 
 Now you can try it out! The server is listening at `localhost:3000`.
