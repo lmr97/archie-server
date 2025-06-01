@@ -5,27 +5,28 @@ name: Archie CI
 
 on:
   push:
-    branches: [ "testing" ]
+    branches: [ "main", "testing" ]
+
+env:
+  EX_VAR: "a value/here"           # an env var to test env fetches
+  SERVER_SOCKET: "127.0.0.1:4321"
+  SERVER_LOG: "test.log"
+  SERVER_ROOT: "/home/runner/work/archie-server/archie-server"
+  CLIENT_SOCKET: "127.0.0.1:4321"  # may different sock, since reqwest parses IPs differently
+  PRE_LOG: 0                       # suppressed initial stdout, for backgrounding
+  MYSQL_PASSWORD: thepass          # not real pw; doesnt matter for testing
+  MYSQL_ROOT_PASSWORD: root
+  DB_URL: "mysql://server1:thepass@127.0.0.1:3306/archie"
+  PY_CONT_SOCK: "127.0.0.1:3575"
+  PK_FILE: "./certs/server.key"    # will be installed during runtime
+  CRT_FILE: "./certs/server.pem"
+  CLIENT_CRT_FILE: "./certs/client.pem"
 
 jobs:
 
-  server_tests:
-    runs-on: ubuntu-latest
-    env:
-      EX_VAR: "a value/here"           # an env var to test env fetches
-      SERVER_SOCKET: "127.0.0.1:4321"
-      SERVER_LOG: "test.log"
-      SERVER_ROOT: "/home/runner/work/archie-server/archie-server"
-      CLIENT_SOCKET: "127.0.0.1:4321"  # may need to be different, since reqwest parses differently
-      PRE_LOG: 0                       # suppressed initial stdout, for backgrounding
-      MYSQL_PASSWORD: thepass          # not real pw; doesnt matter for testing
-      MYSQL_ROOT_PASSWORD: root
-      DB_URL: "mysql://server1:thepass@127.0.0.1:3306/archie"
-      PY_CONT_SOCK: "127.0.0.1:3575"
-      PK_FILE: "./certs/server.key"    # will be installed during runtime
-      CRT_FILE: "./certs/server.pem"
-      CLIENT_CRT_FILE: "./certs/client.pem"
+  web_server_tests:
 
+    runs-on: ubuntu-latest
     defaults:
       run:
         shell: bash
@@ -33,6 +34,8 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
+    # server runs on rootless docker, so test it as such
+    # - uses: ScribeMD/rootless-docker@0.2.2
     - name: Set up MySQL database
       # uses demo db, identical to real db except in content
       # running this first so that the database can initialize while
@@ -60,9 +63,8 @@ jobs:
         cargo test --test tls_on_default --
         cargo test --test tls_off_switch -- --no-tls
     - name: Server integration tests (no TLS)
-      # TODO: find executable for server in Action
       run: |
-        ./target/debug/archie-server --no-tls &
+        (./target/debug/archie-server --no-tls > /dev/null) &
         cargo test --test integ_* -- --no-tls
         killall archie-server
     # uses a brilliantly simple Python module called `trustme`
@@ -75,7 +77,7 @@ jobs:
         python -m trustme
     - name: Server integration tests (with TLS)
       run: |
-        ./target/debug/archie-server &
+        (./target/debug/archie-server > /dev/null) &
         cargo test --test integ_*
         killall archie-server
     - name: Test DB's dump-on-exit
@@ -87,6 +89,7 @@ jobs:
       run: killall python
   
   letterboxd_app_tests:
+
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -110,6 +113,3 @@ jobs:
       run: |
         cd ..
         pytest -v --cov --cov-report=term-missing
-
-  # next job: test frontend JS scripts
-  # final job: full server integration tests
