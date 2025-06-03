@@ -60,6 +60,8 @@ services:
     environment:
         MYSQL_ONETIME_PASSWORD: false
         MYSQL_ALLOW_EMPTY_PASSWORD: false
+        MYSQL_USER: server1
+        MYSQL_PASSWORD: ${MYSQL_PASSWORD:?}
         MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?}   # non-priv user created after startup
 
   lb-app:
