@@ -264,7 +264,7 @@ def test_long_rows():
 
                 # if this fails, then there IS a meaningful difference between cell values.
                 assert set(true_no_quotes.split("; ")) == set(test_no_quotes.split("; ")), \
-                    f"film \"{films_in_list[i]}\" failed assertion."
+                    f"film \"{films_in_list[i-1]}\" failed assertion." # account for header
 
 
 def test_null_attributes():
