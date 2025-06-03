@@ -12,16 +12,13 @@ div.round-box {
     box-shadow: 0 30px 40px rgba(0,0,0,0.2);
 }
 button {
+    border-radius: 7px;
     font-size: large;
     background-color: dodgerblue;
     color: whitesmoke;
 }
 p.epilogue {
     text-align: center;
-}
-div.buttons {
-    display: flex;
-    justify-content: flex-end;
 }
 h1, h2 {
     text-align: center;
@@ -38,8 +35,12 @@ figure {
 figcaption {
     text-align: center;
 }
-textarea {
+input, textarea {
+    border-radius: 7px;
     color: darkslategray;
+    margin: auto;
+    margin-top: 7px;
     width: 100%;
     font-family: Arial, Helvetica, sans-serif;
+    font-size: medium;
 }

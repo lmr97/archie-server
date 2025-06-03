@@ -33,9 +33,10 @@ async function updateHits() {
             );
             return resp.text();
         })
-        .then(result => 
-            hitsElement.innerText = `Visits so far: ${result}`
-        )
+        .then(result => {
+            const fmtNumber = Number(result).toLocaleString();
+            hitsElement.innerText = `Visits so far: ${fmtNumber}`;
+        })
         .catch(error => {
             console.log(error);
             hitsElement.innerText = "(unable to get visit count)";
