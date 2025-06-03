@@ -5,7 +5,7 @@ name: Archie CI
 
 on:
   push:
-    branches: [ "main", "testing" ]
+    branches: [ "testing" ]
 
 env:
   EX_VAR: "a value/here"           # an env var to test env fetches
@@ -34,6 +34,9 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
+    - uses: actions/setup-node@v4
+      with: 
+        node-version: 23.7.0
     # server runs on rootless docker, so test it as such
     # - uses: ScribeMD/rootless-docker@0.2.2
     - name: Set up MySQL database
@@ -58,16 +61,19 @@ jobs:
         override: true
     - name: Server unit tests
       run: |
+        npm install vite
         echo > test.log
+        sed -i 's#let _guard#// let _guard#' ./src/main.rs
         cargo test --release --lib -- --test-threads=1
-        cargo test --test tls_on_default --
-        cargo test --test tls_off_switch -- --no-tls
+        cargo test --release --test tls_on_default --
+        cargo test --release --test tls_off_switch -- --no-tls
     - name: Server integration tests (no TLS)
       run: |
-        (./target/debug/archie-server --no-tls > /dev/null) &
+        (./target/release/archie-server --no-tls > /dev/null) &
         cargo test --test integ_* -- --no-tls
         killall archie-server
     # uses a brilliantly simple Python module called `trustme`
+    # that generates self-signed certificates.
     # from here: https://github.com/python-trio/trustme
     - name: Set up self-signed certificates
       run: |
@@ -77,16 +83,15 @@ jobs:
         python -m trustme
     - name: Server integration tests (with TLS)
       run: |
-        (./target/debug/archie-server > /dev/null) &
+        (./target/release/archie-server > /dev/null) &
         cargo test --test integ_*
         killall archie-server
+        killall python
     - name: Test DB's dump-on-exit
       run: |
         cd ..
         docker compose down
         bash test-helpers/validate-dump.sh
-    - name: Cleanup
-      run: killall python
   
   letterboxd_app_tests:
 

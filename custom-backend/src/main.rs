@@ -55,8 +55,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let use_tls = match process_cli_args()? {
         RunMode::PrintHelp => return Ok(()),
-        RunMode::NoTls => false,
-        RunMode::Tls => true
+        RunMode::NoTls     => false,
+        RunMode::Tls       => true
     };
 
     info!("Defining routes...");
@@ -73,7 +73,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 
     /* Letterboxd List Converter */
-    let converter = Router::new().route("/conv", get(lb_app_io::convert_lb_list));
+    let converter = Router::new().route("/", get(lb_app_io::convert_lb_list));
     let lb_app = Router::new()
         .route("/", get(vite_io::lb_app_page))
         .nest("/conv", converter);
@@ -90,7 +90,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .layer(CompressionLayer::new());         // compress all responses
 
     // Start Vite dev server (debug only)
-    let _guard = vite_io::VitePage::start_dev_server(true);  
+    // Note to self: programmatically comment out by running (from the `custom-backend` dir):
+    //
+    //     sed -i 's#let _guard#// let _guard#' ./src/main.rs
+    //
+    // let _guard: Option<vite_rs::ViteProcess> = vite_io::VitePage::start_dev_server(true);  
     
 
     let addr = SocketAddr::from_str(&get_env_var("SERVER_SOCKET").unwrap()).unwrap();
