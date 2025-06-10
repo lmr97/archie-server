@@ -34,8 +34,6 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
-    # server runs on rootless docker, so test it as such
-    # - uses: ScribeMD/rootless-docker@0.2.2
     - name: Set up MySQL database
       # uses demo db, identical to real db except in content
       # running this first so that the database can initialize while
