@@ -11,6 +11,37 @@ div.round-box {
     border-radius: 10px;
     box-shadow: 0 30px 40px rgba(0,0,0,0.2);
 }
+#react-logo-container {
+    display: flex;
+    justify-content: right;
+}
+/* #react-logo-msg {
+    margin: 7px;
+    background-color: whitesmoke;
+    border-radius: 8px;
+    box-shadow: 0 0 7px black;
+} */
+.interact-synchronizer {
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: right;
+}
+.react-logo {
+    color: dodgerblue;
+}
+#react-logo-msg {
+    width: 20%;
+    height: 20%; 
+}
+.react-msg {
+    font-style: italic;
+    padding: 9px;
+    justify-content: center;
+    border-radius: 5px;
+    box-shadow: 0px 0px 4px 4px rgba(0, 0, 0, 0.166);
+    background-color: whitesmoke;
+}
 button {
     border-radius: 7px;
     font-size: large;
@@ -21,9 +52,27 @@ p.epilogue {
     text-align: center;
 }
 h1, h2 {
+    text-align: left;
+}
+#home-heading {
+    margin-bottom: 40px;
+}
+#hit-count {
     text-align: center;
 }
-div.images {
+.banner {
+    height: 200px;
+    background-image: url("../images/dawn-of-rustecean-banner.png");
+    background-size: 130%;
+    background-repeat: no-repeat;
+    background-position: 50% 40%;
+}
+.artist-attribution {
+    font-style: italic;
+    font-size: 12px;
+    text-align: right;
+}
+.image-box {
     display: flex;
     justify-content: center;
 }
