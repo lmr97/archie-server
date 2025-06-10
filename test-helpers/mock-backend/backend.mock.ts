@@ -7,12 +7,12 @@ import {
     type ListRow, 
     type EntryReceipt 
 } from '../../static/scripts/server-types';
-import viteManifest from '../../dist/.vite/manifest.json';
+
 
 var guestbookDb: Guestbook = {
     guestbook: [
     {
-        id: Math.random().toString(),
+        id: "0.0051166112644069894",
         timeStamp: "1993-10-02T18:37:09.030",
         name: "Linus",
         note: "I speak Malayalam now! മനുഷ്യരെല്ലാവരും തുല്യാവകാശങ്ങളോടും \
@@ -21,13 +21,13 @@ var guestbookDb: Guestbook = {
             മനസാക്ഷിയും സിദ്ധമായിരിക്കുന്നത്‌"
     },
     {
-        id: Math.random().toString(),
+        id: "0.7486503970331404",
         timeStamp: "2023-06-06T06:06:06.666",
         name: "The Devil Himself!",
         note: ""
     },
     {
-        id: Math.random().toString(),
+        id: "0.6871818383290702",
         timeStamp: "2099-03-06T01:12:00.232",
         name: "(anonymous)",
         note: "You won't even known who this is..."
@@ -79,7 +79,7 @@ const mocks: MockHandler[] = [
             const nameLen = textEncoder.encode(newEntry.name).length;
             const noteLen = textEncoder.encode(newEntry.note).length;
             
-            if (nameLen > 150 || noteLen > 1000) { 
+            if (nameLen > 100 || noteLen > 1000) { 
                 res.statusCode = 413;
                 res.statusMessage = "413 PAYLOAD TOO LARGE\n"
                 res.end()

@@ -1,5 +1,5 @@
 import { describe, expect, vi, it } from 'vitest';
-import { render, screen, waitFor, cleanup } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import HitCounter from '../static/scripts/home/hit-counter';
 import ReactLogoMessage from '../static/scripts/home/react-logo-msg';
@@ -54,8 +54,7 @@ describe('Testing the React logo flair', () => {
             expect(screen.getByRole("paragraph")).toBeVisible()
         },
         1200);
-        
-    })
+    });
 
     it('enlarges React logo', () => {
 
@@ -69,5 +68,3 @@ describe('Testing the React logo flair', () => {
         1200);
     })
 })
-
-cleanup();
