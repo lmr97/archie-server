@@ -12,7 +12,7 @@ env:
   SERVER_SOCKET: "127.0.0.1:4321"
   SERVER_LOG: "test.log"
   SERVER_ROOT: "/home/runner/work/archie-server/archie-server"
-  CLIENT_SOCKET: "127.0.0.1:4321"  # may different sock, since reqwest parses IPs differently
+  CLIENT_SOCKET: "127.0.0.1:4321"  # may need different sock, since reqwest parses IPs differently
   PRE_LOG: 0                       # suppressed initial stdout, for backgrounding
   MYSQL_PASSWORD: thepass          # not real pw; doesnt matter for testing
   MYSQL_ROOT_PASSWORD: root
@@ -34,21 +34,17 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
-    - uses: actions/setup-node@v4
-      with: 
-        node-version: 23.7.0
     # server runs on rootless docker, so test it as such
     # - uses: ScribeMD/rootless-docker@0.2.2
     - name: Set up MySQL database
       # uses demo db, identical to real db except in content
       # running this first so that the database can initialize while
       # the server builds 
-      run:
-        docker compose 
-        --file ../compose-demo.yaml 
-        --file ../test-helpers/testing-override.yaml
-        up 
-        --detach db
+      run: |
+        cd ..
+        docker compose --file compose-demo.yaml \
+        --file test-helpers/testing-override.yaml \
+        up --detach db
     - uses: actions/setup-python@v5
       with:
         python-version: '3.13' 
@@ -59,6 +55,9 @@ jobs:
         profile: minimal
         toolchain: stable
         override: true
+    - uses: actions/setup-node@v4
+      with: 
+        node-version: 23.7.0
     - name: Server unit tests
       run: |
         npm install vite
@@ -118,3 +117,21 @@ jobs:
       run: |
         cd ..
         pytest -v --cov --cov-report=term-missing
+  
+
+  frontend_tests:
+  
+    runs-on: ubuntu-latest
+    defaults:
+      run: 
+        shell: bash
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: 
+          node-version: 23.7.0
+      - name: Environment setup
+        run: npm install
+      - name: Vitest tests
+        run: vitest --run

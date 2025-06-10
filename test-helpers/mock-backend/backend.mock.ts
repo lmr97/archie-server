@@ -1,11 +1,13 @@
 import { readFileSync } from 'node:fs';
 import { MockHandler } from 'vite-plugin-mock-server';
+import { createSession, Session } from 'better-sse';
 import { 
     type GuestbookEntry, 
     type Guestbook, 
     type ListRow, 
     type EntryReceipt 
-} from '../static/scripts/server-types';
+} from '../../static/scripts/server-types';
+import viteManifest from '../../dist/.vite/manifest.json';
 
 var guestbookDb: Guestbook = {
     guestbook: [
@@ -38,7 +40,7 @@ const mocks: MockHandler[] = [
         pattern: "/hits", 
         method: 'GET',
         handle: (_req, res) => {
-            res.end('17')
+            res.end('8002934')
         }
     },
     {
@@ -46,6 +48,15 @@ const mocks: MockHandler[] = [
         method: 'POST',
         handle: (req, res) => {
             res.end("Thanks for stopping by!\n");
+        }
+    },
+    {
+        pattern: "/guestbook", 
+        method: 'GET',
+        handle: async (_req, res) => {
+            const pageData: string = await fetch("http://localhost:5173/pages/guestbook.html")
+                .then(resp => {return resp.text()});
+            res.end(pageData); 
         }
     },
     {
@@ -89,68 +100,80 @@ const mocks: MockHandler[] = [
         }
     },
     {
+        pattern: "/lb-list-conv", 
+        method: 'GET',
+        handle: async (_req, res) => {
+            const pageData: string = await fetch("http://localhost:5173/pages/lb-list-app.html")
+                .then(resp => {return resp.text()});
+            res.end(pageData); 
+        }
+    },
+    {
         pattern: "/lb-list-conv/conv",
         method: 'GET',
-        handle: (req, res) => {
-            if (req.query) {
-                switch (req.query.list_name) {
-                    case "server-down": 
-                        res.statusCode = 502; 
-                        res.statusMessage = "502 BAD GATEWAY\n";
-                        break;
-                    case "this-hurts-you":
-                        res.statusCode = 500; 
-                        res.statusMessage = "500 INTERNAL SERVER ERROR\n";
-                        break;
-                    case "the-big-one":
-                        const textData = readFileSync("test-helpers/big-list-test.csv", {encoding: "utf8"});
-                        const rowList = textData.split("\n");
-                        for (const row of rowList) {
-                            var lr: ListRow = {
-                                totalRows: 1517,
-                                rowData: row
-                            }; 
-                            res.write(JSON.stringify(lr));
-                        }
-                        break;
-                    case "list-no-exist":
-                        res.statusCode = 422; 
-                        res.statusMessage = "422 UNPROCESSABLE CONTENT\n";
-                        break;
-                    case "list-too-long":
-                        res.statusCode = 403; 
-                        res.statusMessage = "403 FORBIDDEN\n";
-                        break;
-                    }
-
-
-                // list with only the none attribute are parsed as 
-                if (req.query.attrs == 'none') {
+        handle: async (req, res) => {
             
-                    var titles = ["2001: A Space Odyssey", "Blade Runner",
-                        "The Players vs. Ángeles Caídos", "8½"]
-                    var years  = ["1968", "1982", "1969", "1963"]
-                    var header: ListRow = {
-                        totalRows: 4,
-                        rowData: "Title,Year"
-                    }; 
-
-                    res.write(JSON.stringify(header));
-                    for (var i = 0; i < 4; i++) {
-                        
-                        var lr: ListRow = {
-                            totalRows: 4,
-                            rowData: `${titles[i]},${years[i]}`
-                        }; 
-                        res.write(JSON.stringify(lr));
-                    }
-                } 
-                else if (req.query.attrs.includes("bingus")) {
-                    res.statusCode = 422; 
-                    res.statusMessage = "422 UNPROCESSABLE CONTENT\n";
-                }
+            if (!req.query) {
+                res.statusCode = 400; 
+                res.statusMessage = "400 BAD REQUEST\n";
+                res.end();
+                return;
             }
-            res.end()
+
+            const sseEmitter: Session = await createSession(req, res);
+
+            switch (req.query.list_name) {
+                case "server-down": 
+                    sseEmitter.push("502 BAD GATEWAY\n", "error");
+                    break;
+                case "this-hurts-you":
+                    sseEmitter.push("500 INTERNAL SERVER ERROR\n", "error");
+                    break;
+                case "the-big-one":
+                    const textData = readFileSync("../big-list-test.csv", {encoding: "utf8"});
+                    const rowList = textData.split("\n");
+                    for (const row of rowList) {
+                        var lr: ListRow = {
+                            totalRows: 1517,
+                            rowData: row
+                        }; 
+                        sseEmitter.push(JSON.stringify(lr));
+                    }
+                    sseEmitter.push("done!", "complete");
+                    break;
+                case "list-no-exist":
+                    sseEmitter.push("422 UNPROCESSABLE CONTENT\n", "error");
+                    break;
+                case "list-too-long":
+                    sseEmitter.push("403 FORBIDDEN\n", "error");
+                    break;
+                }
+
+            // list with only the none attribute are parsed as 
+            if (req.query.attrs == 'none') {
+        
+                var titles = ["2001: A Space Odyssey", "Blade Runner",
+                    "The Players vs. Ángeles Caídos", "8½"]
+                var years  = ["1968", "1982", "1969", "1963"]
+                var header: ListRow = {
+                    totalRows: 4,
+                    rowData: "Title,Year"
+                }; 
+
+                sseEmitter.push(JSON.stringify(header));
+                for (var i = 0; i < 4; i++) {
+                    
+                    var lr: ListRow = {
+                        totalRows: 4,
+                        rowData: `${titles[i]},${years[i]}`
+                    }; 
+                    sseEmitter.push(JSON.stringify(lr));
+                }
+                sseEmitter.push("done!", "complete");
+            } 
+            else if (req.query.attrs.includes("bingus")) {
+                sseEmitter.push("422 UNPROCESSABLE CONTENT\n", "error");
+            }
         }
     }
 ]
