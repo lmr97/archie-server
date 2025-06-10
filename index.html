@@ -8,7 +8,13 @@
 
 <body>
 <div class="round-box">
-    <h1 id="heading"><i>Archie: Adventures in Self-hosting</i></h1>
+    <div class="banner">
+        <div id="react-logo-container"></div>
+    </div>
+    <p class="artist-attribution">
+        Banner designed by Sabrina W. Reid (<a href="https://www.instagram.com/golden_tzarina/">@golden_tzarina</a>)
+    </p>
+    <h1 id="home-heading"><i>Archie: Adventures in Self-hosting</i></h1>
     <p>I had an old HP ProBook 640 laying around, and wanted to give it new
         life as a web server. I got a free domain from 
         <a href="https://www.noip.com/">noip.com</a>, and went from there!</p>
@@ -18,17 +24,17 @@
         the server and database each running in their own containers, orchestrated via Docker Compose.</p>
     <p>You can see all the code used to serve this webpage <a href="https://github.com/lmr97/archie-server">on GitHub</a>.</p>
     <h2>
-        <a href="pages/guestbook.html">
+        <a href="/guestbook">
             <button>Sign the guestbook!</button>
         </a>
     </h2>
     <h2>
-        <a href="pages/lb-list-app.html">
+        <a href="/lb-list-conv">
             <button>Download a Letterboxd list!</button>
         </a>
     </h2>
     <br>
-    <div class="images">
+    <div class="image-box">
         <figure>
             <img src="./static/images/the-server.jpg" alt="The laptop in question" style="float:left;" width="230" height="310" />
             <figcaption>This is what serves this webpage!</figcaption>
@@ -38,11 +44,12 @@
             <figcaption>Running on Arch (btw)</figcaption>
         </figure>   
     </div>
+    <div id="react-root-hit-counter"></div>
     <h2 id="hit-count"></h2>
     <p class="epilogue"><i>I hope you enjoy this little project of mine &mdash; I sure have!</i></p>
 </div>
 
-<script type="module" src="./static/scripts/home.js"></script>
+<script type="module" src="./static/scripts/home/index.jsx"></script>
 
 </body>
 
