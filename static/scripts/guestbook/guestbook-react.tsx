@@ -69,9 +69,8 @@ export default function GuestbookApp() {
                 }
                 const entryTimeString = entryDate.toLocaleString("en-US", timeOptions);
                 return (
-                    <div className={"shine-box" + (entry.id == latestEntryId ? " your-entry": "")}>
-                        <div key={entry.id} 
-                            className="guestbook-entry"
+                    <div key={entry.id} className={"shine-box" + (entry.id == latestEntryId ? " your-entry": "")}>
+                        <div className="guestbook-entry"
                             >
                             <p className="entry entry-time">
                                 {entryTimeString}
