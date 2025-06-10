@@ -132,4 +132,4 @@ jobs:
       - name: Environment setup
         run: npm install
       - name: Vitest tests
-        run: vitest --run
+        run: npx vitest --run
