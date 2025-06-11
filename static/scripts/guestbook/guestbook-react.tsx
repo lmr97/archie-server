@@ -21,7 +21,7 @@ export default function GuestbookApp() {
     // returns empty guestbook on error from server
     // same-origin creds for local testing
     const fetchGuestbook = async () => { 
-        const resp = await fetch("/guestbook/entries", {credentials: "same-origin"})
+        const resp = await fetch("/guestbook/entries")
             .catch(err => console.error(err));
         if (resp) {
             if (resp.ok) {
@@ -69,16 +69,19 @@ export default function GuestbookApp() {
                 }
                 const entryTimeString = entryDate.toLocaleString("en-US", timeOptions);
                 return (
-                    <div key={entry.id} className={"shine-box" + (entry.id == latestEntryId ? " your-entry": "")}>
+                    // add "your-entry" class only if the ID matches the latest posted entry
+                    <div key={entry.id} 
+                        className={"shine-box" + (entry.id == latestEntryId ? " your-entry": "")}
+                        data-testid="shine-box">
                         <div className="guestbook-entry"
                             >
-                            <p className="entry entry-time">
+                            <p className="entry entry-time" data-testid={"entry-time"+entry.id}>
                                 {entryTimeString}
                             </p>
-                            <p className="entry guest-note">
+                            <p className="entry guest-note" data-testid={"entry-note"+entry.id}>
                                 {entry.note}
                             </p>
-                            <p className="entry guest-name">
+                            <p className="entry guest-name" data-testid={"entry-name"+entry.id}>
                                 — {entry.name}
                             </p>
                         </div>
@@ -92,6 +95,9 @@ export default function GuestbookApp() {
     /* Entry Box */
     function GuestEntryForm() {
 
+        const MAX_NAME_LENGTH = 100;  // byte values
+        const MAX_NOTE_LENGTH = 1000;
+        const textEncoder = new TextEncoder();
         const [charCount, setCharCount]: [number, Function] = useState(0);
 
         function logAlertErrorSending(errorMessage: string) {
@@ -117,6 +123,28 @@ export default function GuestbookApp() {
             const newEntry: GuestbookEntry = {
                 name: formData.get("name") as string,
                 note: formData.get("note") as string,
+            }
+
+            // measures byte-length of data, courtesy of this SO post:
+            // https://stackoverflow.com/questions/5515869/string-length-in-bytes-in-javascript
+            
+            if (textEncoder.encode(newEntry.name).length > MAX_NAME_LENGTH) {
+                // this will probably not run since the HTML limits the input to MAX_NAME_LENGTH,
+                // but it could, since MAX_NAME_LENGTH measures bytes, and the HTML only limits 
+                // the number of "characters".
+                alert("The name you entered it too long! Is there a shorter way you can identify yourself?\n\n\
+                    Note: The limit is 100 bytes, which can fit 100 non-accented Latin characters. \
+                    This limit will be reached sooner, however, with accented or non-Latin characters, \
+                    so you might get less than 100 characters in that case.".replaceAll("  ", ""));
+                return;
+            }
+            if (textEncoder.encode(newEntry.note).length > MAX_NOTE_LENGTH) {
+                alert("The note you entered it too long! Is there a shorter note you can leave? \
+                    Multiple notes are also welcome!\n\n\
+                    Note: The limit is 1000 bytes, which can fit 1000 non-accented Latin characters. \
+                    This limit will be reached sooner, however, with accented or non-Latin characters, \
+                    so you might get less than 1000 characters in that case.".replaceAll("  ", ""));
+                return;
             }
 
             fetch("/guestbook/entries", 
@@ -154,15 +182,22 @@ export default function GuestbookApp() {
         }
 
         function countChars(keyPressEvent: React.ChangeEvent<HTMLTextAreaElement>) {
-            var textGiven = keyPressEvent.target.value;
-            setCharCount(textGiven.length);
+            const textGiven = keyPressEvent.target.value;
+            // set at number of bytes
+            setCharCount(textEncoder.encode(textGiven).length);
         }
 
         return (
             <form onSubmit={updateEntries}>
                 <p>
                     <label>What's your name? (you can leave it blank)  </label>
-                    <input type="text" id="guestbook-name" name="name" maxLength={50} /> 
+                    <input 
+                        type="text" 
+                        id="guestbook-name" 
+                        name="name" 
+                        maxLength={MAX_NAME_LENGTH}
+                        data-testid="name-input" 
+                    /> 
                 </p>
                 <p>
                     <label>What would you like to say?</label>
@@ -172,11 +207,14 @@ export default function GuestbookApp() {
                         name="note" 
                         rows={4} 
                         cols={65} 
-                        maxLength={1005}  // to 
+                        maxLength={MAX_NOTE_LENGTH + 5}
+                        data-testid="note-input"
                     />
                 </p>
-                <p className={"char-count" + (charCount > 1000 ? " too-long" : "")} >
-                    Character count: {charCount} / 1000
+                <p className={"char-count" + (charCount > 1000 ? " too-long" : "")} 
+                    data-testid="char-counter"
+                    >
+                    Note size (in bytes): {charCount} / 1000
                 </p>
                 <div className="buttons">
                     <button type="submit">Submit</button>
