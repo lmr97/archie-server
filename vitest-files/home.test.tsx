@@ -4,7 +4,6 @@ import { userEvent } from '@testing-library/user-event';
 import HitCounter from '../static/scripts/home/hit-counter';
 import ReactLogoMessage from '../static/scripts/home/react-logo-msg';
 
-
  
 const fetchSpy = vi.spyOn(global, 'fetch')
     .mockImplementation((_a?, _b?) => {
@@ -25,6 +24,7 @@ globalThis.serverFail = false;
 
 describe('Testing home loading hit count', () => {
 
+    
     it('displays it is gonna get hit count', () => {
         render(<HitCounter />);
 
@@ -32,6 +32,7 @@ describe('Testing home loading hit count', () => {
             .toHaveTextContent("getting hit count...");
     });
 
+    
     it('displays hit count', () => {
 
         render(<HitCounter />);
@@ -54,8 +55,10 @@ describe('Testing home loading hit count', () => {
 
 describe('Testing home loading hit count, but server fails', () => {
 
+    
     globalThis.serverFail = true;
 
+    
     it('displays it is gonna get hit count', () => {
 
         render(<HitCounter />);
@@ -63,6 +66,7 @@ describe('Testing home loading hit count, but server fails', () => {
             .toHaveTextContent("getting hit count...");
     });
 
+    
     it('tells user it could not get hit count', () => {
 
         render(<HitCounter />);
@@ -82,7 +86,9 @@ describe('Testing home loading hit count, but server fails', () => {
 
 describe('Testing the React logo flair', () => {
 
+    
     const user = userEvent.setup();
+
 
     it('does not show message when mouse is away', () => {
 
@@ -90,6 +96,7 @@ describe('Testing the React logo flair', () => {
         expect(screen.getByRole("paragraph"))
             .not.toBeVisible()
     })
+
 
     it('does show message when moused over', () => {
 
@@ -102,6 +109,7 @@ describe('Testing the React logo flair', () => {
         },
         1200);
     });
+
 
     it('enlarges React logo', () => {
 
