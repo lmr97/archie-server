@@ -41,7 +41,7 @@ jobs:
       run: |
         cd ..
         docker compose --file compose-demo.yaml \
-        --file test-helpers/testing-override.yaml \
+        --file test-helpers/db-testing-override.yaml \
         up --detach db
     - uses: actions/setup-python@v5
       with:
