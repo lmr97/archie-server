@@ -19,35 +19,36 @@ export default function HitCounter() {
 
     const hitPosted: React.RefObject<boolean> = useRef(false);
 
-    //   0: void state (count not retrieved)
-    //  -1: error state
-    // > 0: normal state
     const [hits, setHits]: [number, Function] = useState(0);
+    const [errorOccured, setErrorOccured]: [boolean, Function] = useState(false);
 
     useEffect(() => {
-            if (!hitPosted.current) {
+            if (!hitPosted.current && !errorOccured) {
+
+                postHit().catch(error => {
+                    console.error(error);
+                    setErrorOccured(true);   // triggers a refresh, 
+                });
                 hitPosted.current = true;
-                postHit();
             }
             getHits()
                 .then((hitCount: number) => { 
                     if (hitCount > hits) {
-                        setHits(hitCount)
+                        setHits(hitCount);
                     }
-                });
+                })
         },
         [hits]
     )
 
-    function postHit(): void {
-        fetch(window.location.origin+"/hits", postOptions)
+    async function postHit(): Promise<void | Error> {
+        return fetch(window.location.origin+"/hits", postOptions)
             .then(resp => {
                 if (!resp.ok) throw new Error(
                     `POST hit to /hits failed with status code ${resp.status}`
                 );
             })
             .then(_ => console.debug("Webpage hit posted."))
-            .catch(error => console.log(error));
     }
 
     async function getHits(): Promise<number> {
@@ -58,15 +59,15 @@ export default function HitCounter() {
                 );
                 return resp.text();
             })
-            .then(result => { return Number(result) })
-            .catch(error => {
-                console.log(error);
-                return -1;
-            }
-        ); 
+            .then(hits => { return Number(hits) })
+            .catch((hitGettingError) => {
+                console.error(hitGettingError);
+                setErrorOccured(true);
+                return 0;
+            }); 
     }
 
-    if (!hits) 
+    if (!hits && !errorOccured) 
     {
         return (
             <h2 data-testid="hit-count-loading" id="hit-count">
@@ -74,7 +75,7 @@ export default function HitCounter() {
             </h2>
         );
     } 
-    else if (hits < 0) 
+    if (errorOccured) 
     {
         return (
             <h2 data-testid="hit-count-get-failed" id="hit-count">
@@ -82,12 +83,11 @@ export default function HitCounter() {
             </h2>
         );
     } 
-    else 
-    {
-        return (
-            <h2 data-testid="hit-count" id="hit-count">
-                Visits so far: {hits.toLocaleString()}
-            </h2>
-        );
-    }
+
+    return (
+        <h2 data-testid="hit-count" id="hit-count">
+            Visits so far: {hits.toLocaleString()}
+        </h2>
+    );
+    
 }
