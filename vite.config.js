@@ -5,6 +5,7 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react';
 import mockServer from 'vite-plugin-mock-server'
 import bodyParser from 'body-parser';
+import qs from 'qs';
 import 'jsdom';
 
 // notes:
@@ -45,7 +46,7 @@ export default defineConfig({
         '/guestbook',
         '/guestbook/entries',
         '/lb-list-conv',
-        '/lb-list-conv/conv',
+        '/lb-list-conv/conv\\?{listName:*}&{authorUser:*}',
       ],
       mockRootDir: './test-helpers/mock-backend',
       mockJsSuffix: '.mock.js',
@@ -53,15 +54,23 @@ export default defineConfig({
       noHandlerResponse404: false,
       middlewares: [
         bodyParser.json(),
+        // (req, _res, next) => {
+        //   console.log("parser called");
+        //   const splitUrl = req.url.split("?");
+        //   const q = splitUrl[1];
+        //   req.query = qs.parse(q);
+        //   req.url = splitUrl[0];
+        //   next();
+        // },
       ],
       printStartupLog: false
     })
   ],
   server: {
-    cors: {
-      // the origin you will be accessing via browser
-      origin: `${env.SERVER_PROTOCOL}://${env.SERVER_SOCKET}`
-    },
+    // cors: {
+    //   // the origin you will be accessing via browser
+    //   origin: `${env.SERVER_PROTOCOL}://${env.SERVER_SOCKET}`
+    // },
   },
   build: {
     manifest: true,

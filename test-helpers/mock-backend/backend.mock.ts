@@ -1,5 +1,5 @@
 import { readFileSync } from 'node:fs';
-import { MockHandler } from 'vite-plugin-mock-server';
+import { MockFunction, MockHandler } from 'vite-plugin-mock-server';
 import { createSession, Session } from 'better-sse';
 import { 
     type GuestbookEntry, 
@@ -8,6 +8,11 @@ import {
     type EntryReceipt 
 } from '../../static/scripts/server-types';
 
+
+// yes, this is how you sleep in Javascript, so it seems
+async function sleepJS(ms: number) {
+    return new Promise(r => setTimeout(r, ms));
+}
 
 var guestbookDb: Guestbook = {
     guestbook: [
@@ -112,7 +117,6 @@ const mocks: MockHandler[] = [
         pattern: "/lb-list-conv/conv",
         method: 'GET',
         handle: async (req, res) => {
-            
             if (!req.query) {
                 res.statusCode = 400; 
                 res.statusMessage = "400 BAD REQUEST\n";
@@ -129,16 +133,35 @@ const mocks: MockHandler[] = [
                 case "this-hurts-you":
                     sseEmitter.push("500 INTERNAL SERVER ERROR\n", "error");
                     break;
+                case "normal-one":
+                    const normalTextData = readFileSync(
+                        "test-helpers/short-list-all-attrs-no-stats.csv", 
+                        {encoding: "utf8"}
+                    );
+                    const normalRowList = normalTextData.split("\n");
+                    for (const row of normalRowList) {
+                        var lr: ListRow = {
+                            totalRows: 5,
+                            rowData: row
+                        }; 
+                        await sleepJS(1000);
+                        sseEmitter.push(JSON.stringify(lr));
+                    }
+                    await sleepJS(1000);
+                    sseEmitter.push("done!", "complete");
+                    break;
                 case "the-big-one":
-                    const textData = readFileSync("../big-list-test.csv", {encoding: "utf8"});
-                    const rowList = textData.split("\n");
+                    const bigTextData = readFileSync("test-helpers/big-list-test.csv", {encoding: "utf8"});
+                    const rowList = bigTextData.split("\n");
                     for (const row of rowList) {
                         var lr: ListRow = {
                             totalRows: 1517,
                             rowData: row
                         }; 
+                        await sleepJS(200);
                         sseEmitter.push(JSON.stringify(lr));
                     }
+                    await sleepJS(200);
                     sseEmitter.push("done!", "complete");
                     break;
                 case "list-no-exist":
