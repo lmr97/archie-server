@@ -1,0 +1,14 @@
+# this file turns off TLS for the server. 
+# Theoretically, the effect of using this file
+# as an override for `compose.yaml` (production config)
+# should be the same as using `compose-demo.yaml`,
+# but I'm making this file to guarantee I'm testing 
+# the production config with as little difference as possible 
+# from the original, isolating TLS.
+
+name: archie
+services:
+  svr:
+    command: [ "./target/release/archie-server", "--no-tls"]
+    healthcheck:
+      test: [ "CMD", "curl", "--fail", "http://localhost:4949" ]
