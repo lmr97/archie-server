@@ -15,12 +15,6 @@ div.round-box {
     display: flex;
     justify-content: right;
 }
-/* #react-logo-msg {
-    margin: 7px;
-    background-color: whitesmoke;
-    border-radius: 8px;
-    box-shadow: 0 0 7px black;
-} */
 .interact-synchronizer {
     height: 100%;
     display: flex;
