@@ -34,15 +34,6 @@ pub struct ListRow {
     pub row_data: String,
 }
 
-// These are the HTTP response codes I expect
-// when errors occur.
-enum ErrCode {
-    Err403,
-    Err422,
-    Err500,
-    Err502,
-}
-
 
 // Error type for all pre-stream errors in this file,
 // i.e., the ones that occur during the *start* of the 
@@ -51,7 +42,7 @@ enum ErrCode {
 // in during the stream must be handled in the stream directly, 
 // since JavaScript handles server-sent events, and is best-practice 
 // to my knowledge. In-stream errors are handled through the 
-// `receive_list_row` and `build_err_event` functions.
+// `receive_list_row` and `build_server_err_event` functions.
 #[derive(Debug)]
 pub enum LbConvError {
     EnvVarError(VarError),
@@ -87,25 +78,44 @@ impl IntoResponse for LbConvError {
 
 
 
-fn build_err_event(mut json: ListRow, err: ErrCode) -> Event {
+// currently only sends 500 errors; others are handled either
+// by build_python_app_err_event() or the Axum framework itself
+// I'm defining this one-liner here because it appears so frequently
+fn build_server_err_event() -> Event {
 
-    let msg = match err {
-        ErrCode::Err422 => "422 UNPROCESSABLE CONTENT",
-        ErrCode::Err500 => "500 INTERNAL SERVER ERROR",
-        ErrCode::Err502 => "502 BAD GATEWAY",
-        ErrCode::Err403 => "403 FORBIDDEN"
-    };
-
-    json.row_data = String::from(msg);
-
-    // all data in this statement's JSON is ASCII: 
-    // - curr_row and total_rows fields are integers (or rendered as such)
-    // - row field can only take on the string values hard-coded above 
-    // so the JSON data is guaranteed serializable, and will not panic
     Event::default()
         .event("error")
-        .json_data(json)
-        .unwrap() 
+        .data("500 INTERNAL SERVER ERROR")
+}
+
+
+// pulling this out into a function for proper logging logic
+fn build_python_app_err_event(err_msg: String) -> Event {
+
+    // can't do a match statment here, since I can only reliably
+    // check the beginning of the error string, and that requires
+    // more logic than a match typically takes
+    if err_msg.starts_with("-- 500 INTERNAL SERVER ERROR --") {
+
+        error!("Python exception was raised: {err_msg}"); 
+    } 
+    else if err_msg.starts_with("-- 502 BAD GATEWAY --") {
+
+        error!("Letterboxd server down: {err_msg}");
+    } 
+    else if err_msg.starts_with("-- 422 UNPROCESSABLE CONTENT --") {
+
+        error!("Python was unable to handle request: {err_msg}");
+        error!("The row data in question: {err_msg:?}");  
+    }
+    else if err_msg.starts_with("-- 403 FORBIDDEN --") {
+
+        error!("The list requested was too long: {err_msg}");
+    }
+
+    Event::default()
+        .event("error")
+        .data(err_msg)
 }
 
 
@@ -114,9 +124,8 @@ fn build_err_event(mut json: ListRow, err: ErrCode) -> Event {
 // and returns the `Event`.It returns an event of type "complete" 
 // when the conversion is done.
 //
-// The `Event` is packaged up with both the row number that was converted
-// (1-indexed), as well as the total rows. Sending the total rows every time
-// is a little bit of overhead, but it helps simplify the code here,
+// The `Event` is packaged up with the total rows. Sending the total rows 
+// every time is a little bit of overhead, but it helps simplify the code here,
 // keeping me from having an `Sse` struct with a `Stream` of two different 
 // types somehow concatenated together.
 //
@@ -166,7 +175,7 @@ fn receive_list_row(conn: &mut TcpStream, total_rows: usize) -> Event {
         Ok(_) => {},
         Err(e) => {
             error!("I/O Error: reading a CSV line from Python container failed: {e:?}");
-            return build_err_event(row_json, ErrCode::Err500);    
+            return build_server_err_event();    
         }         
     };
 
@@ -178,32 +187,16 @@ fn receive_list_row(conn: &mut TcpStream, total_rows: usize) -> Event {
     else {
         error!("Conversion Error: bytes read from Python container could not be converted into a (UTF-8) string.");
         error!("Run on Debug mode to see bytes read.");
-        return build_err_event(row_json, ErrCode::Err500);  
+        return build_server_err_event();  
     };
     debug!("Indiv. row data received: {:?}", row_data);
     
 
     /* SEND APPROPRIATE EVENT */
-    if      row_data.starts_with("-- 500 INTERNAL SERVER ERROR --") {
+    // all error messages sent from the Python app start with a double-hyphen
+    if  row_data.starts_with("--") {
 
-        error!("Python exception was raised: {row_data}");
-        return build_err_event(row_json, ErrCode::Err500);  
-    } 
-    else if row_data.starts_with("-- 502 BAD GATEWAY --") {
-
-        error!("Letterboxd server down: {row_data}");
-        return build_err_event(row_json, ErrCode::Err502);  
-    } 
-    else if row_data.starts_with("-- 422 UNPROCESSABLE CONTENT --") {
-
-        error!("Python was unable to handle request: {row_data}");
-        error!("The row data in question: {row_data:?}");
-        return build_err_event(row_json, ErrCode::Err422);  
-    }
-    else if row_data.starts_with("-- 403 FORBIDDEN --") {
-
-        error!("The list requested was too long: {row_data}");
-        return build_err_event(row_json, ErrCode::Err403);  
+        return build_python_app_err_event(row_data);
     }
     else if row_data.starts_with("done!") {
 
@@ -223,7 +216,7 @@ fn receive_list_row(conn: &mut TcpStream, total_rows: usize) -> Event {
                 error!("The row in question: {row_json:?}");
 
                 row_json.row_data = String::new();
-                build_err_event(row_json, ErrCode::Err500)
+                build_server_err_event()
             }
         }
     }

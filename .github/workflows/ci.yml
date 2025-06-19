@@ -67,7 +67,7 @@ jobs:
     - name: Server integration tests (no TLS)
       run: |
         (./target/release/archie-server --no-tls > /dev/null) &
-        cargo test --test integ_* -- --no-tls
+        cargo test --release --test integ_* -- --no-tls
         killall archie-server
     # uses a brilliantly simple Python module called `trustme`
     # that generates self-signed certificates.
@@ -81,7 +81,7 @@ jobs:
     - name: Server integration tests (with TLS)
       run: |
         (./target/release/archie-server > /dev/null) &
-        cargo test --test integ_*
+        cargo test --release --test integ_*
         killall archie-server
         killall python
     - name: Test DB's dump-on-exit
