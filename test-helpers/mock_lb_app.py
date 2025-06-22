@@ -93,6 +93,24 @@ def main():
             query = json.loads(req)
             debug_print(query)
 
+            if query['list_name'] == "normal-one":
+                lines = []
+                # path relative to <repo-root>/custom-backend, where the tests
+                # are run from
+                with open(
+                    "../test-helpers/short-list-all-attrs-no-stats.csv", 
+                    "r", encoding="utf-8") as tf:
+                    
+                    lines = tf.readlines()
+
+                send_list_len(len(lines)-1, conn)
+
+                for ln in lines:
+                    send_line(conn, ln)
+
+                send_line(conn, "done!")
+                continue
+
             if query["list_name"] == "server-down":
                 lb_serr = RequestError(
                     "Letterboxd server error occurred in fetching webpage. Response status: 500"
