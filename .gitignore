@@ -14,3 +14,4 @@ notes.md
 **/__pycache__/
 dist/
 archive/
+coverage/

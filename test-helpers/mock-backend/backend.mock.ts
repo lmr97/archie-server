@@ -1,12 +1,15 @@
 import { readFileSync } from 'node:fs';
-import { MockFunction, MockHandler } from 'vite-plugin-mock-server';
+import qs from 'qs';
+import { MockHandler } from 'vite-plugin-mock-server';
 import { createSession, Session } from 'better-sse';
 import { 
     type GuestbookEntry, 
     type Guestbook, 
     type ListRow, 
     type EntryReceipt 
-} from '../../static/scripts/server-types';
+} from '../../static/scripts/server-types.ts';
+import { Request, Response } from 'express';
+import { IncomingMessage, ServerResponse } from 'node:http';
 
 
 // yes, this is how you sleep in Javascript, so it seems
@@ -84,7 +87,7 @@ const mocks: MockHandler[] = [
             const nameLen = textEncoder.encode(newEntry.name).length;
             const noteLen = textEncoder.encode(newEntry.note).length;
             
-            if (nameLen > 100 || noteLen > 1000) { 
+            if (nameLen > 100 || noteLen > 800) { 
                 res.statusCode = 413;
                 res.statusMessage = "413 PAYLOAD TOO LARGE\n"
                 res.end()
@@ -117,64 +120,101 @@ const mocks: MockHandler[] = [
         pattern: "/lb-list-conv/conv",
         method: 'GET',
         handle: async (req, res) => {
+
             if (!req.query) {
+                
                 res.statusCode = 400; 
                 res.statusMessage = "400 BAD REQUEST\n";
                 res.end();
+                console.log("Responding with BAD REQUEST");
                 return;
             }
 
             const sseEmitter: Session = await createSession(req, res);
 
-            switch (req.query.list_name) {
-                case "server-down": 
-                    sseEmitter.push("502 BAD GATEWAY\n", "error");
-                    break;
-                case "this-hurts-you":
-                    sseEmitter.push("500 INTERNAL SERVER ERROR\n", "error");
-                    break;
-                case "normal-one":
-                    const normalTextData = readFileSync(
-                        "test-helpers/short-list-all-attrs-no-stats.csv", 
-                        {encoding: "utf8"}
-                    );
-                    const normalRowList = normalTextData.split("\n");
-                    for (const row of normalRowList) {
-                        var lr: ListRow = {
-                            totalRows: 5,
-                            rowData: row
-                        }; 
-                        await sleepJS(1000);
-                        sseEmitter.push(JSON.stringify(lr));
-                    }
-                    await sleepJS(1000);
-                    sseEmitter.push("done!", "complete");
-                    break;
-                case "the-big-one":
-                    const bigTextData = readFileSync("test-helpers/big-list-test.csv", {encoding: "utf8"});
-                    const rowList = bigTextData.split("\n");
-                    for (const row of rowList) {
-                        var lr: ListRow = {
-                            totalRows: 1517,
-                            rowData: row
-                        }; 
-                        await sleepJS(200);
-                        sseEmitter.push(JSON.stringify(lr));
-                    }
-                    await sleepJS(200);
-                    sseEmitter.push("done!", "complete");
-                    break;
-                case "list-no-exist":
-                    sseEmitter.push("422 UNPROCESSABLE CONTENT\n", "error");
-                    break;
-                case "list-too-long":
-                    sseEmitter.push("403 FORBIDDEN\n", "error");
-                    break;
+            // yes I am literally wrapping this all in a try/catch
+            // but that's so it doesn't indicate the workflow failed 
+            // when this supporter crashes after successful tests
+            // (which it does)
+            try {
+                let someCaseRan = false; // to allow some code to be run if any case runs
+                switch (req.query.list_name) {
+                    case "lb-server-down": 
+                        sseEmitter.push("502 BAD GATEWAY\n", "error");
+                        console.log("Responding with BAD GATEWAY");
+                        someCaseRan = true; 
+                        break;
+                    case "this-hurts-you":
+                        sseEmitter.push("500 INTERNAL SERVER ERROR\n", "error");
+                        console.log("Responding with INTERNAL SERVER ERROR");
+                        someCaseRan = true; 
+                        break;
+                    case "normal-one":
+                        console.log("Responding with normal, short file...");
+                        const normalTextData = readFileSync(
+                            "test-helpers/short-list-all-attrs-no-stats.csv", 
+                            { encoding: "utf8" }
+                        );
+                        const normalRowList = normalTextData.split("\n");
+                        for (const row of normalRowList) {
+                            var lr: ListRow = {
+                                totalRows: 5,
+                                rowData: row
+                            }; 
+                            console.log("sending normal file row...");
+                            await sleepJS(800);
+                            sseEmitter.push(JSON.stringify(lr));
+                        }
+                        someCaseRan = true; 
+                        break;
+                    case "the-big-one":
+                        console.log("Responding with big file...");
+                        const bigTextData = readFileSync(
+                            "test-helpers/big-list-test.csv", 
+                            { encoding: "utf8" }
+                        );
+                        const rowList = bigTextData.split("\n");
+                        for (const row of rowList) {
+                            var lr: ListRow = {
+                                totalRows: 1517,
+                                rowData: row
+                            }; 
+                            console.log("sending big file row...");
+                            await sleepJS(200);
+                            sseEmitter.push(JSON.stringify(lr));
+                        }
+                        someCaseRan = true; 
+                        break;
+                    case "list-no-exist":
+                        sseEmitter.push("422 UNPROCESSABLE CONTENT\n", "error");
+                        console.log("Responding with UNPROCESSABLE CONTENT");
+                        someCaseRan = true; 
+                        break;
+                    case "list-too-long":
+                        sseEmitter.push("403 FORBIDDEN\n", "error");
+                        console.log("Responding with FORBIDDEN");
+                        someCaseRan = true; 
+                        break;
                 }
 
-            // list with only the none attribute are parsed as 
+                if (someCaseRan) {
+                    console.log("sending 'done!' signal...");
+                    sseEmitter.push("done!", "complete");
+                    return;
+                }
+            }
+            catch (error) {
+                console.log(error);
+                return;
+            }
+
+            // list with only the none attribute and having a
+            // name other than those in the switch case above
+            // are sent as this brief list
             if (req.query.attrs == 'none') {
         
+                console.log("Responding with minimal list...");
+
                 var titles = ["2001: A Space Odyssey", "Blade Runner",
                     "The Players vs. Ángeles Caídos", "8½"]
                 var years  = ["1968", "1982", "1969", "1963"]
@@ -190,13 +230,21 @@ const mocks: MockHandler[] = [
                         totalRows: 4,
                         rowData: `${titles[i]},${years[i]}`
                     }; 
+                    console.log("sending minimal file row...");
                     sseEmitter.push(JSON.stringify(lr));
                 }
-                sseEmitter.push("done!", "complete");
             } 
             else if (req.query.attrs.includes("bingus")) {
                 sseEmitter.push("422 UNPROCESSABLE CONTENT\n", "error");
+                console.log("Responding with UNPROCESSABLE CONTENT");
+            } 
+            else {
+                sseEmitter.push("400 BAD REQUEST\n", "error");
+                console.log("Responding with BAD REQUEST");
             }
+
+            console.log("sending 'done!' signal...");
+            sseEmitter.push("done!", "complete");
         }
     }
 ]

@@ -1,5 +1,6 @@
 import React from 'react';
 import { useRef, useState } from 'react'; 
+import { EventSource } from 'eventsource';
 import { RingLoader } from 'react-spinners';
 import { Line } from 'progressbar.js';
 import { ListRow, type ListInfo } from '../server-types';
@@ -10,6 +11,8 @@ import { ListRow, type ListInfo } from '../server-types';
     states, they can be defined outside of it. It also saves time
     and computing power, since the functions will not be redefined
     on every render.
+
+    Some are exported for testing purposes.
 */
 
 const validAttributes = [
@@ -66,25 +69,35 @@ const loadingBarOpts = {
 
 const loadingBarElement = document.createElement("div");
 
-// yes, this is how you sleep in Javascript, so it seems
-async function sleepJS(ms: number) {
-    return new Promise(r => setTimeout(r, ms));
-}
 
+// error is given in the same format as a ListRow, with the content in the 
+// rowData attribute
+function streamErrorNotify(errorMessage: string) {
+    console.error(`${errorMessage}`);
 
-function errorNotify(message: string) {
-    console.error(`Error occurred in fetching req: ${message}`);
-    if (message['row'] == "422 UNPROCESSABLE CONTENT") {
+    if (errorMessage.includes("422 UNPROCESSABLE CONTENT")) {
         alert("The URL entered doesn't appear to be a valid Letterboxd list. \
-            Try checking the link and running it again.".replaceAll("  ", ""));
+            Try checking the link and running it again."
+            .replaceAll("  ", "")
+        );
     } 
-    else if (message['row'] == "403 FORBIDDEN") {
+    else if (errorMessage.includes("403 FORBIDDEN")) {
         alert("The server does not accept conversion requests for \
-            lists over 10,000 films long. Is there a shorter list we can try?".replaceAll("  ", ""));
+            lists over 10,000 films long. Is there a shorter list we can try?"
+            .replaceAll("  ", "")
+        );
     }
-    else { alert("There was an issue with the server in processing your request. \
-        My apologies.".replaceAll("  ", "")); }
+    else if (errorMessage.includes("502 BAD GATEWAY")) {
+        alert("It looks like Letterboxd's servers are down! Try again a little later.");
+    }
+    else { 
+        alert("There was an issue with the server in processing your request, most \
+            likely with the internet connection. My apologies."
+            .replaceAll("  ", "")
+        ); 
+    }
 }
+
 
 // Letterboxd list URLs follow this structure:
 //
@@ -99,11 +112,18 @@ function parseURL(url: string): ListInfo {
 
     const lbURLsplit: string[] = url.split("/").slice(0,-1); // last element is a null string
 
-    if (lbURLsplit.length < 3) {
-        throw new Error(`Invalid URL: ${url}`)
+    if (!lbURLsplit) {
+        throw new Error("Invalid URL (null URL).");
     }
+    
     const listName = lbURLsplit.at(-1);
     const author   = lbURLsplit.at(-3);
+
+    // this is probably redundant, but it makes TS happy,
+    // and I trust its judgement
+    if (!listName || !author || lbURLsplit.at(-2) != "list") {
+        throw new Error(`Invalid URL (malformed). URL: ${url}`);
+    }
 
     // TS may be mad, but I've already guarded against these values being undefined
     return {
@@ -121,10 +141,13 @@ function generateQueryURL(listInfo: ListInfo): string {
         attrsUrlForm = listInfo.attrs.map(a => {return "attrs="+a}).join("&");
     }
 
-    const fetchURL = "/lb-list-conv/conv?"
+    const fetchURL = window.location.origin 
+        + "/lb-list-conv/conv?"
         + "list_name="   + listInfo.listName   + "&"
         + "author_user=" + listInfo.authorUser + "&"
         + attrsUrlForm;
+
+    testHandle.getGenURL(fetchURL);
     
     return fetchURL;
 }
@@ -137,6 +160,8 @@ function generateQueryURL(listInfo: ListInfo): string {
 // the industry standard
 function downloadList(listName: string, userList: string[]): void {
 
+    testHandle.dlListCalled();
+
     const csvData = userList.join("\n");
     const csvFile = new Blob([csvData], { type: 'text/csv' });
     const dlLink  = document.createElement("a");
@@ -148,11 +173,35 @@ function downloadList(listName: string, userList: string[]): void {
 }
 
 
-export default function LetterboxdApp() {
+/* 
+    This object exists for testing purposes only,
+    so that the testing software can know the timing of
+    what was received when (since the spinner/bar display 
+    is supposed to be choreographed to these occurences),
+    and also verify the correct URL is generated from the
+    checked attributes. 
+    
+    This is done because the relevant functions are inside 
+    a React component, as as such are not exportable.
+*/
+export const testHandle = {
+    // functions are preferred here over simple attributes, 
+    // because functions can be spied on, but exported attributes
+    // cannot be spied on if they change.
+    getListCalled: () => {return true},             // to watch when the form event handler is called
+    gettingList:   (gettingList: boolean)      => {return gettingList},   // represents gettingList component state
+    getGenURL:     (genURL: string)            => {return genURL}, 
+    getEvent:      (ev: MessageEvent<ListRow>) => {return ev},  // including the event for debugging
+    isComplete:    () => {return true},
+    dlListCalled:  () => {return true}
+};
+
+export function LetterboxdApp() {
 
     const filmAttributes        = useRef(new Array<string>());  // I need to keep track of these myself, so I've been told
     const loadingBarElementRef  = useRef(loadingBarElement);
-    const loadingBar            = useRef<any>(null);            // blank check, to be cashed (cached? later)
+    const errReceivedRef        = useRef(false);                // easy way to communicate between the async message handlers
+    const loadingBar            = useRef<any>(null);            // to allow the loading bar object to persist over renders
     
     const [gettingList,  setGettingList]:  [boolean, Function] = useState(false);
     const [percComplete, setPercComplete]: [number,  Function] = useState(0.0);
@@ -165,13 +214,17 @@ export default function LetterboxdApp() {
 
         var userList     = new Array<string>();
 
-        evtSource.onmessage = (event: MessageEvent) => {
+        evtSource.onmessage = (event: MessageEvent<ListRow>) => {
 
-            // double parse to get through escapes
-            const msgData: ListRow = JSON.parse(JSON.parse(event.data));  
+            // errors from the server are also delivered as MessageEvents,
+            // so ignore those
+            if (event.type == "error") return;
+
+            testHandle.getEvent(event);   // for testing purposes
+            const msgData: ListRow = event.data;  
             userList.push(msgData.rowData);
 
-            // function form so that new value is fresh, and not
+            // using function form so that new value is fresh, and not
             // stale from the time of the closure's definition
             setPercComplete((prevPerc: number) => {
                 return (prevPerc + (1/msgData.totalRows));
@@ -179,31 +232,45 @@ export default function LetterboxdApp() {
         };
 
         // If there is an issue, close out the connection
-        evtSource.onerror = (errEvent: Event) => {
+        // since the error events are actually messages, not proper 
+        // ErrorEvents, we need to use addEventListener, not onerror.
+        evtSource.addEventListener("error", (errEvent: MessageEvent<string>) => {
     
-            if (!errEvent.target) return;   // if the error has null content
+            // sometimes there is a phantom error event that the server 
+            // sends, and I have no idea why, so it doesn't map onto any
+            // actual error state in the server. It has no content,
+            // howver, so it's easy to distinguish from other, intentionally
+            // -programmed error events. This catches those phantom errors.
+            if (!errEvent.data) return;   
 
-            errorNotify(JSON.stringify(errEvent));
+            errReceivedRef.current = true;
+            console.debug(`error received: ${errEvent.data}`)
             
             setPercComplete(0.0);
             setGettingList(false);
+
+            streamErrorNotify(errEvent.data);
             evtSource.close(); 
-        };
+        });
 
         evtSource.addEventListener("complete", (_) => {
 
+            testHandle.isComplete();   // for testing purposes
             console.debug("Stream complete");
             setGettingList(false);
             setPercComplete(0.0);
-            
-            //downloadList(`${listInfo.listName}.csv`, userList);
-            console.log("downloading!");
-            evtSource.close();
-        } );
+
+            if (!errReceivedRef.current) {
+                downloadList(`${listInfo.listName}.csv`, userList);
+                evtSource.close();  
+            }
+        });
     }
 
     
     function getList(submitEvent: React.FormEvent<HTMLFormElement>) {
+
+        testHandle.getListCalled();
 
         // Prevent the browser from reloading the page,
         // and from posting the data to the current URL
@@ -212,30 +279,43 @@ export default function LetterboxdApp() {
 
         const formElement  = submitEvent.currentTarget;
         const listInfoForm = new FormData(formElement);
+        const listURLEntry = listInfoForm.get("list-url");
 
-        if (!listInfoForm.get("list-url")?.toString()) {
+        // no need to raise an error per se, just alert the user and return
+        if (!listURLEntry) {
             alert("There isn't a URL given; try again with a URL to a list on Letterboxd.com!");
             return;
         }
-
-        const listURL = listInfoForm.get("list-url")?.toString();
+        
+        const listURL = listURLEntry.toString();
 
         var listInfo: ListInfo;
+
         try {
             listInfo = parseURL(listURL);
-            // sorting so it's nice for the server. may move over to server-side.
+            // sorting so it's nice for the server. may move this over to server-side.
             listInfo.attrs = filmAttributes.current.sort(); 
             console.debug(listInfo);
         }
         catch(err) {
+            alert(
+                "There was an issue processing your request, possibly due to a missing or mistyped URL. \
+                Try checking that the URL is for a working page on letterboxd.com, and that there aren't \
+                typos in it. Otherwise, I'll look into it myself.".replaceAll("  ", "")
+            );
             console.error(err)
             return;
         }
 
         // if nothing goes wrong in the above, THEN we can say we got started
         setGettingList(true);
+        errReceivedRef.current = false;     // reset if tripped in the error handler
+        testHandle.gettingList(true);       // for testing purposes
 
-        receiveList(listInfo);
+        try {receiveList(listInfo);}
+        catch(streamingError) {
+            streamErrorNotify(streamingError);
+        }
     }
 
     // apparently I have to keep track of states in the form where the input
@@ -248,14 +328,14 @@ export default function LetterboxdApp() {
         // remove attribute if has been unchecked
         if (!checkbox.checked) {
             var newAttrList = filmAttributes.current;
-            const attrIdx = newAttrList.indexOf(checkbox.name)
+            const attrIdx   = newAttrList.indexOf(checkbox.name)
 
             // if item is found
             if (attrIdx > -1) { 
-                newAttrList.splice(attrIdx, 1); 
+                newAttrList.splice(attrIdx, 1);     // delete element from list
                 filmAttributes.current = newAttrList;
             }
-            // otherwise, don't update filmAttributes if nothing changes
+            // otherwise, don't update filmAttributes, since no 
         } 
         // but put it in if it has been checked
         else {
@@ -295,6 +375,7 @@ export default function LetterboxdApp() {
 
             return (
                 <RingLoader 
+                    data-testid="ring-loader"
                     className="ring-loader"
                     color={"dodgerblue"}
                     loading={gettingList}
@@ -302,7 +383,7 @@ export default function LetterboxdApp() {
             );
         }
 
-        console.debug(percComplete);
+        console.debug(`percent complete: ${percComplete}`);
 
         if (gettingList && percComplete) {
             console.debug("receiving request...");
@@ -317,7 +398,7 @@ export default function LetterboxdApp() {
                 Math.floor(percComplete * 100).toString() + "%"
             );
             return (
-                <div className="loading-bar" ref={loadingBarElementRef} />
+                <div data-testid="loading-bar" className="loading-bar" ref={loadingBarElementRef} />
             );
         }
 
@@ -327,20 +408,21 @@ export default function LetterboxdApp() {
         }
 
         return (
-            <button className="lb-list-submit-button" type="submit">
+            <button className="lb-list-submit-button" type="submit"
+                data-testid="submit-button">
                 Get my list!
             </button>
         );
          
     }
-
+    
     return (
         <form onSubmit={getList}>
             <h2>Your list's URL:</h2>
             <div className="lb-url-container">
-                <input type="url" className="lb-url" name="list-url"
+                <input type="url" className="lb-url" name="list-url" data-testid="url-input"
                     placeholder="url of list goes here..." 
-                    pattern="https://letterboxd.com/.*"
+                    pattern="https:\/\/letterboxd.com\/[^\/]+\/list\/[^\/]+\/?"
                     size={80}
                     maxLength={500}
                     required>
@@ -348,10 +430,9 @@ export default function LetterboxdApp() {
             </div>
             <h2>The attributes you'd like from it:</h2>
             <AttributeList />
-            <div id="button-container">
+            <div id="button-container" data-testid="button-container">
                 <LoadingSpace />
             </div>
-        </form>
+        </form>    
     );
 }
-
