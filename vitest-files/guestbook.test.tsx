@@ -1,3 +1,4 @@
+/// <reference types="@vitest/browser/context" />
 import { describe, expect, vi, it } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';

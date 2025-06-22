@@ -1,11 +1,10 @@
 /// <reference types="vitest/config" />
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { defineConfig } from 'vite'
+import { defineConfig,  } from 'vite'
 import react from '@vitejs/plugin-react';
 import mockServer from 'vite-plugin-mock-server'
 import bodyParser from 'body-parser';
-import qs from 'qs';
 import 'jsdom';
 
 // notes:
@@ -14,8 +13,8 @@ import 'jsdom';
 //   in order to get the DOM assertion methods (see vitest-setup.ts)
 // - if some modules are blocked from loading, try turning of UBlockOrigin
 
-const env = process.env
 const __dirname = dirname(fileURLToPath(import.meta.url))
+
 
 // for localhost, port 3000 (the Node default) is used,
 // and I cannot find a way to override this. Thankfully, 
@@ -25,22 +24,18 @@ export default defineConfig({
     css: true,
     setupFiles: ['./vitest-files/vitest-setup.ts'],  // needs to be in "test" property
     environment: 'jsdom',
-    environmentOptions: {
-      url: "http://localhost:3000"
-    },
-    //reporters: ['hanging-process'],
     include: [ 'vitest-files/*', ],
     includeSource: [ 'static/scripts/**' ],
     coverage: {
       provider: 'v8',
       include: [ 'static/scripts/**' ],
-      exclude: [ 'static/scripts/guestbook.js' ]
+      exclude: [ '**\/index.jsx', '**\/server-types.ts' ]
     }
   },
   plugins: [
     react(),
     mockServer({
-      logLevel: 'warn',
+      logLevel: 'error',
       urlPrefixes: [ 
         '/hits', 
         '/guestbook',
@@ -53,25 +48,11 @@ export default defineConfig({
       mockTsSuffix: '.mock.ts',
       noHandlerResponse404: false,
       middlewares: [
-        bodyParser.json(),
-        // (req, _res, next) => {
-        //   console.log("parser called");
-        //   const splitUrl = req.url.split("?");
-        //   const q = splitUrl[1];
-        //   req.query = qs.parse(q);
-        //   req.url = splitUrl[0];
-        //   next();
-        // },
+        bodyParser.json()
       ],
       printStartupLog: false
     })
   ],
-  server: {
-    // cors: {
-    //   // the origin you will be accessing via browser
-    //   origin: `${env.SERVER_PROTOCOL}://${env.SERVER_SOCKET}`
-    // },
-  },
   build: {
     manifest: true,
     outDir: '/home/martinr/archie-server/dist',

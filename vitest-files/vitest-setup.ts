@@ -1,3 +1,4 @@
+/// <reference types="@vitest/browser/context" />
 import '@testing-library/jest-dom/vitest'
 import * as matchers from '@testing-library/jest-dom/matchers'
 import { describe, expect, it } from "vitest";
