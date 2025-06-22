@@ -127,9 +127,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
+      - uses: denoland/setup-deno@v2
         with: 
           node-version: 23.7.0
+          deno-version: 2.3.5
       - name: Environment setup
         run: npm install
       - name: Vitest tests
-        run: npx vitest --run --coverage
+        run: |
+          deno --allow-env --allow-net --allow-read test-helpers/mini-lb-server.mock.ts &
+          npx vitest --run --coverage
