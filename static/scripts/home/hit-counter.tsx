@@ -20,15 +20,14 @@ export default function HitCounter() {
     const hitPosted: React.RefObject<boolean> = useRef(false);
 
     const [hits, setHits]: [number, Function] = useState(0);
-    const [errorOccured, setErrorOccured]: [boolean, Function] = useState(false);
+    // for display purposes, we only care if the GET fails
+    // POST errors are simply logged, on client and server
+    const [getErrorOccured, setGetErrorOccured]: [boolean, Function] = useState(false);
 
     useEffect(() => {
-            if (!hitPosted.current && !errorOccured) {
+            if (!hitPosted.current && !getErrorOccured) {
 
-                postHit().catch(error => {
-                    console.error(error);
-                    setErrorOccured(true);   // triggers a refresh, 
-                });
+                postHit().catch(error => console.error(error));
                 hitPosted.current = true;
             }
             getHits()
@@ -62,12 +61,12 @@ export default function HitCounter() {
             .then(hits => { return Number(hits) })
             .catch((hitGettingError) => {
                 console.error(hitGettingError);
-                setErrorOccured(true);
+                setGetErrorOccured(true); 
                 return 0;
             }); 
     }
 
-    if (!hits && !errorOccured) 
+    if (!hits && !getErrorOccured) 
     {
         return (
             <h2 data-testid="hit-count-loading" id="hit-count">
@@ -75,7 +74,7 @@ export default function HitCounter() {
             </h2>
         );
     } 
-    if (errorOccured) 
+    if (getErrorOccured) 
     {
         return (
             <h2 data-testid="hit-count-get-failed" id="hit-count">
