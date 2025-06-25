@@ -15,7 +15,7 @@ services:
     environment:
       # DB host needs to be CONTAINER name not service name
       PRE_LOG: 1
-      DB_URL: mysql://server1:${MYSQL_PASSWORD:?}@archie-db:3306/archie
+      DB_URL: "mysql://server1:${MYSQL_PASSWORD:?}@archie-db:3306/archie"
       RUST_LOG: "debug"
       PY_CONT_SOCK: "lb-app:3575"
     healthcheck:
@@ -23,6 +23,8 @@ services:
       interval: 30s
       retries: 5
       start_period: 2s
+    # if there are permissions issues, give the file on the 
+    # host the ol' chmod 666 (read/write by everyone)
     volumes:
       - type: bind
         source: ./archie-server.log
@@ -38,12 +40,12 @@ services:
     container_name: "archie-db"
     volumes:
       - type: bind
-        source: "./db-init/"
+        source: ./db-init/
         # all scripts in this directory will be run
-        target: "/docker-entrypoint-initdb.d"
+        target: /docker-entrypoint-initdb.d
       - type: bind
-        source: "./backup_on_exit.sh"
-        target: "/backup_on_exit.sh"
+        source: ./backup_on_exit.sh
+        target: /backup_on_exit.sh
     entrypoint: ["bash", "backup_on_exit.sh"]
     command: "mysqld"
     healthcheck:
