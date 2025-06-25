@@ -106,16 +106,13 @@ describe("Testing error states", () => {
                 await user.click(screen.getByRole("button"));
             });
 
-        // wait for alert to pop up
-        setTimeout(() => {
-            expect(window.alert).toReturnWith(
-                "There was an issue with the server in processing your request, most \
-                likely with the internet connection. My apologies."
-                .replaceAll("  ", "")
-            );
+        expect(window.alert).toReturnWith(
+            "There was an issue with the server in processing your request, most \
+            likely with the internet connection. My apologies."
+            .replaceAll("  ", "")
+        );
 
-            expect(screen.getByRole("button")).toBeInTheDocument();
-        }, 100);
+        expect(screen.getByRole("button")).toBeInTheDocument();
 
         expect(dlSpy).not.toHaveBeenCalled();  // make sure a download wasn't triggered
     });
