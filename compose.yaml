@@ -18,11 +18,11 @@ services:
       DB_URL: mysql://server1:${MYSQL_PASSWORD:?}@archie-db:3306/archie
       RUST_LOG: "debug"
       PY_CONT_SOCK: "lb-app:3575"
-    # healthcheck:
-    #   test: [ "CMD", "curl", "--fail", "--cacert", "/run/secrets/testing-client-key", "https://localhost:4949" ]
-    #   interval: 30s
-    #   retries: 5
-    #   start_period: 2s
+    healthcheck:
+      test: [ "CMD", "curl", "--fail", "--cacert", "/run/secrets/testing-client-key", "https://localhost:4949" ]
+      interval: 30s
+      retries: 5
+      start_period: 2s
     volumes:
       - type: bind
         source: ./archie-server.log
