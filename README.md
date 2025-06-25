@@ -67,11 +67,15 @@ Since it's all Dockerized, you can also spin it up locally! If you have Docker r
 ```
 git clone https://github.com/lmr97/archie-server
 cd archie-server
-git submodule update --init --recursive
-npm install
 docker compose --file compose-demo.yaml up --detach
 ```
 
-It'll probably take a while to build the Docker images (it takes ~5 minutes total on my machine, the majority of which was for the central server image). And once the containers are started, give the database container ~2 minutes to initialize before trying it out (otherwise there will be errors). You can see if the database is ready by running `docker container ls` looking for whether the `archie-db` container is marked healthy or not.
+It'll take a minute to pull the Docker images (roughly 2 minutes on my laptop, most of which is pulling the `mysql` image). And once the containers are started, give the database container ~2 minutes to initialize before trying it out (otherwise there will be errors). You can see if the database is ready by running `docker container ls` looking for whether the `archie-db` container is marked `healthy` or not.
 
-Now you can try it out! The server is listening at `localhost:3000`.
+After that, you can try it out! The server is listening at `localhost:8080`.
+
+To shut it down, you'll need to specify that it's the demo file you've been using (or else you may get an error about certain required environment variables not being set), by running the following: 
+
+```
+docker compose --file compose-demo.yaml down
+```
