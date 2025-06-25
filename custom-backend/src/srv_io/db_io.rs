@@ -28,6 +28,7 @@ impl From<mysql::UrlError> for DbError {
     }
 }
 
+
 impl IntoResponse for DbError {
 
     fn into_response(self) -> Response {
@@ -72,8 +73,14 @@ impl IntoResponse for DbOrUserError {
             DbOrUserError::UserError(ue) => {
 
                 let (entry_field, db_limit) = match ue {
-                    UserError::NameTooLong => { ("Name", 100)  },
-                    UserError::NoteTooLong => { ("Note", 1000) }
+                    UserError::NameTooLong => { 
+                        error!("A user entered an overlong name.");
+                        ("Name", 100)  
+                    },
+                    UserError::NoteTooLong => { 
+                        error!("A user entered an overlong note.");
+                        ("Note", 1000) 
+                    }
                 };
 
                 let too_long_msg = Html(format!(
