@@ -1,47 +1,92 @@
-# to build (an image named "archie-svr", from repo root):
-# docker build -t archie-svr .
-
-# WARNING: this will build, but not run as such without 
-# secrets being manually mounted, when using the default 
-# compose.yaml. For this reason, a compose-demo.yaml has been
-# added for demo purposes.
+# The frequent use of the `chown` option on COPY is to make sure
+# the image/container has permissions to the files when running
+# in rootless mode
 
 
-# Oddly, the method below is the only known way to cache dependency  
-# builds for Rust Docker images. It allows the dependencies and 
-# `main.rs` to be built using separate commands, so the dependency  
-# build command can be cached. 
-#
-# It works by switching the real `main.rs` for a dummy `main.rs` 
-# with an empty `main` function in the Manifest, building the 
-# dependencies, substituting the real `main.rs` afterwards. 
-# Only then does it build the whole project -- with the dependencies 
-# already found to be built. 
-#
-# This behavior can obviously be overriden with the `--no-cache` 
-# option on `docker build`.
-#
-# This method comes from this blog post:
-# https://web.archive.org/web/20221028051630/https://blog.mgattozzi.dev/caching-rust-docker-builds/
-# 
-# Found through this StackOverflow thread:
-# https://stackoverflow.com/questions/58473606/cache-rust-dependencies-with-docker-build
+###########################################
+#                                         #
+#     STAGE 1: Build Rust dependencies    #
+#                                         #
+###########################################
+FROM rust:1.83.0 AS deps
 
-FROM rust:1.83.0
+RUN useradd -m server
+USER server
+
+WORKDIR /home/server/custom-backend
+RUN echo "fn main() {}" > dummy.rs
+COPY --chown=server:server ./custom-backend/Cargo.toml ./
+COPY --chown=server:server ./custom-backend/Cargo.lock ./
+RUN sed -i 's#src/main.rs#dummy.rs#' Cargo.toml
+RUN cargo build --release
+
+
+
+###########################################
+#                                         #
+#     STAGE 2: Build server executable    #
+#                                         #
+###########################################
+FROM rust:1.83.0 AS main-build
+
+# Install Node, for ViteJS integration. It's easier to set up Node 
+# from a Rust environment than the other way around, I've found. 
+RUN curl -fsSL https://deb.nodesource.com/setup_23.x -o nodesource_setup.sh
+RUN bash nodesource_setup.sh
+RUN apt-get install nodejs
 
 RUN useradd -m server
 USER server
 WORKDIR /home/server
 
-RUN echo "fn main() {}" > dummy.rs
-COPY ./custom-backend/Cargo.toml .
-COPY ./custom-backend/Cargo.lock .
-RUN sed -i 's#src/main.rs#dummy.rs#' Cargo.toml
-RUN cargo build --release
-RUN sed -i 's#dummy.rs#src/main.rs#' Cargo.toml
-COPY ./custom-backend .
+# In order to use Vite with a Rust backend (using vite-rs), we've 
+# gotta have EVERYTHING in the image for building, so it's all gotta be here...
+
+# ...the packages...
+COPY --chown=server:server ./package.json      ./
+COPY --chown=server:server ./package-lock.json ./
+RUN npm install
+
+# ...and the content.
+COPY --chown=server:server ./pages      ./pages/
+COPY --chown=server:server ./static     ./static/
+COPY --chown=server:server ./index.html ./
+
+# since the assets are built into the server binary, the Vite config file
+# should be statically copied into the image, not mounted 
+COPY --chown=server:server ./vite.config.ts ./
+
+# Finally, build the server executable
+WORKDIR /home/server/custom-backend
+COPY --chown=server:server ./custom-backend ./
+# target directory is ignored in .dockerignore
+COPY --from=deps --chown=server:server \
+    /home/server/custom-backend/target/release \
+    ./target/release/
 RUN cargo build --release
 
+
+
+###########################################
+#                                         #
+#   STAGE 3: Finalize server environment  #
+#                                         #
+###########################################
+FROM debian AS server-run
+RUN useradd -m server
+USER server
+
+WORKDIR /home/server
+COPY --from=main-build --chown=server:server \
+    /home/server/custom-backend/target/release/archie-server \
+    ./custom-backend/target/release/archie-server
+COPY --from=main-build --chown=server:server \
+    /home/server/dist ./dist/
+
+# set up environment variables that will always
+# be the same relative to the server. The ones that
+# may change (or depend on host environment) are 
+# in the Compose file.
 ENV SERVER_ROOT="/home/server"
 ENV SERVER_LOG="/home/server/archie-server.log"
 ENV SERVER_SOCKET="0.0.0.0:4949"
@@ -51,5 +96,6 @@ ENV PK_FILE="/run/secrets/server-priv-key"
 # make sure the log is fresh for the image
 RUN touch "./archie-server.log"
 
+WORKDIR /home/server/custom-backend
 EXPOSE 4949
-CMD [ "./target/release/archie-server" ]
+CMD [ "/home/server/custom-backend/target/release/archie-server" ]
