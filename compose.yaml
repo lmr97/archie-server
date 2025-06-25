@@ -2,7 +2,8 @@ name: archie
 services:
   svr:
     # separately-built image to avoid clutter from anonymous images
-    image: archie-svr:latest
+    # pulled from DockerHub if necessary
+    image: lmr97/archie-svr:latest
     restart: always
     depends_on:
       - db
@@ -15,33 +16,24 @@ services:
       # DB host needs to be CONTAINER name not service name
       PRE_LOG: 1
       DB_URL: mysql://server1:${MYSQL_PASSWORD:?}@archie-db:3306/archie
-      RUST_LOG: "archie_server=debug"   # for `tracing` logger
+      RUST_LOG: "debug"
       PY_CONT_SOCK: "lb-app:3575"
-    healthcheck:
-      test: [ "CMD", "curl", "--fail", "--cacert", "/run/secrets/testing-client-key", "https://localhost:4949" ]
-      interval: 30s
-      retries: 5
-      start_period: 2s
+    # healthcheck:
+    #   test: [ "CMD", "curl", "--fail", "--cacert", "/run/secrets/testing-client-key", "https://localhost:4949" ]
+    #   interval: 30s
+    #   retries: 5
+    #   start_period: 2s
     volumes:
       - type: bind
         source: ./archie-server.log
         target: /home/server/archie-server.log
-      - type: bind
-        source: ./pages
-        target: /home/server/pages
-      - type: bind
-        source: ./static
-        target: /home/server/static
-      - type: bind
-        source: ./node_modules
-        target: /home/server/node_modules
     secrets:
       - server-cert
       - server-priv-key
       - testing-client-key
 
   db:
-    image: "mysql:9.2"
+    image: mysql:9.2
     restart: always
     container_name: "archie-db"
     volumes:
@@ -68,15 +60,15 @@ services:
         MYSQL_PASSWORD: ${MYSQL_PASSWORD:?}
 
   lb-app:
-    build: ./lb-app
+    image: lmr97/lb-web-app:latest
     container_name: "lb-app"
     restart: always
 
 secrets:
   server-cert:
-    environment: "CRT_FILE"
+    file: ${CRT_FILE:?}
   server-priv-key:
-    environment: "PK_FILE"
+    file: ${PK_FILE:?}
   testing-client-key:
-    environment: "CLIENT_PK_FILE"
+    file: ${CLIENT_PK_FILE:?}
 
