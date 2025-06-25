@@ -6,17 +6,17 @@ use axum::{
     routing::{get, post}, 
     Router
 };
-use axum_server::tls_rustls::RustlsConfig;
+use axum_server::{Handle, tls_rustls::RustlsConfig};
 use tower_http::{
     services::ServeDir,
     compression::CompressionLayer
 };
+use tokio::signal;
 use tracing::info;
 use custom_backend::{
     srv_io::{vite_io, db_io, lb_app_io},
     utils::init_utils::*,
 };
-
 
 
 // The only panicking unwraps are here in main(), since, if there are 
@@ -98,12 +98,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     
 
     let addr = SocketAddr::from_str(&get_env_var("SERVER_SOCKET").unwrap()).unwrap();
-
+    let svr_handle = Handle::new(); // allows other threads access to the thread running the server
+    
     if !use_tls {
 
         info!("Serving on {:?}! (no TLS)", addr);
         let listener = tokio::net::TcpListener::bind(addr).await?;
-        axum::serve(listener, routes).await?;
+        axum::serve(listener, routes)
+            .with_graceful_shutdown(shutdown_on_signal(None))
+            .await?;
 
     } else {
         
@@ -113,11 +116,50 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             .await?;
         info!("Authorization loaded!");
     
+        // Spawn a task to catch signals and shut down server; 
+        // they won't be caught in this thread.
+        tokio::spawn(shutdown_on_signal(Some(svr_handle.clone())));
+
         info!("Serving securely on {:?}!", addr);
         axum_server::bind_rustls(addr, auth_config)
+            .handle(svr_handle)
             .serve(routes.into_make_service())
             .await?;
     }
 
     Ok(())
+}
+
+
+// Adapted from the Axum examples on Github: 
+// https://github.com/tokio-rs/axum/blob/main/examples/tls-graceful-shutdown/src/main.rs
+async fn shutdown_on_signal(handle: Option<Handle>) {
+
+    let ctrl_c = async {
+        signal::ctrl_c()
+            .await
+            .expect("failed to install Ctrl+C handler");
+    };
+
+    let terminate = async {
+        signal::unix::signal(signal::unix::SignalKind::terminate())
+            .expect("failed to install signal handler")
+            .recv()
+            .await;
+    };
+
+    let sig_recved: &'static str;
+
+    tokio::select! {
+        _ = ctrl_c    => { sig_recved = "SIGINT";  },
+        _ = terminate => { sig_recved = "SIGTERM"; },
+    }
+
+    if let Some(svr_handle) = handle {
+        svr_handle.graceful_shutdown(None);
+    }
+
+    // sending to both stdout and the log file for redundancy
+    println!("\nI just got a {} signal; shutting down now. Bye!", sig_recved);
+    info!("I just got a {} signal; shutting down now. Bye!", sig_recved);
 }
