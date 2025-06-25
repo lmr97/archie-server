@@ -20,7 +20,7 @@ env:
   PY_CONT_SOCK: "127.0.0.1:3575"
   PK_FILE: "./certs/server.key"    # will be installed during runtime
   CRT_FILE: "./certs/server.pem"
-  CLIENT_CRT_FILE: "./certs/client.pem"
+  CLIENT_PK_FILE: "./certs/client.pem"
 
 jobs:
 
