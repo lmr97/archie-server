@@ -9,6 +9,6 @@
 name: archie
 services:
   svr:
-    command: [ "./target/release/archie-server", "--no-tls"]
+    command: [ "/home/server/custom-backend/target/release/archie-server", "--no-tls"]
     healthcheck:
       test: [ "CMD", "curl", "--fail", "http://localhost:4949" ]
