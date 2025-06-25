@@ -1,0 +1,9 @@
+*.egg-info/
+.coverage
+.github/
+build/
+tests/
+**/.pytest_cache/
+**/__pycache__/
+*.csv
+test*.py
