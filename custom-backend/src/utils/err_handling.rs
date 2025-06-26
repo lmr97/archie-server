@@ -3,7 +3,11 @@ use axum::{
     response::{Html, IntoResponse, Response}
 };
 
-use crate::srv_io::vite_io;
+
+// the server is usually run from the crate directory, and vite.config.ts is in the repo root
+#[derive(vite_rs::Embed)]
+#[root = "../"]  
+struct ErrPage;
 
 // extracting this as public function to use elsewhere
 // breaking up this huge error type into more specific errors 
@@ -17,10 +21,11 @@ pub fn make_500_resp() -> Response {
                     <p>500 Error: Internal Server Error</p>\n\
                     </html>".to_string();
 
-    let html_500_err = match vite_io::VitePage::get("static/errors/500.html") {
+    let html_500_err = match ErrPage::get("static/errors/500.html") {
 
         Some(err_page) => {
-            String::from_utf8(err_page.bytes.to_vec()).unwrap_or(default_error)
+            String::from_utf8(err_page.bytes.to_vec())
+                .unwrap_or(default_error)
         },
         // if we can't even find the env var, we're sending the short version
         None => default_error
