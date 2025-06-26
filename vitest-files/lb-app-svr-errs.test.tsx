@@ -107,9 +107,8 @@ describe("Testing error states", () => {
             });
 
         expect(window.alert).toReturnWith(
-            "There was an issue with the server in processing your request, most \
-            likely with the internet connection. My apologies."
-            .replaceAll("  ", "")
+            "There was an issue with the server itself that prevented the completion \
+            of your request. My apologies.".replaceAll("  ", "")
         );
 
         expect(screen.getByRole("button")).toBeInTheDocument();
