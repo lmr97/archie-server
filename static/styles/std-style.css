@@ -27,6 +27,7 @@ div.round-box {
 #react-logo-msg {
     width: 20%;
     height: 20%; 
+    position: relative;
 }
 .react-msg {
     font-style: italic;
