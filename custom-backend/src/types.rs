@@ -64,7 +64,7 @@ pub mod db_io_types {
     }
 
     #[derive(Debug, serde::Deserialize, serde::Serialize, PartialEq, Clone, TS)]
-    #[serde(rename_all = "snake_case")]
+    #[serde(rename_all = "camelCase")]
     #[ts(export, export_to="server-types.ts")]
     #[ts(rename_all = "camelCase")]
     pub struct WebpageHit {
