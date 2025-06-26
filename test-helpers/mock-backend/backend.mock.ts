@@ -1,5 +1,4 @@
 import { readFileSync } from 'node:fs';
-import qs from 'qs';
 import { MockHandler } from 'vite-plugin-mock-server';
 import { createSession, Session } from 'better-sse';
 import { 
@@ -8,14 +7,15 @@ import {
     type ListRow, 
     type EntryReceipt 
 } from '../../static/scripts/server-types.ts';
-import { Request, Response } from 'express';
-import { IncomingMessage, ServerResponse } from 'node:http';
 
 
 // yes, this is how you sleep in Javascript, so it seems
 async function sleepJS(ms: number) {
     return new Promise(r => setTimeout(r, ms));
 }
+
+// allow for specifying the dev server port for redirects
+const port = process.env.VITE_SVR_PORT;
 
 var guestbookDb: Guestbook = {
     guestbook: [
@@ -62,7 +62,7 @@ const mocks: MockHandler[] = [
         pattern: "/guestbook", 
         method: 'GET',
         handle: async (_req, res) => {
-            const pageData: string = await fetch("http://localhost:5173/pages/guestbook.html")
+            const pageData: string = await fetch(`http://localhost:${port}/pages/guestbook.html`)
                 .then(resp => {return resp.text()});
             res.end(pageData); 
         }
@@ -111,7 +111,7 @@ const mocks: MockHandler[] = [
         pattern: "/lb-list-conv", 
         method: 'GET',
         handle: async (_req, res) => {
-            const pageData: string = await fetch("http://localhost:5173/pages/lb-list-app.html")
+            const pageData: string = await fetch(`http://localhost:${port}/pages/lb-list-app.html`)
                 .then(resp => {return resp.text()});
             res.end(pageData); 
         }
