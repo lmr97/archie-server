@@ -7,17 +7,18 @@ use axum::{
     Router
 };
 use axum_server::{Handle, tls_rustls::RustlsConfig};
-use tower_http::{
-    services::ServeDir,
-    compression::CompressionLayer
-};
-use tokio::signal;
+use tower_http::{compression::CompressionLayer};
 use tracing::info;
+
 use custom_backend::{
-    srv_io::{vite_io, db_io, lb_app_io},
-    utils::init_utils::*,
+    srv_io::{vite_get, db_io, lb_app_io},
+    utils::{init_utils::*, shutdown},
 };
 
+#[derive(vite_rs::Embed)]
+#[root = "../"] 
+#[dev_server_port = 5173]
+struct AssetHandle;
 
 // The only panicking unwraps are here in main(), since, if there are 
 // any problems during startup, I want the server to crash and show me what 
@@ -59,43 +60,36 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         RunMode::Tls       => true
     };
 
+
+
     info!("Defining routes...");
-    let server_root = get_env_var("SERVER_ROOT").unwrap();
 
-
-    /* Guestbook */
-    let guestbook_entries: Router<()> = Router::new()
-        .route("/", post(db_io::update_guestbook))
-        .route("/", get(db_io::get_guestbook));
-    let guestbook_app = Router::new()
-        .route("/", get(vite_io::guestbook_page))
-        .nest("/entries", guestbook_entries);
-
-
-    /* Letterboxd List Converter */
-    let converter = Router::new().route("/", get(lb_app_io::convert_lb_list));
-    let lb_app = Router::new()
-        .route("/", get(vite_io::lb_app_page))
-        .nest("/conv", converter);
-
-    
-    /* All routes */
-    let routes = Router::new()
-        .route("/", get(vite_io::homepage))
-        .nest_service("/assets", ServeDir::new(format!("{}/dist/assets", server_root)))
-        .route("/hits", post(db_io::log_hit))
+    let api = Router::new()
         .route("/hits", get(db_io::get_hit_count))
-        .nest("/guestbook", guestbook_app)       // `Router`s must be nested with other routers
-        .nest("/lb-list-conv", lb_app)
+        .route("/hits", post(db_io::log_hit))
+        .route("/guestbook/entries", get(db_io::get_guestbook))
+        .route("/guestbook/entries", post(db_io::update_guestbook))
+        .route("/lb-list-conv/conv", get(lb_app_io::convert_lb_list));
+    
+    let routes = Router::new()
+        .route("/", get(vite_get::serve_statics))
+        .route("/{*path}", get(vite_get::serve_statics))
+        .merge(api)
         .layer(CompressionLayer::new());         // compress all responses
 
-    // Start Vite dev server (debug only)
-    // Note to self: programmatically comment out by running (from the `custom-backend` dir):
-    //
-    //     sed -i 's#let _guard#// let _guard#' ./src/main.rs
-    //
-    // let _guard: Option<vite_rs::ViteProcess> = vite_io::VitePage::start_dev_server(true);  
+
+    // Start Vite dev server (on debug only).
+    // 
+    // NOTE TO SELF: To indicate to Vite that it's merely being 
+    // puppeted by a Rust program in debug mode (and to not run 
+    // the mock backend I wrote to emulate this Rust server), set 
+    // the env var VITE_SVR_MODE to "rust" (or anything so 
+    // long as it's not "native")
+
+    #[cfg(debug_assertions)]
+    let _guard = AssetHandle::start_dev_server(true);  
     
+
 
     let addr = SocketAddr::from_str(&get_env_var("SERVER_SOCKET").unwrap()).unwrap();
     let svr_handle = Handle::new(); // allows other threads access to the thread running the server
@@ -105,7 +99,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         info!("Serving on {:?}! (no TLS)", addr);
         let listener = tokio::net::TcpListener::bind(addr).await?;
         axum::serve(listener, routes)
-            .with_graceful_shutdown(shutdown_on_signal(None))
+            .with_graceful_shutdown(shutdown::on_signal(None))
             .await?;
 
     } else {
@@ -118,7 +112,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     
         // Spawn a task to catch signals and shut down server; 
         // they won't be caught in this thread.
-        tokio::spawn(shutdown_on_signal(Some(svr_handle.clone())));
+        tokio::spawn(shutdown::on_signal(Some(svr_handle.clone())));
 
         info!("Serving securely on {:?}!", addr);
         axum_server::bind_rustls(addr, auth_config)
@@ -128,38 +122,4 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     Ok(())
-}
-
-
-// Adapted from the Axum examples on Github: 
-// https://github.com/tokio-rs/axum/blob/main/examples/tls-graceful-shutdown/src/main.rs
-async fn shutdown_on_signal(handle: Option<Handle>) {
-
-    let ctrl_c = async {
-        signal::ctrl_c()
-            .await
-            .expect("failed to install Ctrl+C handler");
-    };
-
-    let terminate = async {
-        signal::unix::signal(signal::unix::SignalKind::terminate())
-            .expect("failed to install signal handler")
-            .recv()
-            .await;
-    };
-
-    let sig_recved: &'static str;
-
-    tokio::select! {
-        _ = ctrl_c    => { sig_recved = "SIGINT";  },
-        _ = terminate => { sig_recved = "SIGTERM"; },
-    }
-
-    if let Some(svr_handle) = handle {
-        svr_handle.graceful_shutdown(None);
-    }
-
-    // sending to both stdout and the log file for redundancy
-    println!("\nI just got a {} signal; shutting down now. Bye!", sig_recved);
-    info!("I just got a {} signal; shutting down now. Bye!", sig_recved);
 }

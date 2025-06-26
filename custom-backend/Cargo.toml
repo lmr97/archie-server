@@ -41,12 +41,13 @@ futures-util = { version = "0.3.31" }
 mysql = { version = "26.0.0", features = ["chrono"] }
 mysql_common = { version = "0.34.1", features = ["chrono"] }
 serde = "1.0.217"
-tokio = { version = "1", features = ["macros", "rt-multi-thread", "signal"] }
+tokio = { version = "1.45.1", features = ["macros", "rt-multi-thread", "signal"] }
 tower-http = { version = "0.6.2", features = [ "fs", "compression-br", "compression-deflate", "compression-gzip", "compression-zstd" ] }
 tracing = "0.1.41"
 tracing-subscriber = { version = "0.3.19", features = ["env-filter"] }
 ts-rs = { version = "10.1.0", features = [ "serde-json-impl", "chrono-impl" ] }
-vite-rs = "0.1.0"
+vite-rs = "0.2.1"
+vite-rs-axum-0-8 = "0.2.1"
 
 [dev-dependencies]
 reqwest = { version = "0.12.15", features = ["json", "stream", "default-tls"] }
