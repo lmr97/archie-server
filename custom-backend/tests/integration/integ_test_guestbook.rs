@@ -4,6 +4,10 @@ use reqwest::StatusCode;
 use custom_backend::types::db_io_types::{EntryReceipt, Guestbook, GuestbookEntry};
 mod client_config;
 
+// WARNING: these tests will fail if they are run before the library tests.
+// These tests expect the data posted to the data during those tests
+// to be there.
+
 #[tokio::main]
 async fn main() {
 

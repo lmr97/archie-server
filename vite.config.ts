@@ -11,7 +11,10 @@ import 'jsdom';
 //
 // - `expect` from Vitest needs to be extended by `jest-dom`
 //   in order to get the DOM assertion methods (see vitest-setup.ts)
+//
 // - if some modules are blocked from loading, try turning of UBlockOrigin
+// 
+// - make sure the right value of VITE_SVR_PORT is set
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 
