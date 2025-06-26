@@ -1,6 +1,6 @@
 import React from 'react';
 import { useRef, useState } from 'react'; 
-import { EventSource } from 'eventsource';
+import { EventSource, ErrorEvent } from 'eventsource';
 import { RingLoader } from 'react-spinners';
 import { Line } from 'progressbar.js';
 import { ListRow, type ListInfo } from '../server-types';
@@ -73,7 +73,7 @@ const loadingBarElement = document.createElement("div");
 // error is given in the same format as a ListRow, with the content in the 
 // rowData attribute
 function streamErrorNotify(errorMessage: string) {
-    console.error(`${errorMessage}`);
+    console.error(`error received: ${errorMessage}`);
 
     if (errorMessage.includes("422 UNPROCESSABLE CONTENT")) {
         alert("The URL entered doesn't appear to be a valid Letterboxd list. \
@@ -90,8 +90,13 @@ function streamErrorNotify(errorMessage: string) {
     else if (errorMessage.includes("502 BAD GATEWAY")) {
         alert("It looks like Letterboxd's servers are down! Try again a little later.");
     }
+    else if (errorMessage.includes("500")) {
+        alert("There was an issue with the server itself that prevented the completion \
+            of your request. My apologies.".replaceAll("  ", "")
+        );
+    }
     else { 
-        alert("There was an issue with the server in processing your request, most \
+        alert("There was an issue in processing your request, most \
             likely with the internet connection. My apologies."
             .replaceAll("  ", "")
         ); 
@@ -211,7 +216,6 @@ export function LetterboxdApp() {
         
         const queryURL   = generateQueryURL(listInfo);
         const evtSource  = new EventSource(queryURL, {withCredentials: true});
-
         var userList     = new Array<string>();
 
         evtSource.onmessage = (event: MessageEvent<ListRow>) => {
@@ -231,9 +235,25 @@ export function LetterboxdApp() {
             });
         };
 
-        // If there is an issue, close out the connection
-        // since the error events are actually messages, not proper 
-        // ErrorEvents, we need to use addEventListener, not onerror.
+        // This is to catch errors that the SERVER sends BEFORE starting the stream.
+        // Errors from the Python app (via the server) are handled by an event listener
+        // for messages of type "error" (next function after this one).
+        evtSource.onerror = (err: ErrorEvent) => {
+            
+            setPercComplete(0.0);
+            setGettingList(false);
+
+            const errMsg = err.message ? err.message : "Stream failed initiate (error message null).";
+            streamErrorNotify(errMsg);
+
+            evtSource.close(); 
+        }
+
+        // This catches errors sent by the PYTHON APP via the server, once the stream
+        // successfully initiates.
+        // 
+        // Since the error events from the server are actually messages, not proper 
+        // ErrorEvents, we need to use `addEventListener` as well as `onerror`.
         evtSource.addEventListener("error", (errEvent: MessageEvent<string>) => {
     
             // sometimes there is a phantom error event that the server 
@@ -242,9 +262,7 @@ export function LetterboxdApp() {
             // howver, so it's easy to distinguish from other, intentionally
             // -programmed error events. This catches those phantom errors.
             if (!errEvent.data) return;   
-
             errReceivedRef.current = true;
-            console.debug(`error received: ${errEvent.data}`)
             
             setPercComplete(0.0);
             setGettingList(false);
