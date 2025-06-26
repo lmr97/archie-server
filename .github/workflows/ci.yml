@@ -60,7 +60,6 @@ jobs:
       run: |
         npm install vite
         echo > test.log
-        sed -i 's#let _guard#// let _guard#' ./src/main.rs
         cargo test --release --lib -- --test-threads=1
         cargo test --release --test tls_on_default --
         cargo test --release --test tls_off_switch -- --no-tls
