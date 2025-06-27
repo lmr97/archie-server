@@ -44,9 +44,12 @@ async fn main() {
     // demo data starts with 6 hits, the unit tests add 1 more,
     // and the above code adds one more: 6+1+1 == 8
     // 
-    // A previous run without TLS will add 1 more, so it may also be 9
-    assert!(hit_count == "8" || hit_count == "9");
-    assert!(hit_count_js == "9" || hit_count_js == "10");
+    // A previous run without TLS, along with the other JS hit,
+    // will each add 1 more, so at that point it will be 10.
+    // Same goes for the second assert, except it's one more ahead.
+
+    assert!(hit_count == "8" || hit_count == "10");
+    assert!(hit_count_js == "9" || hit_count_js == "11");
 }
 
 async fn test_posting_hit(req_client: Client, url: String, hit_ser: String) -> String {
