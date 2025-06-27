@@ -1,6 +1,5 @@
 /custom-backend/target
 /db-init/
-/db-init-demo/
 /node_modules/
 -test*
 certs/
