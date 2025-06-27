@@ -8,7 +8,7 @@
 #     STAGE 1: Build Rust dependencies    #
 #                                         #
 ###########################################
-FROM rust:1.83.0 AS deps
+FROM rust:1.88.0 AS deps
 
 RUN useradd -m server
 USER server
@@ -27,13 +27,13 @@ RUN cargo build --release
 #     STAGE 2: Build server executable    #
 #                                         #
 ###########################################
-FROM rust:1.83.0 AS main-build
+FROM rust:1.88.0 AS main-build
 
 # Install Node, for ViteJS integration. It's easier to set up Node 
 # from a Rust environment than the other way around, I've found. 
 RUN curl -fsSL https://deb.nodesource.com/setup_23.x -o nodesource_setup.sh
 RUN bash nodesource_setup.sh
-RUN apt-get install nodejs
+RUN apt-get install -y nodejs
 
 RUN useradd -m server
 USER server
@@ -73,6 +73,12 @@ RUN cargo build --release
 #                                         #
 ###########################################
 FROM debian AS server-run
+
+# install cURL for healthcheck
+RUN apt-get update
+RUN apt-get install -y curl
+
+# don't run as root inside container
 RUN useradd -m server
 USER server
 
@@ -92,6 +98,7 @@ ENV SERVER_LOG="/home/server/archie-server.log"
 ENV SERVER_SOCKET="0.0.0.0:4949"
 ENV CRT_FILE="/run/secrets/server-cert"
 ENV PK_FILE="/run/secrets/server-priv-key"
+
 
 # make sure the log is fresh for the image
 RUN touch "./archie-server.log"
