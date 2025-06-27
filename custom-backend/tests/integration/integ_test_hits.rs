@@ -8,6 +8,7 @@ mod client_config;
 // use the JS styling to make sure the deserialization converts correctly
 // when taken from the client
 #[derive(serde::Serialize)]
+#[allow(non_snake_case)]
 struct WebpageHitJs {
     timeStamp: NaiveDateTime,
     userAgent: String,
