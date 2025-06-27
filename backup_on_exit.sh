@@ -6,12 +6,13 @@
 backup() {
     echo "Backing up DB to ~/archie-server/db-init/db_schema.sql (on host)..."
 
-    touch /docker-entrypoint-initdb.d/db_schema_save.sql
+    filename="/db-dumps/db_schema_$(date +"%Y-%m-%dT%H:%I:%S").sql"
+    
     mysqldump --protocol=tcp \
         --databases archie \
         --user server1 --password="$MYSQL_PASSWORD" \
         --skip-lock-tables \
-        --result-file /docker-entrypoint-initdb.d/db_schema_save.sql
+        --result-file $filename
 }
 
 trap 'backup' SIGTERM

@@ -43,6 +43,10 @@ services:
         source: ./db-init/
         # all scripts in this directory will be run
         target: /docker-entrypoint-initdb.d
+      # this is where dumps will be saved to
+      - type: bind
+        source: ./db-dumps/
+        target: /db-dumps
       - type: bind
         source: ./backup_on_exit.sh
         target: /backup_on_exit.sh
