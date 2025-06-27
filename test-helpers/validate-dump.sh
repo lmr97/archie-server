@@ -3,7 +3,7 @@
 # - has an identical timestamp to the backup file, or
 # - is missing any of the INSERT or CREATE TABLE statements for the tables
 
-if [[ $(tail -n 1 db-init-demo/db_schema.sql) = $(tail -n 1 db-init-demo/db_schema.sql.bkup) ]]
+if [[ $(tail -n 3 db-init-demo/db_schema.sql) = $(tail -n 3 db-init-demo/db_schema.sql.bkup) ]]
 then 
     exit 1
 fi
