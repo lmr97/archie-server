@@ -16,11 +16,11 @@ services:
       # DB host needs to be CONTAINER name not service name
       PRE_LOG: 1
       DB_URL: "mysql://server1:${MYSQL_PASSWORD:?}@archie-db:3306/archie"
-      RUST_LOG: "debug"
+      RUST_LOG: "custom_backend=info"
       PY_CONT_SOCK: "lb-app:3575"
     healthcheck:
       test: [ "CMD", "curl", "--fail", "--cacert", "/run/secrets/testing-client-key", "https://localhost:4949" ]
-      interval: 30s
+      interval: 10s
       retries: 5
       start_period: 2s
     # if there are permissions issues, give the file on the 
@@ -50,10 +50,10 @@ services:
     command: "mysqld"
     healthcheck:
       # slight breach of exec form with the options, but `mysqladmin` does not work otherwise
-      test: [ "CMD", "mysqladmin", "ping", "--user=server1", "--password=${MYSQL_PASSWORD?}" ]
-      interval: 15s
-      retries: 3
-      start_period: 1m
+      test: [ "CMD", "mysqladmin", "ping", "--protocol=tcp", "--user=server1", "--password=${MYSQL_PASSWORD?}" ]
+      interval: 5s
+      retries: 6
+      start_period: 30s
     environment:
         MYSQL_ONETIME_PASSWORD: false
         MYSQL_ALLOW_EMPTY_PASSWORD: false
