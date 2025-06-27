@@ -18,6 +18,7 @@ use custom_backend::{
 #[derive(vite_rs::Embed)]
 #[root = "../"] 
 #[dev_server_port = 5173]
+#[allow(dead_code, reason = "AssetHandle used to run Vite dev server in debug builds")]
 struct AssetHandle;
 
 // The only panicking unwraps are here in main(), since, if there are 
