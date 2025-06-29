@@ -11,7 +11,9 @@ from selenium.webdriver.support import expected_conditions as ec
 chrome_opts = wd.ChromeOptions()
 chrome_opts.headless = True
 chrome_opts.add_argument("--headless")
-drivers = [wd.Chrome(options=chrome_opts)]
+chrome_opts.add_argument('--remote-debugging-port=9222')
+chrome_opts.binary_location = "/usr/bin/google-chrome"
+drivers = [wd.Chrome(options=chrome_opts, executable_path="/usr/local/bin/chromedriver")]
 
 match platform.system():
     case "Windows":
@@ -19,10 +21,11 @@ match platform.system():
     case "Darwin":          # MacOS
         drivers.append(wd.Safari())
     case _:
-        firefox_opts = wd.FirefoxOptions()
-        firefox_opts.headless = True
-        firefox_opts.add_argument("--headless")
-        drivers.append(wd.Firefox(options=firefox_opts))
+        # firefox_opts = wd.FirefoxOptions()
+        # firefox_opts.headless = True
+        # firefox_opts.add_argument("--headless")
+        # drivers.append(wd.Firefox(options=firefox_opts))
+        pass
 
 
 root_url = os.getenv("DOCKER_SERVER_URL")   # has no trailing slash
