@@ -155,6 +155,7 @@ jobs:
       PK_FILE: "./certs/server.key"    # will be installed during runtime
       CRT_FILE: "./certs/server.pem"
       CLIENT_PK_FILE: "./certs/client.pem"
+      DISPLAY: ":99"
 
     steps:
       - uses: actions/checkout@v4
