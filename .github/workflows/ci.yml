@@ -145,7 +145,7 @@ jobs:
     #     os: [windows-latest, ubuntu-latest, macos-latest]
   
     runs-on: ubuntu-latest #${{ matrix.os }}
-    needs: [web_server_tests, letterboxd_app_tests, frontend_tests]
+    #needs: [web_server_tests, letterboxd_app_tests, frontend_tests]
     
     defaults:
       run:
@@ -167,7 +167,24 @@ jobs:
           mkdir certs
           cd certs
           python -m trustme
-      # no TLS tests
+      # install browsers if running Linux
+      - name: Install Firefox
+        run: |
+          sudo install -d -m 0755 /etc/apt/keyrings
+          wget -q https://packages.mozilla.org/apt/repo-signing-key.gpg -O- \
+            | sudo tee /etc/apt/keyrings/packages.mozilla.org.asc > /dev/null
+          echo "deb [signed-by=/etc/apt/keyrings/packages.mozilla.org.asc] \
+            https://packages.mozilla.org/apt mozilla main" \
+            | sudo tee -a /etc/apt/sources.list.d/mozilla.list > /dev/null
+          echo -e '\nPackage: *\nPin: origin packages.mozilla.org\nPin-Priority: 1000' \
+            | sudo tee /etc/apt/preferences.d/mozilla 
+          sudo apt-get update
+          sudo apt-get install firefox
+      - name: Install Chrome
+        run: |
+          wget https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
+          sudo dpkg -i google-chrome-stable_current_amd64.deb
+      # no-TLS tests
       - name: Spin up Docker pod (no TLS)
         run: |
           touch archie-server.log
@@ -184,6 +201,7 @@ jobs:
       - name: Spin up Docker pod (with TLS)
         run: |
           docker compose down
+          export DOCKER_SERVER_URL="https://127.0.0.1:4949"
           docker compose \
             --file compose.yaml \
             --file test-helpers/db-override.yaml \
