@@ -168,13 +168,13 @@ jobs:
           mkdir certs
           cd certs
           python -m trustme
+      - uses: nanasess/setup-chromedriver@v2
       - name: Set up Chrome
-        uses: nanasess/setup-chromedriver@v2
+        run: |
+          chromedriver --url-base=/wd/hub &
+          sudo Xvfb -ac :99 -screen 0 1280x1024x24 > /dev/null 2>&1 &
       - name: Set up Firefox
         uses: browser-actions/setup-firefox@v1
-      # Start the X11 virtual framebuffer; turns off headless mode
-      # - name: Start XVFB
-      #   run: sudo Xvfb -ac :99 -screen 0 1280x1024x24 > /dev/null 2>&1 &
       # no-TLS tests
       - name: Spin up Docker pod (no TLS)
         run: |

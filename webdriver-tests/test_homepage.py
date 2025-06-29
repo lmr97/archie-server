@@ -9,7 +9,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as ec
 
 
-drivers = []#[wd.Chrome()]
+drivers = [wd.Chrome()]
 
 match platform.system():
     case "Windows":
