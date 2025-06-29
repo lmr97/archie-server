@@ -2,14 +2,16 @@ import os
 import platform
 import numpy as np
 from selenium import webdriver as wd
-from selenium.webdriver import ActionChains
+from selenium.webdriver import ActionChains, Options
 from selenium.webdriver.remote.webelement import WebElement
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as ec
 
-
-drivers = [wd.Chrome()]
+driver_opts = Options()
+driver_opts.headless = True
+driver_opts.add_argument("--headless")
+drivers = [wd.Chrome(options=driver_opts)]
 
 match platform.system():
     case "Windows":
@@ -17,7 +19,7 @@ match platform.system():
     case "Darwin":          # MacOS
         drivers.append(wd.Safari())
     case _:
-        drivers.append(wd.Firefox())
+        drivers.append(wd.Firefox(options=driver_opts))
 
 
 root_url = os.getenv("DOCKER_SERVER_URL")   # has no trailing slash
