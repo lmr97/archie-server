@@ -1,5 +1,4 @@
 import os
-import subprocess
 import platform
 import numpy as np
 from selenium import webdriver as wd
@@ -10,31 +9,15 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as ec
 
 
-drivers = [wd.Firefox()]   # the default, becasue I like Linux
+drivers = None
 
 match platform.system():
     case "Windows":
-        drivers[0] = wd.Edge()
+        drivers = [wd.Edge()]
     case "Darwin":          # MacOS
-        drivers[0] = wd.Safari()
+        drivers = [wd.Safari()]
     case _:
-        # see if Chrome is already there
-        try:
-            drivers.append(wd.Chrome())
-        except Exception:
-
-            # Otherwise, install Chrome on Linux to test there as well
-            print("Downloading Chrome installer...")
-            subprocess.run(
-                ["wget", "https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb"]
-            )
-            print("Done.")
-
-            print("Installing Chrome...")
-            subprocess.run(["sudo", "dpkg", "-i" "google-chrome-stable_current_amd64.deb"])
-            print("Done.")
-
-            drivers.append(wd.Chrome())
+        drivers = [wd.Firefox(), wd.Chrome()]
 
 
 root_url = os.getenv("DOCKER_SERVER_URL")   # has no trailing slash
