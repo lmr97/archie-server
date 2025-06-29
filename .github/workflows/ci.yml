@@ -137,7 +137,7 @@ jobs:
           deno --allow-env --allow-net --allow-read test-helpers/mini-lb-server.mock.ts &
           npx vitest --run --coverage
   
-  whole_project_integration:
+  whole_project_integration_tests:
 
     # strategy:
     #   fail-fast: true
@@ -152,12 +152,21 @@ jobs:
         shell: bash
     env:
       DOCKER_SERVER_URL: "http://127.0.0.1:4949"  # start with HTTP, switch out later
+      PK_FILE: "./certs/server.key"    # will be installed during runtime
+      CRT_FILE: "./certs/server.pem"
+      CLIENT_PK_FILE: "./certs/client.pem"
 
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: '3.13' 
+      - name: Generate certificates
+        run: |
+          pip install trustme
+          mkdir certs
+          cd certs
+          python -m trustme
       # no TLS tests
       - name: Spin up Docker pod (no TLS)
         run: |
@@ -172,12 +181,6 @@ jobs:
         run: |
           pip install -r requirements.txt
           pytest --verbose
-      # trustme already installed from requirements
-      - name: Generate certificates
-        run: |
-          mkdir certs
-          cd certs
-          python -m trustme
       - name: Spin up Docker pod (with TLS)
         run: |
           docker compose down
