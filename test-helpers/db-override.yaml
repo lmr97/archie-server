@@ -1,0 +1,35 @@
+#This file replaces the 
+name: archie
+services:
+  db:
+    image: mysql:9.2
+    restart: always
+    container_name: "archie-db"
+    ports:
+      - "3306:3306"
+    volumes:
+      - type: bind
+        source: ./db-init-demo/
+        # all scripts in this directory will be run
+        target: /docker-entrypoint-initdb.d
+      # this is where dumps will be saved to
+      - type: bind
+        source: ./db-dumps/
+        target: /db-dumps
+      - type: bind
+        source: ./backup_on_exit.sh
+        target: /backup_on_exit.sh
+    entrypoint: ["bash", "backup_on_exit.sh"]
+    command: "mysqld"
+    healthcheck:
+      # slight breach of exec form with the options, but `mysqladmin` does not work otherwise
+      test: [ "CMD", "mysqladmin", "ping", "--protocol=tcp", "--user=server1", "--password=${MYSQL_PASSWORD?}" ]
+      interval: 5s
+      retries: 6
+      start_period: 30s
+    environment:
+        MYSQL_ONETIME_PASSWORD: false
+        MYSQL_ALLOW_EMPTY_PASSWORD: false
+        MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?}
+        MYSQL_USER: server1
+        MYSQL_PASSWORD: ${MYSQL_PASSWORD:?}

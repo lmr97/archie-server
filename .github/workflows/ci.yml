@@ -41,7 +41,7 @@ jobs:
       run: |
         cd ..
         docker compose --file compose-demo.yaml \
-        --file test-helpers/db-testing-override.yaml \
+        --file test-helpers/db-override.yaml \
         up --detach db
     - uses: actions/setup-python@v5
       with:
@@ -136,3 +136,40 @@ jobs:
         run: |
           deno --allow-env --allow-net --allow-read test-helpers/mini-lb-server.mock.ts &
           npx vitest --run --coverage
+  
+  # whole_project_integration:
+
+  #   runs-on: ubuntu-latest
+  #   needs: [web_server_tests, letterboxd_app_tests, frontend_tests]
+  #   defaults:
+  #     run:
+  #       shell: bash
+  #   env:
+  #     DOCKER_SERVER_URL: "http://127.0.0.1:4949"  # start with HTTP, switch out later
+
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - uses: actions/setup-python@v5
+  #       with:
+  #         python-version: '3.13' 
+  #     - name: Generate certificates and log files
+  #       run: |
+  #         pip install -U trustme
+  #         mkdir certs
+  #         cd certs
+  #         python -m trustme
+  #         touch archie-server.log
+  #     # no TLS tests
+  #     - name: Spin up Docker pod (no TLS)
+  #       run: docker compose \
+  #         --file compose.yaml \
+  #         --file test-helpers/tls-override.yaml \
+  #         --file test-helpers/db-override.yaml \
+  #         up --detach
+  #     - name: Run integrations tests (no TLS)
+  #       working-directory: ./webdriver-tests
+  #       run: |
+  #         pip install -r requirements.txt
+  #         pytest --verbose
+  #     # - name: Stress testing (no TLS)
+  #     #   run: echo "working on these..."
