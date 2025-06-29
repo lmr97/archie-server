@@ -9,15 +9,15 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as ec
 
 
-drivers = None
+drivers = [wd.Chrome()]
 
 match platform.system():
     case "Windows":
-        drivers = [wd.Edge()]
+        drivers.append(wd.Edge())
     case "Darwin":          # MacOS
-        drivers = [wd.Safari()]
+        drivers.append(wd.Safari())
     case _:
-        drivers = [wd.Firefox(), wd.Chrome()]
+        drivers.append(wd.Firefox())
 
 
 root_url = os.getenv("DOCKER_SERVER_URL")   # has no trailing slash
