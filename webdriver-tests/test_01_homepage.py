@@ -8,12 +8,14 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as ec
 
+# test Chrome on all OS's...
 chrome_opts = wd.ChromeOptions()
 chrome_opts.headless = True
 chrome_opts.add_argument("--headless")
 chrome_opts.binary_location = "/usr/bin/google-chrome"
-drivers = []#[wd.Chrome(options=chrome_opts)]
+drivers = [wd.Chrome(options=chrome_opts)]
 
+# ...and a more native browser.
 match platform.system():
     
     case "Windows":
@@ -47,7 +49,8 @@ def test_hit_count():
 
         hit_count = drv.find_element(By.ID, "hit-count")
 
-        # started with 6 in the DB, then at least one browser navigated to the page during init
+        # started with 6 hits in the DB, and both browsers navigated 
+        # to the page during init
         assert "8" in hit_count.text, f"failed for {drv.name}"
 
 
@@ -82,7 +85,8 @@ def test_react_logo():
             .find_element(By.CSS_SELECTOR, "p.react-msg") \
             .is_displayed(), \
             f"failed for {drv.name}"
-    
+
+
 def test_teardown():
     for drv in drivers:
         drv.quit()

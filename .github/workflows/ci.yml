@@ -146,7 +146,13 @@ jobs:
   
     runs-on: ubuntu-latest #${{ matrix.os }}
     #needs: [web_server_tests, letterboxd_app_tests, frontend_tests]
-    
+    # services:
+    #   selenium-chrome:
+    #     image: selenium/standalone-chrome
+    #     options: --shm-size=2gb
+    #   selenium-firefox:
+    #     image: selenium/standalone-firefox
+    #     options: --shm-size=2gb
     defaults:
       run:
         shell: bash
@@ -168,12 +174,22 @@ jobs:
           mkdir certs
           cd certs
           python -m trustme
-      - uses: nanasess/setup-chromedriver@v2
+      # - name: Set up Chrome
+      #   uses: nanasess/setup-chromedriver@v2
+      # - name: Set up Chrome
+      #   run: |
+      #     sudo Xvfb -ac :99 -screen 0 1280x1024x24 > /dev/null 2>&1 &
       - name: Set up Chrome
-        run: |
-          sudo Xvfb -ac :99 -screen 0 1280x1024x24 > /dev/null 2>&1 &
+        uses: browser-actions/setup-chrome@v1
+        with:
+          install-dependencies: true
+          install-chromedriver: true
       - name: Set up Firefox
         uses: browser-actions/setup-firefox@v1
+        with:
+          install-dependencies: true
+          install-chromedriver: true
+      
       # no-TLS tests
       - name: Spin up Docker pod (no TLS)
         run: |
