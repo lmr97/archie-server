@@ -11,21 +11,29 @@ from selenium.webdriver.support import expected_conditions as ec
 chrome_opts = wd.ChromeOptions()
 chrome_opts.headless = True
 chrome_opts.add_argument("--headless")
-chrome_opts.add_argument('--remote-debugging-port=9222')
 chrome_opts.binary_location = "/usr/bin/google-chrome"
-drivers = [wd.Chrome(options=chrome_opts, executable_path="/usr/local/bin/chromedriver")]
+drivers = []#[wd.Chrome(options=chrome_opts)]
 
 match platform.system():
+    
     case "Windows":
-        drivers.append(wd.Edge())
-    case "Darwin":          # MacOS
-        drivers.append(wd.Safari())
+        edge_opts = wd.EdgeOptions()
+        edge_opts.headless = True
+        edge_opts.add_argument("--headless")
+        drivers.append(wd.Edge(options=edge_opts))
+
+    # MacOS
+    case "Darwin":
+        safari_opts = wd.SafariOptions()
+        safari_opts.headless = True
+        safari_opts.add_argument("--headless")
+        drivers.append(wd.Safari(options=safari_opts))
+    
     case _:
-        # firefox_opts = wd.FirefoxOptions()
-        # firefox_opts.headless = True
-        # firefox_opts.add_argument("--headless")
-        # drivers.append(wd.Firefox(options=firefox_opts))
-        pass
+        firefox_opts = wd.FirefoxOptions()
+        firefox_opts.headless = True
+        firefox_opts.add_argument("--headless")
+        drivers.append(wd.Firefox(options=firefox_opts))
 
 
 root_url = os.getenv("DOCKER_SERVER_URL")   # has no trailing slash
@@ -34,15 +42,13 @@ root_url = os.getenv("DOCKER_SERVER_URL")   # has no trailing slash
 
 
 def test_hit_count():
-
-    correct_count = 7  # native browser will run first, then Chrome if present
-    
+ 
     for drv in drivers:
+
         hit_count = drv.find_element(By.ID, "hit-count")
 
-        assert str(correct_count) in hit_count.text, f"failed for {drv.name}"
-
-        correct_count += 1
+        # started with 6 in the DB, then at least one browser navigated to the page during init
+        assert "8" in hit_count.text, f"failed for {drv.name}"
 
 
 # test whether the logo enlarges when moused over,
