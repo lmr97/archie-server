@@ -1,0 +1,34 @@
+name: "selenium-grid"
+services: 
+  chrome:
+    image: selenium/standalone-chrome:latest
+    ports:
+      - 4444:4444
+      - 7900:7900
+    shm_size: "2g"
+    networks:
+      - svr-net
+  firefox:
+    image: selenium/standalone-firefox:latest
+    ports:
+      - 4445:4444
+      - 7901:7900
+    shm_size: "2g"
+    networks:
+      - svr-net
+  edge:
+    image: selenium/standalone-edge:latest
+    ports:
+      - 4446:4444
+      - 7902:7900
+    shm_size: "2g"
+    networks:
+      - svr-net
+
+# use the Archie network, not a distinct default
+networks: 
+  svr-net:
+    name: archie_default
+    external: true
+        
+      

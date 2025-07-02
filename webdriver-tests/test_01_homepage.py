@@ -1,5 +1,5 @@
 import os
-import platform
+import time
 import numpy as np
 from selenium import webdriver as wd
 from selenium.webdriver import ActionChains
@@ -8,50 +8,40 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as ec
 
+selenium_grid_server = "http://127.0.0.1:4444"
+
 # test Chrome on all OS's...
-chrome_opts = wd.ChromeOptions()
-chrome_opts.headless = True
-chrome_opts.add_argument("--headless")
-chrome_opts.binary_location = "/usr/bin/google-chrome"
-drivers = [wd.Chrome(options=chrome_opts)]
+chrome_opts  = wd.ChromeOptions()
+firefox_opts = wd.FirefoxOptions()
+edge_opts    = wd.EdgeOptions()
 
-# ...and a more native browser.
-match platform.system():
-    
-    case "Windows":
-        edge_opts = wd.EdgeOptions()
-        edge_opts.headless = True
-        edge_opts.add_argument("--headless")
-        drivers.append(wd.Edge(options=edge_opts))
-
-    # MacOS
-    case "Darwin":
-        safari_opts = wd.SafariOptions()
-        safari_opts.headless = True
-        safari_opts.add_argument("--headless")
-        drivers.append(wd.Safari(options=safari_opts))
-    
-    case _:
-        firefox_opts = wd.FirefoxOptions()
-        firefox_opts.headless = True
-        firefox_opts.add_argument("--headless")
-        drivers.append(wd.Firefox(options=firefox_opts))
+drivers = [
+    wd.Remote(command_executor="http://127.0.0.1:4444", options=chrome_opts),
+    wd.Remote(command_executor="http://127.0.0.1:4445", options=firefox_opts),
+    wd.Remote(command_executor="http://127.0.0.1:4446", options=edge_opts)
+    ]
 
 
 root_url = os.getenv("DOCKER_SERVER_URL")   # has no trailing slash
+print(root_url)
 
-[d.get(root_url) for d in drivers]
+for d in drivers:
+    d.get(root_url)
+    time.sleep(1)    # make sure the hit can be posted to the DB after each visit
 
 
 def test_hit_count():
- 
+
+    correct_hits = 7
     for drv in drivers:
 
         hit_count = drv.find_element(By.ID, "hit-count")
 
         # started with 6 hits in the DB, and both browsers navigated 
         # to the page during init
-        assert "8" in hit_count.text, f"failed for {drv.name}"
+        assert str(correct_hits) in hit_count.text, f"failed for {drv.name}"
+        
+        correct_hits += 1 # increment, since each browser saw different count
 
 
 # test whether the logo enlarges when moused over,

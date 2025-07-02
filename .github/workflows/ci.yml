@@ -41,8 +41,8 @@ jobs:
       run: |
         cd ..
         docker compose --file compose.yaml \
-        --file test-helpers/db-override.yaml \
-        up --detach db
+        --file test-helpers/db-override.yaml up \
+        --detach db
     - uses: actions/setup-python@v5
       with:
         python-version: '3.13' 
@@ -146,19 +146,14 @@ jobs:
   
     runs-on: ubuntu-latest #${{ matrix.os }}
     #needs: [web_server_tests, letterboxd_app_tests, frontend_tests]
-    # services:
-    #   selenium-chrome:
-    #     image: selenium/standalone-chrome
-    #     options: --shm-size=2gb
-    #   selenium-firefox:
-    #     image: selenium/standalone-firefox
-    #     options: --shm-size=2gb
+
     defaults:
       run:
         shell: bash
+        working-directory: ./webdriver-tests
     env:
-      DOCKER_SERVER_URL: "http://127.0.0.1:4949"  # start with HTTP, switch out later
-      PK_FILE: "./certs/server.key"               # will be installed during runtime
+      DOCKER_SERVER_URL: "http://archie-svr-1:4949"  # start with HTTP, switch out later
+      PK_FILE: "./certs/server.key"                  # will be installed during runtime
       CRT_FILE: "./certs/server.pem"
       CLIENT_PK_FILE: "./certs/client.pem"
       DISPLAY: ":99"
@@ -168,49 +163,43 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.13' 
+      # put in repo root because that's where the server's
+      # Docker Compose command is run from
       - name: Generate certificates
         run: |
+          cd ..
           pip install trustme
           mkdir certs
           cd certs
           python -m trustme
-      # - name: Set up Chrome
-      #   uses: nanasess/setup-chromedriver@v2
-      # - name: Set up Chrome
-      #   run: |
-      #     sudo Xvfb -ac :99 -screen 0 1280x1024x24 > /dev/null 2>&1 &
-      - name: Set up Chrome
-        uses: browser-actions/setup-chrome@v1
-        with:
-          install-dependencies: true
-          install-chromedriver: true
-      - name: Set up Firefox
-        uses: browser-actions/setup-firefox@v1
-        with:
-          install-dependencies: true
-          install-chromedriver: true
+          cd -
+      - name: Launch browser containers
+        run: docker compose --file selnium-grid.yaml up --detach
       
       # no-TLS tests
       - name: Spin up Docker pod (no TLS)
         run: |
+          cd ..
           touch archie-server.log
           docker compose \
             --file compose.yaml \
             --file test-helpers/tls-override.yaml \
             --file test-helpers/db-override.yaml \
             up --detach
+          cd -
       - name: Run integrations tests (no TLS)
-        working-directory: ./webdriver-tests
         run: |
           pip install -r requirements.txt
           pytest --verbose
       - name: Spin up Docker pod (with TLS)
         run: |
+          cd ..
           docker compose down \
-          export DOCKER_SERVER_URL="https://127.0.0.1:4949" \
+          export DOCKER_SERVER_URL="https://archie-svr-1:4949" \
           docker compose \
             --file compose.yaml \
-            --file test-helpers/db-override.yaml \
-            up --detach
+            --file test-helpers/db-override.yaml up 
+            --detach
+          cd -
       - name: Run integrations tests (with TLS)
         run: pytest --verbose
