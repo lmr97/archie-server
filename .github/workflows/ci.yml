@@ -173,8 +173,6 @@ jobs:
           cd certs
           python -m trustme
           cd -
-      - name: Launch browser containers
-        run: docker compose --file selenium-grid.yaml up --detach
       
       # no-TLS tests
       - name: Spin up Docker pod (no TLS)
@@ -187,6 +185,8 @@ jobs:
             --file test-helpers/db-override.yaml \
             up --detach
           cd -
+      - name: Launch browser containers
+        run: docker compose --file selenium-grid.yaml up --detach
       - name: Run integrations tests (no TLS)
         run: |
           pip install -r requirements.txt
