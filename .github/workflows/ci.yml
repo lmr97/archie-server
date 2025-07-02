@@ -187,6 +187,8 @@ jobs:
           cd -
       - name: Launch browser containers
         run: docker compose --file selenium-grid.yaml up --detach
+      - name: View network
+        run: docker network inspect archie_default
       - name: Run integrations tests (no TLS)
         run: |
           pip install -r requirements.txt
