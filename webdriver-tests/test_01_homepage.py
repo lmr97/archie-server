@@ -8,9 +8,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as ec
 
-selenium_grid_server = "http://127.0.0.1:4444"
 
-# test Chrome on all OS's...
 chrome_opts  = wd.ChromeOptions()
 firefox_opts = wd.FirefoxOptions()
 edge_opts    = wd.EdgeOptions()

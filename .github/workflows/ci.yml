@@ -174,7 +174,7 @@ jobs:
           python -m trustme
           cd -
       - name: Launch browser containers
-        run: docker compose --file selnium-grid.yaml up --detach
+        run: docker compose --file selenium-grid.yaml up --detach
       
       # no-TLS tests
       - name: Spin up Docker pod (no TLS)
