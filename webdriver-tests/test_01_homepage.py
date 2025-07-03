@@ -12,6 +12,9 @@ from selenium.webdriver.support import expected_conditions as ec
 chrome_opts  = wd.ChromeOptions()
 firefox_opts = wd.FirefoxOptions()
 edge_opts    = wd.EdgeOptions()
+chrome_opts.add_argument("--no-sandbox")
+firefox_opts.add_argument("--no-sandbox")
+edge_opts.add_argument("--no-sandbox")
 
 drivers = [
     wd.Remote(command_executor="http://127.0.0.1:4444", options=chrome_opts),
@@ -30,7 +33,7 @@ for d in drivers:
 
 def test_hit_count():
 
-    correct_hits = 6
+    correct_hits = 7
     for drv in drivers:
 
         hit_count = drv.find_element(By.ID, "hit-count")
@@ -39,7 +42,7 @@ def test_hit_count():
         # to the page during init
         assert str(correct_hits) in hit_count.text, f"failed for {drv.name}"
         
-        # correct_hits += 1 # increment, since each browser saw different count
+        correct_hits += 1 # increment, since each browser saw different count
 
 
 # test whether the logo enlarges when moused over,

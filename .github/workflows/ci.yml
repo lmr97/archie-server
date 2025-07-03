@@ -197,8 +197,8 @@ jobs:
       - name: Spin up Docker pod (with TLS)
         run: |
           cd ..
-          docker compose down \
-          export DOCKER_SERVER_URL="https://archie-svr-1:4949" \
+          docker compose down
+          export DOCKER_SERVER_URL="https://archie-svr-1:4949"
           docker compose \
             --file compose.yaml \
             --file test-helpers/db-override.yaml up 
