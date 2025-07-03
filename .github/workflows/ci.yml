@@ -196,7 +196,7 @@ jobs:
       - name: Spin up Docker pod (with TLS)
         run: |
           cd ..
-          docker compose --file selenium-grid.yaml down
+          docker compose --file webdriver-tests/selenium-grid.yaml down
           docker compose down
           export DOCKER_SERVER_URL="https://archie-svr-1:4949"
           docker compose \
