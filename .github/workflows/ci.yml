@@ -182,11 +182,12 @@ jobs:
           docker compose \
             --file compose.yaml \
             --file test-helpers/tls-override.yaml \
-            --file test-helpers/db-override.yaml \
-            up --detach
+            --file test-helpers/db-override.yaml up \
+            --detach \
+            --force-recreate
           cd -
       - name: Launch browser containers
-        run: docker compose --file selenium-grid.yaml up --detach chrome
+        run: docker compose --file selenium-grid.yaml up --detach
       - name: View network (svr-net)
         run: |
           docker network inspect svr-net | jq '.[0].Containers[] | {name: .Name, ip: .IPv4Address}'

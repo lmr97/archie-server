@@ -15,8 +15,8 @@ edge_opts    = wd.EdgeOptions()
 
 drivers = [
     wd.Remote(command_executor="http://127.0.0.1:4444", options=chrome_opts),
-    #wd.Remote(command_executor="http://127.0.0.1:4445", options=firefox_opts),
-    #wd.Remote(command_executor="http://127.0.0.1:4446", options=edge_opts)
+    wd.Remote(command_executor="http://127.0.0.1:4445", options=firefox_opts),
+    wd.Remote(command_executor="http://127.0.0.1:4446", options=edge_opts)
     ]
 
 

@@ -33,8 +33,6 @@ services:
       - server-cert
       - server-priv-key
       - testing-client-key
-    networks:
-      - default
 
   db:
     image: mysql:9.2
@@ -66,15 +64,11 @@ services:
         MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?}
         MYSQL_USER: server1
         MYSQL_PASSWORD: ${MYSQL_PASSWORD:?}
-    networks:
-      - default
 
   lb-app:
     image: lmr97/lb-web-app:latest
     container_name: "lb-app"
     restart: always
-    networks:
-      - default
 
 secrets:
   server-cert:
@@ -83,8 +77,4 @@ secrets:
     file: ${PK_FILE:?}
   testing-client-key:
     file: ${CLIENT_PK_FILE:?}
-
-networks:
-  default:
-    name: svr-net
 
