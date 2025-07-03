@@ -180,6 +180,7 @@ jobs:
         run: |
           cd ..
           touch archie-server.log
+          sudo chmod 666 archie-server.log
           docker compose \
             --file compose.yaml \
             --file test-helpers/tls-override.yaml \
