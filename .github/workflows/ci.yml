@@ -184,6 +184,7 @@ jobs:
             --file test-helpers/tls-override.yaml \
             --file test-helpers/db-override.yaml up \
             --detach
+          docker container inspect archie-svr-1 | jq '.[0].State.Status'
           cd -
       - name: Launch browser containers
         run: docker compose --file selenium-grid.yaml up --detach
