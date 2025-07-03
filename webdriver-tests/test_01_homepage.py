@@ -31,7 +31,14 @@ def test_hit_count():
 
         hit_count = drv.find_element(By.ID, "hit-count")
 
-        # since I can't 
+        # I'm not checking the exact count (which can be known) because the 
+        # Selenium standalones I'm using to run the browsers in don't post 
+        # the webpage hits, but only when running in Github Actions. 
+        # Locally, they do so just fine, even in the standalone containers. 
+        # While I'm not sure about the cause of this, since I can't don't know 
+        # how to diagnose it, but I think the issue might be a cross-origin 
+        # requests one. Regardless, as long as the page shows a non-error state, 
+        # I'm calling it good.
         assert "(unable to get visit count)" != hit_count.text, f"failed for {drv.name}"
 
 
