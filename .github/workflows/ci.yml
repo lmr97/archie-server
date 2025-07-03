@@ -186,8 +186,6 @@ jobs:
             --file test-helpers/db-override.yaml up \
             --detach
           cd -
-      - name: Check on server
-        run: docker logs archie-svr-1
       - name: Launch browser containers
         run: docker compose --file selenium-grid.yaml up --detach
       # tests start here
@@ -195,17 +193,17 @@ jobs:
         run: |
           pip install -r requirements.txt
           pytest --verbose
-      - name: Check server logs
-        run: cat ../archie-server.log
       - name: Spin up Docker pod (with TLS)
         run: |
           cd ..
+          docker compose --file selenium-grid.yaml down
           docker compose down
           export DOCKER_SERVER_URL="https://archie-svr-1:4949"
           docker compose \
             --file compose.yaml \
             --file test-helpers/db-override.yaml up \
             --detach
+          docker compose --file selenium-grid.yaml up --detach
           cd -
       - name: Run integrations tests (with TLS)
         run: pytest --verbose
