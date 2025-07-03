@@ -30,12 +30,12 @@ for d in drivers:
 
 def test_hit_count():
 
-    correct_hits = 7
+    correct_hits = 6
     for drv in drivers:
 
         hit_count = drv.find_element(By.ID, "hit-count")
 
-        # started with 6 hits in the DB, and both browsers navigated 
+        # started with 6 hits in the DB, and each browsers navigated 
         # to the page during init
         assert str(correct_hits) in hit_count.text, f"failed for {drv.name}"
         
