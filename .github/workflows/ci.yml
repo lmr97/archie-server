@@ -204,6 +204,7 @@ jobs:
             --file test-helpers/db-override.yaml up \
             --detach
           docker compose --file webdriver-tests/selenium-grid.yaml up --detach
+          sleep 5
           cd -
       - name: Run integrations tests (with TLS)
         run: pytest --verbose
