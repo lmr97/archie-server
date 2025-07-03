@@ -188,7 +188,11 @@ jobs:
       - name: Launch browser containers
         run: docker compose --file selenium-grid.yaml up --detach chrome
       - name: View network
-        run: docker network inspect archie_default | jq '.[0].Containers[]'
+        run: |
+          echo -e "archie_default:\n"
+          docker network inspect archie_default | jq '.[0].Containers[] | {name: .Name, ip: .IPv4Address}'
+          echo -e "svr-net:\n"
+          docker network inspect svr-net | jq '.[0].Containers[] | {name: .Name, ip: .IPv4Address}'
       - name: Run integrations tests (no TLS)
         run: |
           pip install -r requirements.txt

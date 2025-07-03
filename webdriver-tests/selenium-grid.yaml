@@ -28,7 +28,7 @@ services:
 # use the Archie network, not a distinct default
 networks: 
   svr-net:
-    name: archie_default
+    name: svr-net
     external: true
         
       
