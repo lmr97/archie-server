@@ -174,8 +174,6 @@ jobs:
           cd certs
           python -m trustme
           cd -
-      
-      # no-TLS tests
       - name: Spin up Docker pod (no TLS)
         run: |
           cd ..
@@ -191,6 +189,7 @@ jobs:
         run: docker logs archie-svr-1
       - name: Launch browser containers
         run: docker compose --file selenium-grid.yaml up --detach
+
       - name: Run integrations tests (no TLS)
         run: |
           pip install -r requirements.txt

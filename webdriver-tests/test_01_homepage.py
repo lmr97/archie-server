@@ -25,12 +25,12 @@ print(root_url)
 
 for d in drivers:
     d.get(root_url)
-    time.sleep(2)    # make sure the hit can be posted to the DB after each visit
+    time.sleep(1)    # make sure the hit can be posted to the DB after each visit
 
 
 def test_hit_count():
 
-    correct_hits = 6
+    correct_hits = 7
     for drv in drivers:
 
         hit_count = drv.find_element(By.ID, "hit-count")
