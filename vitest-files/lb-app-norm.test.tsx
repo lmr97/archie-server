@@ -1,4 +1,5 @@
 /// <reference types="@vitest/browser/context" />
+import { readFileSync } from 'node:fs';
 import { describe, expect, vi, it } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
@@ -20,6 +21,25 @@ const alertSpy = vi.spyOn(global, 'alert')
         return alertText;
     }
 );
+
+
+describe('Ensuring all links are live', () => {
+
+    it('has only live links', async () => {
+        
+        // HTML without the React components (no links are in components)
+        const baseHTML  = readFileSync("./index.html", { encoding: "utf8" });
+        const docParser = new DOMParser();
+        const baseDoc   = docParser.parseFromString(baseHTML, "text/html"); 
+        const links: HTMLCollectionOf<HTMLAnchorElement> = baseDoc.getElementsByTagName("a");
+  
+        for (var link of links) {
+
+            var resp = await fetch(link.href);
+            expect(resp.ok);
+        }
+    })
+});
 
 describe("Testing URL query generation", () => {
 

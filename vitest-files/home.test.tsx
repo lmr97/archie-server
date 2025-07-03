@@ -1,5 +1,7 @@
+/// <reference types="@vitest/browser/context" />
+import { readFileSync } from 'node:fs';
 import { afterEach, describe, expect, vi, it } from 'vitest';
-import { render, screen, waitFor, cleanup } from '@testing-library/react';
+import { render, screen, cleanup } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import HitCounter from '../static/scripts/home/hit-counter';
 import ReactLogoMessage from '../static/scripts/home/react-logo-msg';
@@ -21,6 +23,24 @@ const fetchSpy = vi.spyOn(global, 'fetch')
 afterEach(() => cleanup());
 globalThis.serverFail = false;
 
+
+describe('Ensuring all links are live', () => {
+
+    it('has only live links', async () => {
+        
+        // HTML without the React components (no links are in components)
+        const baseHTML  = readFileSync("./index.html", { encoding: "utf8" });
+        const docParser = new DOMParser();
+        const baseDoc   = docParser.parseFromString(baseHTML, "text/html"); 
+        const links: HTMLCollectionOf<HTMLAnchorElement> = baseDoc.getElementsByTagName("a");
+  
+        for (var link of links) {
+
+            var resp = await fetch(link.href);
+            expect(resp.ok);
+        }
+    })
+})
 
 describe('Testing home loading hit count', () => {
 
