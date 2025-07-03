@@ -153,9 +153,10 @@ jobs:
         working-directory: ./webdriver-tests
     env:
       DOCKER_SERVER_URL: "http://archie-svr-1:4949"  # start with HTTP, switch out later
-      PK_FILE: "./certs/server.key"                  # will be installed during runtime
-      CRT_FILE: "./certs/server.pem"
-      CLIENT_PK_FILE: "./certs/client.pem"
+      # will be installed during runtime
+      PK_FILE: "/home/runner/work/archie-server/archie-server/server.key" 
+      CRT_FILE: "/home/runner/work/archie-server/archie-server/server.pem"
+      CLIENT_PK_FILE: "/home/runner/work/archie-server/archie-server/client.pem"
       DISPLAY: ":99"
 
     steps:
