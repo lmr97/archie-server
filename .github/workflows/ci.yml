@@ -185,8 +185,9 @@ jobs:
             --file test-helpers/tls-override.yaml \
             --file test-helpers/db-override.yaml up \
             --detach
-          docker logs archie-svr-1
           cd -
+      - name: Check on server
+        run: docker logs archie-svr-1
       - name: Launch browser containers
         run: docker compose --file selenium-grid.yaml up --detach
       - name: Run integrations tests (no TLS)
