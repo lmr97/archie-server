@@ -25,7 +25,7 @@ print(root_url)
 
 for d in drivers:
     d.get(root_url)
-    time.sleep(1)    # make sure the hit can be posted to the DB after each visit
+    time.sleep(2)    # make sure the hit can be posted to the DB after each visit
 
 
 def test_hit_count():
