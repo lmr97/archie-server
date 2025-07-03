@@ -6,8 +6,10 @@ services:
     image: lmr97/archie-svr:latest
     restart: always
     depends_on:
-      - db
-      - lb-app
+      db:
+        condition: service_healthy
+      lb-app:
+        condition: service_healthy
     ports:
       - "4949:4949"
     # if running with sudo, use the --preserve-env option
