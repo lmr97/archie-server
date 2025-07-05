@@ -182,7 +182,9 @@ jobs:
             --detach
           cd -
       - name: Launch browser containers
-        run: docker compose --file browsers.yaml up --detach
+        run: |
+          docker compose --file browsers.yaml up --detach
+          sleep 4
       # tests start here
       - name: Run integrations tests (no TLS)
         run: |
