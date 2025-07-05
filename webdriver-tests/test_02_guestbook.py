@@ -1,9 +1,6 @@
 import os
-import numpy as np
 from datetime import datetime, timezone
 from selenium import webdriver as wd
-from selenium.webdriver import ActionChains
-from selenium.webdriver.remote.webelement import WebElement
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as ec
