@@ -31,7 +31,7 @@ function logAlertErrorSending(errorMessage: string) {
         \nI'll look into this issue as soon as I can!");
 }
 
-function displayErrorMsg(newEntry: GuestbookEntry) {
+function entryIsTooLong(newEntry: GuestbookEntry): boolean {
     // measures byte-length of data, courtesy of this SO post:
     // https://stackoverflow.com/questions/5515869/string-length-in-bytes-in-javascript
     
@@ -43,7 +43,7 @@ function displayErrorMsg(newEntry: GuestbookEntry) {
             Note: The limit is 100 bytes, which can fit 100 non-accented Latin characters. \
             This limit will be reached sooner, however, with accented or non-Latin characters, \
             so you might get less than 100 characters in that case.".replaceAll("  ", ""));
-        return;
+        return true;
     }
     if (textEncoder.encode(newEntry.note).length > MAX_NOTE_LENGTH) {
         alert("The note you entered it too long! Is there a shorter note you can leave? \
@@ -51,8 +51,10 @@ function displayErrorMsg(newEntry: GuestbookEntry) {
             Note: The limit is 1000 bytes, which can fit 1000 non-accented Latin characters. \
             This limit will be reached sooner, however, with accented or non-Latin characters, \
             so you might get less than 1000 characters in that case.".replaceAll("  ", ""));
-        return;
+        return true;
     }
+
+    return false;
 }
 
 
@@ -165,37 +167,39 @@ export default function GuestbookApp() {
                 note: formData.get("note") as string,
             }
 
-            displayErrorMsg(newEntry);
+            const tooLong = entryIsTooLong(newEntry);
 
-            fetch("/guestbook/entries", 
-                {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(newEntry),
-                    credentials: "same-origin"          // for local testing
-                })
-                .then(resp => {
-                    if (!resp.ok) {
-                        throw new Error(
-                            `Error status: \
-                            ${resp.status} ${resp.statusText}`
-                        );
-                    } else {
-                        return resp.json()
-                    }
-                })
-                .then((newIdJson: EntryReceipt) => { latestEntryId.current = newIdJson.id; })
-                .catch(err => { logAlertErrorSending(`POST to server failed. ${err}`) });
-            
-            // THE BIG FIX: this Guestbook object needs to be set by passing 
-            // in a constant or a new object literal to setGuestbook(), 
-            // not a var. if it's not a const, then the rendering will be all
-            // messed up.
-            setGuestbook({
-                guestbook: guestbook.guestbook.splice(0,0,newEntry)
-            });
+            if (!tooLong) {
+                fetch("/guestbook/entries", 
+                    {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(newEntry),
+                        credentials: "same-origin"          // for local testing
+                    })
+                    .then(resp => {
+                        if (!resp.ok) {
+                            throw new Error(
+                                `Error status: \
+                                ${resp.status} ${resp.statusText}`
+                            );
+                        } else {
+                            return resp.json()
+                        }
+                    })
+                    .then((newIdJson: EntryReceipt) => { latestEntryId.current = newIdJson.id; })
+                    .catch(err => { logAlertErrorSending(`POST to server failed. ${err}`) });
+                
+                // THE BIG FIX: this Guestbook object needs to be set by passing 
+                // in a constant or a new object literal to setGuestbook(), 
+                // not a var. if it's not a const, then the rendering will be all
+                // messed up.
+                setGuestbook({
+                    guestbook: guestbook.guestbook.splice(0,0,newEntry)
+                });
+            }
         }
 
         function countChars(keyPressEvent: React.ChangeEvent<HTMLTextAreaElement>) {
