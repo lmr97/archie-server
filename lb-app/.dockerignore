@@ -1,6 +1,6 @@
 *.egg-info/
 .coverage
-.github/
+**/.github/
 build/
 tests/
 **/.pytest_cache/
