@@ -10,6 +10,15 @@ COPY --chown=converter:converter lb_app.py           ./
 COPY --chown=converter:converter healthcheck.py      ./
 
 RUN pip install ./letterboxd_list
-HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
-    CMD [ "python3", "healthcheck.py" ]
-CMD [ "python3", "lb_app.py" ]
+
+# -u option is for unbuffered output, so print statements will show up
+# in the the Docker container's logs
+HEALTHCHECK \
+    --interval=30s \
+    --timeout=5s \
+    --start-period=2s \
+    --retries=3 \
+    CMD [ "python3", "-u", "healthcheck.py" ]
+
+EXPOSE 3575
+CMD [ "python3", "-u", "lb_app.py" ]
