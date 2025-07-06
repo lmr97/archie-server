@@ -196,7 +196,7 @@ export const testHandle = {
     getListCalled: () => {return true},             // to watch when the form event handler is called
     gettingList:   (gettingList: boolean)      => {return gettingList},   // represents gettingList component state
     getGenURL:     (genURL: string)            => {return genURL}, 
-    getEvent:      (ev: MessageEvent<ListRow>) => {return ev},  // including the event for debugging
+    getEvent:      (ev: MessageEvent<string>) => {return ev},  // including the event for debugging
     isComplete:    () => {return true},
     dlListCalled:  () => {return true}
 };
@@ -218,14 +218,17 @@ export function LetterboxdApp() {
         const evtSource  = new EventSource(queryURL, {withCredentials: true});
         var userList     = new Array<string>();
 
-        evtSource.onmessage = (event: MessageEvent<ListRow>) => {
+        evtSource.onmessage = (event: MessageEvent<string>) => {
 
             // errors from the server are also delivered as MessageEvents,
             // so ignore those
             if (event.type == "error") return;
 
             testHandle.getEvent(event);   // for testing purposes
-            const msgData: ListRow = event.data;  
+
+            // double parse because of escaped double quotes
+            const msgData: ListRow = JSON.parse(JSON.parse(event.data));  
+            console.debug(`rowData: ${msgData.rowData}`)
             userList.push(msgData.rowData);
 
             // using function form so that new value is fresh, and not
