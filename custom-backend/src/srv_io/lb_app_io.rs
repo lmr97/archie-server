@@ -15,25 +15,12 @@ use std::net::TcpStream;
 use futures_util::{StreamExt, stream::{self, Stream}};
 use axum::response::{IntoResponse, Sse, sse::Event, Response};
 use axum_extra::extract::Query;
-use mysql_common::{serde, serde_json};
+use mysql_common::serde_json;
 use tracing::{debug, error};
 
 use crate::utils::err_handling::make_500_resp;
 use crate::utils::init_utils::get_env_var;
-
-#[derive(Debug, serde::Serialize, serde::Deserialize)] 
-pub struct ListInfo {
-    list_name: String,
-    author_user: String,
-    attrs: Vec<String>,
-}
-
-#[derive(Debug, serde::Serialize, serde::Deserialize, PartialEq)]
-pub struct ListRow {
-    pub total_rows: usize,
-    pub row_data: String,
-}
-
+use crate::types::lb_app_types::{ListInfo, ListRow};
 
 // Error type for all pre-stream errors in this file,
 // i.e., the ones that occur during the *start* of the 
@@ -208,6 +195,7 @@ fn receive_list_row(conn: &mut TcpStream, total_rows: usize) -> Event {
     } 
     else {
         row_json.row_data = row_data;
+        
         match Event::default().json_data(&row_json) {
         
             Ok(event) => {debug!("Event built successfully."); event},

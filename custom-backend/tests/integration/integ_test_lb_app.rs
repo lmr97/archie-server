@@ -9,7 +9,7 @@ use tokio;
 use futures::StreamExt;
 use mysql_common::serde_json;
 use eventsource_stream::Eventsource;
-use custom_backend::srv_io::lb_app_io::ListRow;
+use custom_backend::types::lb_app_types::ListRow;
 mod client_config;
 
 #[tokio::main]
