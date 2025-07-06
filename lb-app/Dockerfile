@@ -20,5 +20,4 @@ HEALTHCHECK \
     --retries=3 \
     CMD [ "python3", "-u", "healthcheck.py" ]
 
-EXPOSE 3575
 CMD [ "python3", "-u", "lb_app.py" ]
