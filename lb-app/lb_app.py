@@ -31,8 +31,9 @@ from letterboxd_list import VALID_ATTRS
 import letterboxd_list.containers as lbl
 
 # parameters for streaming data to server
-ENDIANNESS = 'big'
-SIZE_BYTES = 2
+ENDIANNESS  = 'big'
+SIZE_BYTES  = 2
+DEBUG_PRINT = False
 
 
 class InterruptHandler:
@@ -60,6 +61,10 @@ class InterruptHandler:
         self._main_listener.close()
 
 
+
+def debug_print(msg: str):
+    if DEBUG_PRINT:
+        print(msg)
 
 
 # get number of films
@@ -94,15 +99,15 @@ def send_line(conn: socket.socket, line: str):
 
     This function is also used to send error messages, using the same protocol.
     """
-    print(" -- Sending line --")
+    debug_print(" -- Sending line --")
     byte_row = bytes(line, 'utf-8')
 
     # send row length
     # needs to be byte length of row, to account for multi-byte characters
     row_len  = len(byte_row)
     byte_len = row_len.to_bytes(SIZE_BYTES, ENDIANNESS)
-    print(row_len)
-    print(byte_len)
+    debug_print(row_len)
+    debug_print(byte_len)
 
     try:
         conn.sendall(byte_len)
@@ -112,7 +117,7 @@ def send_line(conn: socket.socket, line: str):
         return
 
     # send row itself
-    print(byte_row)
+    debug_print(byte_row)
     try:
         conn.sendall(byte_row)
     except OSError as ose:
@@ -187,7 +192,13 @@ def get_list_with_attrs(query: dict, conn: socket.socket) -> None:
 def main():
     """See notes at top of file."""
 
-    py_cont_sock = os.getenv("PY_CONT_SOCK", "127.0.0.1:3575")
+    print("\n\033[0;32m--- Letterboxd app is starting up! ---\033[0m\n")
+    
+    # it is vital that the IP address be 0.0.0.0, not 127.0.0.1, 
+    # so when the app is running in a container, it is bound to a
+    # port that is listening to incoming data from outside the 
+    # container
+    py_cont_sock = os.getenv("PY_CONT_SOCK", "0.0.0.0:3575")
     (ip, port)   = py_cont_sock.split(":")
     port         = int(port)        # listener.bind() needs tuple of str and int
 
@@ -197,7 +208,14 @@ def main():
 
     shutdown_handler = InterruptHandler(listener)
 
-    print(f"Listening on {py_cont_sock}...")
+    print(f"\033[0;32mListening on {py_cont_sock}...\033[0m\n")
+
+    # using a global here so the app doesn't have to do I/O from the OS
+    # every debug print statement. It is not updated anywhere else.
+    global DEBUG_PRINT 
+    dbg_env_var = os.getenv("PY_DEBUG")
+    if dbg_env_var == "1": 
+        DEBUG_PRINT = True
 
     while not shutdown_handler.kill_now:
         try:
