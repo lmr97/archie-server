@@ -226,8 +226,8 @@ export function LetterboxdApp() {
 
             testHandle.getEvent(event);   // for testing purposes
 
-            // double parse because of escaped double quotes
-            const msgData: ListRow = JSON.parse(JSON.parse(event.data));  
+            console.debug(`raw data received: ${event.data}`);
+            const msgData: ListRow = JSON.parse(event.data);  
             console.debug(`rowData: ${msgData.rowData}`)
             userList.push(msgData.rowData);
 
