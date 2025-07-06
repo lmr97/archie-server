@@ -189,7 +189,8 @@ jobs:
       - name: Run integrations tests (no TLS)
         run: |
           pip install -r requirements.txt
-          pytest --verbose
+          pytest --verbose test_01_homepage.py
+          pytest --verbose test_02_guestbook.py
       - name: Spin up Docker pod (with TLS)
         run: |
           cd ..
