@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.9.5 - 2025-07-05
+
+### Fixed
+
+- **Letterboxd List App (backend)**: Fix snake-case-to-camel-case conversion on serialization for `ListInfo` type
+
+
 ## 0.9.4 - 2025-07-05
 
 ### Fixed
