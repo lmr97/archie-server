@@ -39,7 +39,7 @@ services:
   db:
     image: mysql:9.2
     restart: always
-    container_name: "archie-db"
+    container_name: archie-db
     volumes:
       - type: bind
         source: ./db-init/
@@ -69,8 +69,10 @@ services:
 
   lb-app:
     image: lmr97/lb-web-app:latest
-    container_name: "lb-app"
+    container_name: lb-app
     restart: always
+    environment:
+      PY_DEBUG: 0
 
 secrets:
   server-cert:
