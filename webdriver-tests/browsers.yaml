@@ -6,6 +6,8 @@ services:
       - 4444:4444
       - 7900:7900
     shm_size: "2g"
+    environment:
+      SE_OPTS: "--enable-managed-downloads true"
     networks:
       - svr-net
   firefox:
@@ -14,6 +16,8 @@ services:
       - 4445:4444
       - 7901:7900
     shm_size: "2g"
+    environment:
+      SE_OPTS: "--enable-managed-downloads true"
     networks:
       - svr-net
   edge:
@@ -22,6 +26,8 @@ services:
       - 4446:4444
       - 7902:7900
     shm_size: "2g"
+    environment:
+      SE_OPTS: "--enable-managed-downloads true"
     networks:
       - svr-net
 
