@@ -20,13 +20,13 @@ async fn main() {
     let hit_count    = test_posting_hit(req_client, url, hit_camel_case).await;
 
     // demo data starts with 6 hits, the unit tests add 1 more,
-    // and the above code adds one more: 6+1 == 7
+    // and the above code adds one more: 6+1+1 == 8
     // 
     // A previous run without TLS, along with the other JS hit,
     // will each add 1 more, so at that point it will be 10.
     // Same goes for the second assert, except it's one more ahead.
 
-    assert!(hit_count == "7" || hit_count == "8");
+    assert!(hit_count == "8" || hit_count == "9");
 }
 
 async fn test_posting_hit(req_client: Client, url: String, hit_ser: String) -> String {
