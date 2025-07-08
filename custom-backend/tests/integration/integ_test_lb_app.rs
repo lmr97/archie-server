@@ -40,8 +40,8 @@ async fn extract_events(client: &reqwest::Client, url: String) -> Vec<eventsourc
         .eventsource();
 
     let mut event_data: Vec<eventsource_stream::Event> = vec![];
-    while let Some(event) = event_stream.next().await {
-        match event {
+    while let Some(event_res) = event_stream.next().await {
+        match event_res {
             Ok(event) => {
                 // break the loop at the end of SSE stream
                 if event.data == "done!" {
@@ -199,6 +199,9 @@ async fn no_attr_req(client: &reqwest::Client, mut url: String) {
     let received_rows: Vec<ListRow> = event_data
         .iter()
         .map(| ev | { 
+            // this makes sure that the ListRow serialization is camelCase
+            assert!(ev.data.contains("totalRows"));
+            assert!(ev.data.contains("rowData"));
             serde_json::from_str::<ListRow>(&ev.data)
                 .unwrap() 
         })
@@ -238,6 +241,9 @@ async fn big_list_req(client: &reqwest::Client, mut url: String){
     let received_list  = event_data
         .iter()
         .map(| ev | { 
+            // this makes sure that the ListRow serialization is camelCase
+            assert!(ev.data.contains("totalRows"));
+            assert!(ev.data.contains("rowData"));
             let li = serde_json::from_str::<ListRow>(&ev.data)
                 .unwrap();
             li.row_data

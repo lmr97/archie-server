@@ -21,22 +21,18 @@ async fn main() {
     post_overlong_entry_name(&client, &url).await;
 }
 
+
+// This checks whether the entry can be deserialized from camelCase,
+// and that an EntryReceipt is sent
 async fn post_valid_entry(client: &reqwest::Client, url: &String) {
     
-    let valid_entry = GuestbookEntry {
-        id: None,
-		time_stamp: None,
-        name: String::from("a normal name"),
-        note: String::from(
-            "A moderately sized note. Not much special going on here, \
-            aside from some non-ASCII Unicode (UTF-8): ગુજરાતી લિપિ \
-            (this is Gujarati!)."
-        )
-    };
+    let valid_entry = String::from(
+        "{\"id\":null,\"timeStamp\":null,\"name\": \"a normal name\",\"note\": \"Some non-ASCII Unicode: ગુજરાતી લિપિ.\"}"
+    );
 
     let resp = client
         .post(url)
-        .body(serde_json::to_string(&valid_entry).unwrap())
+        .body(valid_entry)
         .send()
         .await
         .unwrap();
@@ -44,7 +40,13 @@ async fn post_valid_entry(client: &reqwest::Client, url: &String) {
     // only checking whether the post was successful, and an EntryReceipt
     // was received. whether it's retrievable is tested in getting_guestbook()
     assert_eq!(resp.status(), StatusCode::OK);
-    resp.json::<EntryReceipt>().await.unwrap();  // as long as this runs without error, it's good
+
+    let resp_body_text = resp.text().await.unwrap();
+
+    // test both that the response body can be deserialized into an EntryReceipt
+    // and that it is camelCase
+    assert!(resp_body_text.contains("timeStamp"));
+    serde_json::from_str::<EntryReceipt>(&resp_body_text).unwrap();  
 }
 
 async fn getting_guestbook(client: &reqwest::Client, url: &String) {
@@ -57,11 +59,7 @@ async fn getting_guestbook(client: &reqwest::Client, url: &String) {
         id: None,
 		time_stamp: None,
         name: String::from("a normal name"),
-        note: String::from(
-            "A moderately sized note. Not much special going on here, \
-            aside from some non-ASCII Unicode (UTF-8): ગુજરાતી લિપિ \
-            (this is Gujarati!)."
-        )
+        note: String::from("Some non-ASCII Unicode: ગુજરાતી લિપિ.")
     };
     let test_guestbook_vec0 = vec![
         latest_entry.clone(),
@@ -131,17 +129,23 @@ async fn getting_guestbook(client: &reqwest::Client, url: &String) {
     let resp_body = resp.text()
         .await
         .unwrap();
+
+    // check for camelCase serialization
+    assert!(resp_body.contains("timeStamp"));
+    
     let gotten_guestbook: Guestbook = serde_json::from_str(&resp_body).unwrap();
     let gb_no_ts_vec: Vec<GuestbookEntry> = gotten_guestbook.guestbook
         .into_iter()
         .map(|ent| {
-        GuestbookEntry {
-            id: None,
-            time_stamp: None,
-            name: ent.name,
-            note: ent.note
-        }
-    }).collect();
+
+            GuestbookEntry {
+                id: None,
+                time_stamp: None,
+                name: ent.name,
+                note: ent.note
+            }
+        })
+        .collect();
 
     assert!(test_guestbook_vec0 == gb_no_ts_vec || test_guestbook_vec1 == gb_no_ts_vec);
 }
