@@ -6,6 +6,9 @@ pub mod lb_app_types {
     
     use ts_rs::TS;
     
+    // this struct is only ever serialized when it's sent to 
+    // the Python app, which also uses snake_case, so I won't
+    // be converting the fields to camelCase.
     #[derive(Debug, serde::Serialize, serde::Deserialize, TS)] 
     #[ts(export, export_to="server-types.ts")]
     #[ts(rename_all = "camelCase")]
