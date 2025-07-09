@@ -1,5 +1,4 @@
 import os
-from time import sleep
 from selenium import webdriver as wd
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
@@ -18,8 +17,8 @@ edge_opts.enable_downloads = True
 
 drivers = [
     wd.Remote(command_executor="http://127.0.0.1:4444", options=chrome_opts),
-    # wd.Remote(command_executor="http://127.0.0.1:4445", options=firefox_opts),
-    # wd.Remote(command_executor="http://127.0.0.1:4446", options=edge_opts)
+    wd.Remote(command_executor="http://127.0.0.1:4445", options=firefox_opts),
+    wd.Remote(command_executor="http://127.0.0.1:4446", options=edge_opts)
     ]
 
 root_url = os.getenv("DOCKER_SERVER_URL")   # has no trailing slash
@@ -86,7 +85,11 @@ def test_normal_list_some_attrs():
             )
         )
 
-        drv.download_file("test-list-all-attributes (1).csv","./downloads")
+        # on Firefox, there is no space between the title and the (1)
+        if drv.name == "firefox":
+            drv.download_file("test-list-all-attributes(1).csv","./downloads")
+        else:
+            drv.download_file("test-list-all-attributes (1).csv","./downloads")
 
         true_data = []
         test_data = []
@@ -129,9 +132,6 @@ def test_ranked_list():
         drv.find_element(By.NAME, "editor").click()
         drv.find_element(By.NAME, "country").click()
 
-        # the JS needs a moment to update the list of attributes
-        sleep(1)
-
         # submit
         submit_button = drv.find_element(By.CSS_SELECTOR, "button[type='submit']")
         submit_button.click()
@@ -172,18 +172,90 @@ def test_ranked_list():
                     assert true_value == test_value, f"failed for field: {field}"
 
 
-# def test_overlong_list():
-#     pass
+def test_overlong_list():
+
+    for drv in drivers:
+
+        url_box = drv.find_element(By.CSS_SELECTOR, "input.lb-url")
+        url_box.clear()
+        url_box.send_keys("https://letterboxd.com/maxwren/list/monster-mega-list-2-actual-watch-list-1/")
+
+        # check some other different boxes this time
+        drv.find_element(By.NAME, "casting").click()
+        drv.find_element(By.NAME, "art-direction").click()
+
+        # submit
+        submit_button = drv.find_element(By.CSS_SELECTOR, "button[type='submit']")
+        submit_button.click()
+
+        # wait for alert to show up
+        wait  = WebDriverWait(drv, timeout=1.0)
+        alert = wait.until(ec.alert_is_present())
+
+        # as long as the basics are covered
+        assert ("not accept" in alert.text) and ("10,000 films" in alert.text)
+
+        # close alert box, and return focus to the page as a whole
+        alert.accept()
 
 
-# def test_invalid_list():
-#     pass
+def test_invalid_list():
+    for drv in drivers:
+
+        url_box = drv.find_element(By.CSS_SELECTOR, "input.lb-url")
+        url_box.clear()
+        url_box.send_keys("https://letterboxd.com/invaliduser/list/list-that-doesnt-exist/")
+
+        # check some other different boxes this time
+        drv.find_element(By.NAME, "producer").click()
+        drv.find_element(By.NAME, "assistant-director").click()
+
+        # submit
+        submit_button = drv.find_element(By.CSS_SELECTOR, "button[type='submit']")
+        submit_button.click()
+
+        # wait for alert to show up
+        wait  = WebDriverWait(drv, timeout=1.0)
+        alert = wait.until(ec.alert_is_present())
+
+        # as long as the basics are covered
+        assert ("doesn't appear to be a valid Letterboxd list" in alert.text)
+
+        # close alert box, and return focus to the page as a whole
+        alert.accept()
 
 
-# def test_non_letterboxd_url():
-#     pass
+def test_non_letterboxd_url():
+    for drv in drivers:
+
+        url_box = drv.find_element(By.CSS_SELECTOR, "input.lb-url")
+        url_box.clear()
+        url_box.send_keys("https://example.com/not/a/list/on/letterboxd/")
+
+        # check some other different boxes this time
+        drv.find_element(By.NAME, "makeup").click()
+        drv.find_element(By.NAME, "language").click()
+
+        # submit
+        submit_button = drv.find_element(By.CSS_SELECTOR, "button[type='submit']")
+        submit_button.click()
+
+        # wait for HTML validation error to show up (not a pop-up)
+        # adapted from the Java version from this SO answer:
+        # https://stackoverflow.com/a/62858110/20496903
+        wait = WebDriverWait(drv, timeout=1.0)
+        wait.until(ec.element_to_be_clickable(url_box))
+
+        val_error_main  = url_box.get_attribute("validationMessage")
+        val_error_extra = url_box.get_dom_attribute("title")  # the custom text added to the error
+        print(val_error_main)
+        
+        assert ("Please match the requested format" in val_error_main)
+        assert ("A valid URL for a list on Letterboxd.com" in val_error_extra)
+
 
 
 def test_teardown():
+
     for drv in drivers:
         drv.quit()
