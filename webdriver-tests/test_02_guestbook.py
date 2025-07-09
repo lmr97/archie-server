@@ -131,13 +131,12 @@ def test_overlong_note():
         submit_button = entry_form.find_element(By.TAG_NAME, "button")
         submit_button.click()
 
-        # check that it appeared, and is at the top
-        # this wait condition is an implicit test
+        # wait for alert to show up
         wait  = WebDriverWait(drv, 1.2)
         alert = wait.until(lambda d: d.switch_to.alert)
 
         # as long as the basics are covered
-        assert "note" in alert.text and "too long" in alert.text
+        assert ("note" in alert.text) and ("too long" in alert.text)
 
         # close alert box, and return focus to the page as a whole
         alert.accept()
