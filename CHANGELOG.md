@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.9.6 - 2025-07-08
+
+### Fixed
+
+- **Letterboxd List App (frontend)**: Fix film attribute dynamic list failure to reset after submission
+
+
 ## 0.9.5 - 2025-07-05
 
 ### Fixed

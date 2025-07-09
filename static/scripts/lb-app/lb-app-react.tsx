@@ -330,8 +330,9 @@ export function LetterboxdApp() {
 
         // if nothing goes wrong in the above, THEN we can say we got started
         setGettingList(true);
-        errReceivedRef.current = false;     // reset if tripped in the error handler
-        testHandle.gettingList(true);       // for testing purposes
+        filmAttributes.current = new Array<string>();   // reset attrs after (successful) submit
+        errReceivedRef.current = false;                 // reset if tripped in the error handler
+        testHandle.gettingList(true);                   // for testing purposes
 
         try {receiveList(listInfo);}
         catch(streamingError) {
