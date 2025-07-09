@@ -18,7 +18,7 @@ services:
       # DB host needs to be CONTAINER name not service name
       PRE_LOG: 1
       DB_URL: "mysql://server1:${MYSQL_PASSWORD:?}@archie-db:3306/archie"
-      RUST_LOG: "custom_backend=info"
+      RUST_LOG: "custom_backend=info,custom_backend=debug"
       PY_CONT_SOCK: "lb-app:3575"
     healthcheck:
       test: [ "CMD", "curl", "--fail", "--cacert", "/run/secrets/testing-client-key", "https://localhost:4949" ]
