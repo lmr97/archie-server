@@ -89,6 +89,7 @@ jobs:
         docker compose down
         bash test-helpers/validate-dump.sh
   
+
   letterboxd_app_tests:
 
     runs-on: ubuntu-latest
@@ -137,6 +138,7 @@ jobs:
           deno --allow-env --allow-net --allow-read test-helpers/mini-lb-server.mock.ts &
           npx vitest --run --coverage
   
+
   whole_project_integration_tests:
   
     runs-on: ubuntu-latest
@@ -147,11 +149,6 @@ jobs:
         working-directory: ./webdriver-tests
     env:
       DOCKER_SERVER_URL: "http://archie-svr-1:4949"
-      RUST_LOG: "custom-backend=info"
-      # these will be installed during runtime
-      PK_FILE: "/home/runner/work/archie-server/archie-server/certs/server.key" 
-      CRT_FILE: "/home/runner/work/archie-server/archie-server/certs/server.pem"
-      CLIENT_PK_FILE: "/home/runner/work/archie-server/archie-server/certs/client.pem"
 
     steps:
       - uses: actions/checkout@v4
