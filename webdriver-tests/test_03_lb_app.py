@@ -1,4 +1,5 @@
 import os
+from time import sleep
 from selenium import webdriver as wd
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
@@ -43,6 +44,7 @@ def test_normal_list_no_attrs():
             )
         )
 
+        sleep(1)   # to try an address what seems to be a race condition
         drv.download_file("test-list-all-attributes.csv","./downloads")
 
         true_data = []
@@ -84,6 +86,8 @@ def test_normal_list_some_attrs():
                 (By.CSS_SELECTOR, "button[type='submit']")
             )
         )
+
+        sleep(1)   # to try an address what seems to be a race condition
 
         # on Firefox, there is no space between the title and the (1)
         if drv.name == "firefox":
@@ -144,6 +148,7 @@ def test_ranked_list():
             )
         )
 
+        sleep(1)   # to try an address what seems to be a race condition
         drv.download_file("testing-a-ranked-list.csv","./downloads")
 
         true_data = []
