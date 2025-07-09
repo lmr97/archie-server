@@ -26,6 +26,21 @@ root_url = os.getenv("DOCKER_SERVER_URL")   # has no trailing slash
 [d.get(root_url+"/lb-list-conv") for d in drivers]
 
 
+def unordered_row_val_compare(true_row: str, test_row: str, attrs: list[str], is_ranked: bool):
+    
+    headers = ["title", "year"] + attrs
+    if is_ranked:
+        headers = ["rank"] + headers
+
+    true_row_fields = true_row.split(",")
+    test_row_fields = test_row.split(",")
+    
+    for (field, true_value, test_value) in zip(headers, true_row_fields, test_row_fields):
+        true_val_list = true_value.split(";")
+        test_val_list = test_value.split(";")
+        assert set(true_val_list) == set(test_val_list), f"failed for field: {field}"
+
+
 def test_normal_list_no_attrs():
 
     for drv in drivers:
@@ -70,11 +85,10 @@ def test_normal_list_some_attrs():
         
         # click some attribute boxes
         # should be alphabetized upon download
-        drv.find_element(By.NAME, "genre").click()
-        drv.find_element(By.NAME, "director").click()
-        drv.find_element(By.NAME, "avg-rating").click()
-        drv.find_element(By.NAME, "writer").click()
-
+        attrs = ["genre", "director", "avg-rating", "writer"]
+        for attr in attrs:
+            drv.find_element(By.NAME, attr).click()
+        
         # submit
         submit_button = drv.find_element(By.CSS_SELECTOR, "button[type='submit']")
         submit_button.click()
@@ -113,12 +127,7 @@ def test_normal_list_some_attrs():
             # is not matching the testing constants
             except AssertionError:
                 
-                headers = ["Title", "Year", "Avg Rating", "Director", "Genre", "Writer"]
-                true_row_fields = true_row.split(",")
-                test_row_fields = test_row.split(",")
-                
-                for (field, true_value, test_value) in zip(headers, true_row_fields, test_row_fields):
-                    assert true_value == test_value, f"failed for field: {field}"
+                unordered_row_val_compare(true_row, test_row, attrs, is_ranked=False)
 
 
 # some attributes included
@@ -131,10 +140,10 @@ def test_ranked_list():
         url_box.send_keys("https://letterboxd.com/dialectica972/list/testing-a-ranked-list/")
 
         # check some different boxes this time
-        drv.find_element(By.NAME, "theme").click()
-        drv.find_element(By.NAME, "songs").click()
-        drv.find_element(By.NAME, "editor").click()
-        drv.find_element(By.NAME, "country").click()
+        attrs = ["theme", "songs", "editor", "country"]
+        for attr in attrs:
+            drv.find_element(By.NAME, attr).click()
+
 
         # submit
         submit_button = drv.find_element(By.CSS_SELECTOR, "button[type='submit']")
@@ -166,15 +175,10 @@ def test_ranked_list():
                 assert true_row == test_row, f"Test failed for {drv.name}"
             
             # give it a closer look on failure, to see where in the row
-            # is not matching the testing constants
+            # is not matching the testing constants, if it's not a matter of ordering
             except AssertionError:
                 
-                headers = ["Title", "Year", "Avg Rating", "Director", "Genre", "Writer"]
-                true_row_fields = true_row.split(",")
-                test_row_fields = test_row.split(",")
-                
-                for (field, true_value, test_value) in zip(headers, true_row_fields, test_row_fields):
-                    assert true_value == test_value, f"failed for field: {field}"
+                unordered_row_val_compare(true_row, test_row, attrs, is_ranked=True)
 
 
 def test_overlong_list():
