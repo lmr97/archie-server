@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.9.7 - 2025-07-08
+
+### Changed
+
+- **Letterboxd List App (frontend)**: Changed built-in HTML warning when URL pattern is not matched
+
+
 ## 0.9.6 - 2025-07-08
 
 ### Fixed

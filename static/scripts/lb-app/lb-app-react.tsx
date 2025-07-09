@@ -445,6 +445,7 @@ export function LetterboxdApp() {
                 <input type="url" className="lb-url" name="list-url" data-testid="url-input"
                     placeholder="url of list goes here..." 
                     pattern="https:\/\/letterboxd.com\/[^\/]+\/list\/[^\/]+\/?"
+                    title="A valid URL for a list on Letterboxd.com"
                     size={80}
                     maxLength={500}
                     required>
