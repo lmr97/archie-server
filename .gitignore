@@ -17,3 +17,4 @@ archive/
 coverage/
 .vscode
 db-dumps/
+webdriver-tests/downloads/
