@@ -87,7 +87,7 @@ jobs:
       run: |
         cd ..
         docker compose down
-        bash test-helpers/validate-dump.sh
+        source test-helpers/validate-dump.sh demo
   
 
   letterboxd_app_tests:

@@ -3,7 +3,16 @@
 # - has an identical timestamp to the backup file, or
 # - is missing any of the INSERT or CREATE TABLE statements for the tables
 
-if [[ $(tail -n 3 db-dumps/db_schema_*.sql) = $(tail -n 3 db-init-demo/db_schema.sql.bkup) ]]
+# the directory to check for the backup database dump file
+# can be config'd with a command line arg
+REF_DIR=db-init
+
+if [[ $1 = "demo" ]]
+then
+    REF_DIR=db-init-demo
+fi
+
+if [[ $(tail -n 3 db-dumps/db_schema_*.sql) = $(tail -n 3 "$REF_DIR/db_schema.sql.bkup") ]]
 then 
     exit 1
 fi
