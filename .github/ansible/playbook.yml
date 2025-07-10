@@ -1,6 +1,6 @@
 - name: Deploy latest passing commit
   hosts: web_server
-  # remote_user: martin
+  remote_user: martin
 
   tasks: 
     - name: Pull new source code
