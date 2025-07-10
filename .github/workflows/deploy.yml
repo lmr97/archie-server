@@ -1,0 +1,18 @@
+on:
+  push:
+    branches: [ "testing", "main" ]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Run demo playbook
+      uses: dawidd6/action-ansible-playbook@v4
+      with:
+        playbook: playbook.yaml
+        directory: ./.github/ansible
+        key: ${{ secrets.ARCHIE_SSH_PK }}
+        vault_password: ${{ secrets.ANSIBLE_VAULT_PASSWORD }}
+        options: |
+          --inventory web-server
+          --verbose
