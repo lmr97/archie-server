@@ -36,10 +36,12 @@ def unordered_row_val_compare(true_row: str, test_row: str, attrs: list[str], is
     test_row_fields = test_row.split(",")
     
     for (field, true_value, test_value) in zip(headers, true_row_fields, test_row_fields):
-        true_value    = true_value.replace("\"", "")
+        true_value    = true_value.replace("\"", "")  # shave off double-quotes
         test_value    = test_value.replace("\"", "")
-        true_val_list = true_value.split(";")
-        test_val_list = test_value.split(";")
+        true_value    = true_value.replace("\n", "")  # take out newlines
+        test_value    = test_value.replace("\n", "")
+        true_val_list = true_value.split("; ")
+        test_val_list = test_value.split("; ")
         assert set(true_val_list) == set(test_val_list), f"failed for field: {field}"
 
 
