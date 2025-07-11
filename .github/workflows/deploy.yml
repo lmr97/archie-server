@@ -12,10 +12,6 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-
-    - name: Attempt ping to Archie
-      run: ping -c 3 -W 10 archie.zapto.org
-
     - uses: actions/checkout@v4
     - name: Run demo playbook
       uses: dawidd6/action-ansible-playbook@v4
