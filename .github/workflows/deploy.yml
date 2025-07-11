@@ -22,5 +22,5 @@ jobs:
         key: ${{ secrets.ARCHIE_SSH_PK }}
         vault_password: ${{ secrets.ANSIBLE_VAULT_PASSWORD }}
         options: |
-          --inventory archie
+          --inventory inventory.yml
           --verbose
