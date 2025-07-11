@@ -6,7 +6,7 @@
 backup() {
     echo "Backing up DB to ~/archie-server/db-init/db_schema.sql (on host)..."
 
-    filename="/db-dumps/db_schema_$(date +"%Y-%m-%dT%H:%I:%S").sql"
+    filename="/db-dumps/db_schema_$(date +"%Y-%m-%dT%R:%S").sql"
     
     mysqldump --protocol=tcp \
         --databases archie \
