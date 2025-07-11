@@ -9,10 +9,10 @@ jobs:
     - name: Run demo playbook
       uses: dawidd6/action-ansible-playbook@v4
       with:
-        playbook: playbook.yaml
-        directory: ./.github/ansible
+        playbook: playbook.yml
+        directory: ./ansible
         key: ${{ secrets.ARCHIE_SSH_PK }}
         vault_password: ${{ secrets.ANSIBLE_VAULT_PASSWORD }}
         options: |
-          --inventory web-server
+          --inventory web_server
           --verbose
