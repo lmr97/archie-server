@@ -22,4 +22,4 @@ jobs:
         vault_password: ${{ secrets.ANSIBLE_VAULT_PASSWORD }}
         options: |
           --inventory inventory.yml
-          --verbose
+          -vvvv
