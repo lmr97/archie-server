@@ -1,13 +1,13 @@
 name: Deployment
 
 on:
-  push:
-    branches: [ "testing", "main" ]
-  # workflow_run:
-  #   workflows: 
-  #     - Archie CI
-  #   types:
-  #     - completed
+  # push:
+  #   branches: [ "testing", "main" ]
+  workflow_run:
+    workflows: 
+      - Archie CI
+    types:
+      - completed
 
 jobs:
   deploy:
