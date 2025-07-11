@@ -1,6 +1,8 @@
 - name: Deploy latest passing commit
   hosts: web_server
   remote_user: martinr
+  gather_subset:
+    - env
 
   tasks: 
     # - name: Pull new source code
