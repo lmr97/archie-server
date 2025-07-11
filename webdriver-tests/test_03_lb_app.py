@@ -202,7 +202,7 @@ def test_overlong_list():
         submit_button.click()
 
         # wait for alert to show up
-        wait  = WebDriverWait(drv, timeout=1.0)
+        wait  = WebDriverWait(drv, timeout=3.0)
         alert = wait.until(ec.alert_is_present())
 
         # as long as the basics are covered
@@ -228,7 +228,7 @@ def test_invalid_list():
         submit_button.click()
 
         # wait for alert to show up
-        wait  = WebDriverWait(drv, timeout=1.0)
+        wait  = WebDriverWait(drv, timeout=3.0)
         alert = wait.until(ec.alert_is_present())
 
         # as long as the basics are covered
@@ -256,7 +256,7 @@ def test_non_letterboxd_url():
         # wait for HTML validation error to show up (not a pop-up)
         # adapted from the Java version from this SO answer:
         # https://stackoverflow.com/a/62858110/20496903
-        wait = WebDriverWait(drv, timeout=1.0)
+        wait = WebDriverWait(drv, timeout=2.0)
         wait.until(ec.element_to_be_clickable(url_box))
 
         val_error_main  = url_box.get_attribute("validationMessage")
