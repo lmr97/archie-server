@@ -2,7 +2,7 @@
 web_server:
   hosts:
     archie:
-      ansible_user: martinr
+      ansible_user: martin
       ansible_host: archie.zapto.org
       ansible_python_interpreter: /home/martin/archie-server/ansible/av/bin/python3
       ansible_port: 1917
