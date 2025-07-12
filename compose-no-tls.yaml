@@ -1,0 +1,73 @@
+name: archie
+services:
+  svr:
+    # separately-built image to avoid clutter from anonymous images
+    # pulled from DockerHub if necessary
+    image: lmr97/archie-svr:latest
+    restart: always
+    depends_on:
+      db:
+        condition: service_healthy
+      lb-app:
+        condition: service_healthy
+    ports:
+      - "4949:4949"
+    # if running with sudo, use the --preserve-env option
+    # so that your user shell env is in scope
+    environment:
+      # DB host needs to be CONTAINER name not service name
+      PRE_LOG: 1
+      DB_URL: "mysql://server1:${MYSQL_PASSWORD:?}@archie-db:3306/archie"
+      RUST_LOG: "custom_backend=info,custom_backend=debug"
+      PY_CONT_SOCK: "lb-app:3575"
+    command: [ "/home/server/custom-backend/target/release/archie-server", "--no-tls"]
+    healthcheck:
+      test: [ "CMD", "curl", "--fail", "http://localhost:4949" ]
+      interval: 10s
+      retries: 5
+      start_period: 2s
+    # if there are permissions issues, give the file on the 
+    # host the ol' chmod 666 (read/write by everyone)
+    volumes:
+      - type: bind
+        source: ./archie-server.log
+        target: /home/server/archie-server.log
+
+  db:
+    image: mysql:9.2
+    restart: always
+    container_name: archie-db
+    volumes:
+      - type: bind
+        source: ./db-init/
+        # all scripts in this directory will be run
+        target: /docker-entrypoint-initdb.d
+      # this is where dumps will be saved to
+      - type: bind
+        source: ./db-dumps/
+        target: /db-dumps
+      - type: bind
+        source: ./backup_on_exit.sh
+        target: /backup_on_exit.sh
+    entrypoint: ["bash", "backup_on_exit.sh"]
+    command: "mysqld"
+    healthcheck:
+      # slight breach of exec form with the options, but `mysqladmin` does not work otherwise
+      test: [ "CMD", "mysqladmin", "ping", "--protocol=tcp", "--user=server1", "--password=${MYSQL_PASSWORD?}" ]
+      interval: 5s
+      retries: 6
+      start_period: 30s
+    environment:
+        MYSQL_ONETIME_PASSWORD: false
+        MYSQL_ALLOW_EMPTY_PASSWORD: false
+        MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?}
+        MYSQL_USER: server1
+        MYSQL_PASSWORD: ${MYSQL_PASSWORD:?}
+
+  lb-app:
+    image: lmr97/lb-web-app:latest
+    container_name: lb-app
+    restart: always
+    environment:
+      PY_DEBUG: 0
+
