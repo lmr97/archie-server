@@ -5,7 +5,7 @@ web_server:
       ansible_user: martin
       ansible_host: localhost
       ansible_python_interpreter: /home/martin/archie-server/ansible/av/bin/python3
-      # ansible_port: 1917
+      ansible_port: 1917
       # need to pass --ask-vault-pass to `ansible` command to decrypt
       ansible_password: "!vault |
           $ANSIBLE_VAULT;1.1;AES256
