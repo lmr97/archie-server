@@ -5,56 +5,56 @@
     - env
 
   tasks: 
-    # - name: Pull new source code
-    #   ansible.builtin.git:
-    #     repo: https://github.com/lmr97/archie-server.git
-    #     dest: ~/archie-server
+    - name: Pull new source code
+      ansible.builtin.git:
+        repo: https://github.com/lmr97/archie-server.git
+        dest: ~/archie-server
 
-    # - name: Shut down server, back up DB
-    #   community.docker.docker_compose_v2:
-    #     cli_context: rootless
-    #     project_src: ~/archie-server
-    #     state: absent
-    #   environment: "{{ansible_env}}"       
+    - name: Shut down server, back up DB
+      community.docker.docker_compose_v2:
+        cli_context: rootless
+        project_src: ~/archie-server
+        state: absent
+      environment: "{{ansible_env}}"       
     
-    # - name: Find latest database dump
-    #   shell:
-    #     chdir: ~/archie-server/db-dumps/
-    #     cmd: ls | grep "$(date +'%Y-%m-%dT%R')"
-    #   register: latest_dump
+    - name: Find latest database dump
+      shell:
+        chdir: ~/archie-server/db-dumps/
+        cmd: ls | grep "$(date +'%Y-%m-%dT%R')"
+      register: latest_dump
 
-    # - name: Check database dump
-    #   ansible.builtin.shell: 
-    #     chdir: ~/archie-server
-    #     cmd: bash test-helpers/validate-dump.sh
-    #   register: db_dump_validation
+    - name: Check database dump
+      ansible.builtin.shell: 
+        chdir: ~/archie-server
+        cmd: bash test-helpers/validate-dump.sh
+      register: db_dump_validation
 
-    # - name: Copy dump into production database file
-    #   ansible.builtin.shell:
-    #     chdir: ~/archie-server
-    #     cmd: cp db-dumps/{{ latest_dump.stdout }} db-init/db_schema.sql
-    #   when: db_dump_validation is not failed
-
-    # - name: Back up latest dump to extra-server database
-    #   community.mysql.mysql_db:
-    #     chdir: ~/archie-server/db-dumps
-    #     name: archie
-    #     login_user: server1
-    #     login_password: "{{ ansible_env.MYSQL_PASSWORD }}"
-    #     state: import
-    #     target: "{{ latest_dump.stdout }}"
-    #   when: db_dump_validation is not failed
-
-    # - name: Launch server
-    #   community.docker.docker_compose_v2:
-    #     cli_context: rootless
-    #     project_src: ~/archie-server
-    #     state: present 
-    #   environment: "{{ansible_env}}"
-
-
-    - name: Make new text file with content
+    - name: Copy dump into production database file
       ansible.builtin.shell:
         chdir: ~/archie-server
-        creates: ansible-ran-here.txt
-        cmd: echo 'ansible ran here!' > ansible-ran-here.txt
+        cmd: cp db-dumps/{{ latest_dump.stdout }} db-init/db_schema.sql
+      when: db_dump_validation is not failed
+
+    - name: Back up latest dump to extra-server database
+      community.mysql.mysql_db:
+        chdir: ~/archie-server/db-dumps
+        name: archie
+        login_user: server1
+        login_password: "{{ ansible_env.MYSQL_PASSWORD }}"
+        state: import
+        target: "{{ latest_dump.stdout }}"
+      when: db_dump_validation is not failed
+
+    - name: Launch server
+      community.docker.docker_compose_v2:
+        cli_context: rootless
+        project_src: ~/archie-server
+        state: present 
+      environment: "{{ansible_env}}"
+
+
+    # - name: Make new text file with content
+    #   ansible.builtin.shell:
+    #     chdir: ~/archie-server
+    #     creates: ansible-ran-here.txt
+    #     cmd: echo 'ansible ran here!' > ansible-ran-here.txt

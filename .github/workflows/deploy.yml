@@ -1,11 +1,10 @@
 name: Deployment
 
 on:
-  push
-  # workflow_run:
-  #   workflows: [Archie CI]
-  #   types:
-  #     - completed
+  workflow_run:
+    workflows: [Archie CI]
+    types:
+      - completed
 
 jobs:
   deploy:
@@ -19,9 +18,8 @@ jobs:
         username: martin
         password: ${{ secrets.ARCHIE_PASSWORD }}
         key: ${{ secrets.ARCHIE_SSH_PK }}
-        port: 1917
+        port: ${{ secrets.SSH_PORT }}
         script: |
-          echo ${{ secrets.SSH_PORT }}
           echo ${{ secrets.ANSIBLE_VAULT_PASSWORD }} > ~/.pw
           ansible-playbook -i ~/archie-server/ansible/inventory.yml \
             ~/archie-server/ansible/playbook.yml \
