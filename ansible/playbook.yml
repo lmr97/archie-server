@@ -1,6 +1,6 @@
 - name: Deploy latest passing commit
   hosts: web_server
-  remote_user: martinr
+  remote_user: martin
   gather_subset:
     - env
 
@@ -8,39 +8,36 @@
     # - name: Pull new source code
     #   ansible.builtin.git:
     #     repo: https://github.com/lmr97/archie-server.git
-    #     dest: ~/archie-server-ansible
+    #     dest: ~/archie-server
 
     # - name: Shut down server, back up DB
     #   community.docker.docker_compose_v2:
     #     cli_context: rootless
-    #     project_src: ~/archie-server-ansible
+    #     project_src: ~/archie-server
     #     state: absent
     #   environment: "{{ansible_env}}"       
     
-    # - name: Get latest database dump
+    # - name: Find latest database dump
     #   shell:
-    #     chdir: ~/archie-server-ansible/db-dumps/
-    #     cmd: |
-    #       cp db_schema_2025-07-09T23:11.sql "db_schema_$(date +'%Y-%m-%dT%R:%S').sql"
-    #       NOW_MINUTE=$(date +"%Y-%m-%dT%R")
-    #       ls | grep ${NOW_MINUTE}
+    #     chdir: ~/archie-server/db-dumps/
+    #     cmd: ls | grep "$(date +'%Y-%m-%dT%R')"
     #   register: latest_dump
 
     # - name: Check database dump
     #   ansible.builtin.shell: 
-    #     chdir: ~/archie-server-ansible
+    #     chdir: ~/archie-server
     #     cmd: bash test-helpers/validate-dump.sh
     #   register: db_dump_validation
 
     # - name: Copy dump into production database file
     #   ansible.builtin.shell:
-    #     chdir: ~/archie-server-ansible
+    #     chdir: ~/archie-server
     #     cmd: cp db-dumps/{{ latest_dump.stdout }} db-init/db_schema.sql
     #   when: db_dump_validation is not failed
 
     # - name: Back up latest dump to extra-server database
     #   community.mysql.mysql_db:
-    #     chdir: ~/archie-server-ansible/db-dumps
+    #     chdir: ~/archie-server/db-dumps
     #     name: archie
     #     login_user: server1
     #     login_password: "{{ ansible_env.MYSQL_PASSWORD }}"
@@ -51,9 +48,8 @@
     # - name: Launch server
     #   community.docker.docker_compose_v2:
     #     cli_context: rootless
-    #     project_src: ~/archie-server-ansible
+    #     project_src: ~/archie-server
     #     state: present 
-        
     #   environment: "{{ansible_env}}"
 
 

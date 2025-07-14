@@ -1,8 +1,6 @@
 name: Deployment
 
 on:
-  push:
-    branches: [ "testing", "main" ]
   workflow_run:
     workflows: [Archie CI]
     types:
@@ -14,12 +12,16 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     - name: Run demo playbook
-      uses: dawidd6/action-ansible-playbook@v4
+      uses: appleboy/ssh-action@v1
       with:
-        playbook: playbook.yml
-        directory: ./ansible
+        host: ${{ secrets.MAIN_HOST }}
+        username: martin
+        password: ${{ secrets.ARCHIE_PASSWORD }}
         key: ${{ secrets.ARCHIE_SSH_PK }}
-        vault_password: ${{ secrets.ANSIBLE_VAULT_PASSWORD }}
-        options: |
-          --inventory inventory.yml
-          -vvvv
+        port: ${{ secrets.SSH_PORT }}
+        script: |
+          echo ${{ secrets.ANSIBLE_VAULT_PASSWORD }} > ~/.pw
+          ansible-playbook -i ~/archie-server/ansible/inventory.yml \
+            ~/archie-server/ansible/playbook.yml \
+            --vault-pass-file ~/.pw
+          rm ~/.pw
