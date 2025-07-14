@@ -1,10 +1,11 @@
 name: Deployment
 
 on:
-  workflow_run:
-    workflows: [Archie CI]
-    types:
-      - completed
+  push
+  # workflow_run:
+  #   workflows: [Archie CI]
+  #   types:
+  #     - completed
 
 jobs:
   deploy:
