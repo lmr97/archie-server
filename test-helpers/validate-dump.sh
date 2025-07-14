@@ -12,11 +12,13 @@ then
     REF_DIR=db-init-demo
 fi
 
-if [[ $(tail -n 3 db-dumps/db_schema_*.sql) = $(tail -n 3 "$REF_DIR/db_schema.sql.bkup") ]]
+LATEST_DUMP=$(ls -t db-dumps | head -n 1)
+
+if [[ $(tail -n 3 "db-dumps/$LATEST_DUMP.sql") = $(tail -n 3 "$REF_DIR/db_schema.sql.bkup") ]]
 then 
     exit 1
 fi
-cat db-dumps/db_schema_*.sql | grep "CREATE TABLE \`guestbook\`"
-cat db-dumps/db_schema_*.sql | grep "INSERT INTO \`guestbook\`"
-cat db-dumps/db_schema_*.sql | grep "CREATE TABLE \`hitLog\`"
-cat db-dumps/db_schema_*.sql | grep "INSERT INTO \`hitLog\`"
+cat "db-dumps/$LATEST_DUMP.sql" | grep "CREATE TABLE \`guestbook\`"
+cat "db-dumps/$LATEST_DUMP.sql" | grep "INSERT INTO \`guestbook\`"
+cat "db-dumps/$LATEST_DUMP.sql" | grep "CREATE TABLE \`hitLog\`"
+cat "db-dumps/$LATEST_DUMP.sql" | grep "INSERT INTO \`hitLog\`"

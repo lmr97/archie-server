@@ -3,14 +3,14 @@ web_server:
   hosts:
     archie:
       ansible_user: martin
-      ansible_host: archie.zapto.org
+      ansible_host: localhost
       ansible_python_interpreter: /home/martin/archie-server/ansible/av/bin/python3
-      ansible_port: 1917
+      # ansible_port: 1917
       # need to pass --ask-vault-pass to `ansible` command to decrypt
-      ansible_password: !vault |
+      ansible_password: "!vault |
           $ANSIBLE_VAULT;1.1;AES256
           64383738613938623366653836333532326464343961666533343166363930633935633064333333
           6436336530366133343838333164323832636663633132350a666331313137323434656139316434
           32326531373337306364323762326533373761623365303661376461313235613430303030383339
           3636663330336438320a356533343964653032623632366539363135623063346563373565663739
-          6363
+          6363"
