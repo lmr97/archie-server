@@ -14,11 +14,11 @@ fi
 
 LATEST_DUMP=$(ls -t db-dumps | head -n 1)
 
-if [[ $(tail -n 3 "db-dumps/$LATEST_DUMP.sql") = $(tail -n 3 "$REF_DIR/db_schema.sql.bkup") ]]
+if [[ $(tail -n 3 "db-dumps/$LATEST_DUMP") = $(tail -n 3 "$REF_DIR/db_schema.sql.bkup") ]]
 then 
     exit 1
 fi
-cat "db-dumps/$LATEST_DUMP.sql" | grep "CREATE TABLE \`guestbook\`"
-cat "db-dumps/$LATEST_DUMP.sql" | grep "INSERT INTO \`guestbook\`"
-cat "db-dumps/$LATEST_DUMP.sql" | grep "CREATE TABLE \`hitLog\`"
-cat "db-dumps/$LATEST_DUMP.sql" | grep "INSERT INTO \`hitLog\`"
+cat "db-dumps/$LATEST_DUMP" | grep "CREATE TABLE \`guestbook\`"
+cat "db-dumps/$LATEST_DUMP" | grep "INSERT INTO \`guestbook\`"
+cat "db-dumps/$LATEST_DUMP" | grep "CREATE TABLE \`hitLog\`"
+cat "db-dumps/$LATEST_DUMP" | grep "INSERT INTO \`hitLog\`"
