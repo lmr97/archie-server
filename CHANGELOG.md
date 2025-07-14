@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.9.8 - 2025-07-14
+
+### Added
+
+- **Homepage**: Add mention of Ansible deployment mechanism
+
 ## 0.9.7 - 2025-07-08
 
 ### Changed

@@ -21,7 +21,9 @@
     <p>The server runs on <b>Arch Linux</b>, with a custom-built <b>Rust</b> backend, using the 
         <a href="https://github.com/tokio-rs/axum">Axum</a> framework. For the guestbook, I'm using a <b>MySQL</b> database 
         to store and retrieve the entries, as well as log homepage hits. The whole setup is fully <b>Dockerized</b>, with 
-        the server and database each running in their own containers, orchestrated via Docker Compose.</p>
+        the server and database each running in their own containers, orchestrated via Docker Compose. Changes are dployed using 
+        GitHub Actions and <a href="https://docs.ansible.com/">Ansible<a>.
+    </p>
     <p>You can see all the code used to serve this webpage <a href="https://github.com/lmr97/archie-server">on GitHub</a>.</p>
     <h2>
         <a href="/guestbook">
