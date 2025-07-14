@@ -19,7 +19,7 @@ jobs:
         username: martin
         password: ${{ secrets.ARCHIE_PASSWORD }}
         key: ${{ secrets.ARCHIE_SSH_PK }}
-        port: ${{ secrets.SSH_PORT }}
+        port: 1917
         script: |
           echo ${{ secrets.SSH_PORT }}
           echo ${{ secrets.ANSIBLE_VAULT_PASSWORD }} > ~/.pw
