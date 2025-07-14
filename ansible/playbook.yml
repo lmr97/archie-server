@@ -1,8 +1,6 @@
 - name: Deploy latest passing commit
   hosts: web_server
   remote_user: martin
-  gather_subset:
-    - env
 
   tasks: 
     - name: Pull new source code
@@ -51,10 +49,3 @@
         project_src: ~/archie-server
         state: present 
       environment: "{{ansible_env}}"
-
-
-    # - name: Make new text file with content
-    #   ansible.builtin.shell:
-    #     chdir: ~/archie-server
-    #     creates: ansible-ran-here.txt
-    #     cmd: echo 'ansible ran here!' > ansible-ran-here.txt
