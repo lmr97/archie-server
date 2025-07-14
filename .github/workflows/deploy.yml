@@ -20,6 +20,7 @@ jobs:
         key: ${{ secrets.ARCHIE_SSH_PK }}
         port: ${{ secrets.SSH_PORT }}
         script: |
+          echo ${{ secrets.SSH_PORT }}
           echo ${{ secrets.ANSIBLE_VAULT_PASSWORD }} > ~/.pw
           ansible-playbook -i ~/archie-server/ansible/inventory.yml \
             ~/archie-server/ansible/playbook.yml \
