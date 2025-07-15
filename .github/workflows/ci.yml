@@ -39,6 +39,7 @@ jobs:
       # running this first so that the database can initialize while
       # the server builds 
       run: |
+        exit 1
         cd ..
         docker compose --file compose.yaml \
         --file test-helpers/db-override.yaml up \
