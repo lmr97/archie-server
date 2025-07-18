@@ -10,13 +10,13 @@
 
     # it appears that we must do this manually
     - name: Load MySQL password from environment
-      shell: 
+      ansible.builtin.shell: 
         cmd: source ~/.user_env && echo $MYSQL_PASSWORD
       register:
         mysql_pass
 
     - name: Load MySQL root password from environment
-      shell: 
+      ansible.builtin.shell: 
         cmd: source ~/.user_env && echo $MYSQL_ROOT_PASSWORD
       register:
         mysql_root_pass
@@ -33,7 +33,7 @@
         MYSQL_ROOT_PASSWORD: "{{ mysql_root_pass.stdout }}"       
     
     - name: Find latest database dump
-      shell:
+      ansible.builtin.shell:
         chdir: ~/archie-server/db-dumps/
         cmd: ls -t | head -n 1
       register: latest_dump
@@ -55,10 +55,18 @@
     # (I want to use 3306 for the Docker pod, and 3307 for
     # the localhost-running DB which will server as backup)
     - name: Back up latest dump to extra-server database
-      shell: 
+      ansible.builtin.shell: 
         chdir: ~/archie-server/db-dumps
         cmd: mariadb --user=server1 --password="{{ mysql_pass.stdout }}" --execute "source {{ latest_dump.stdout }}"
       when: db_dump_validation is not failed
+      register: backup_result
+    
+    # For security
+    - name: Remove latest dump file
+      ansible.builtin.shell:
+        chdir: ~/archie-server/db-dumps
+        cmd: rm "{{ latest_dump.stdout }}"
+      when: backup_result is not failed
 
     - name: Launch server
       community.docker.docker_compose_v2:
