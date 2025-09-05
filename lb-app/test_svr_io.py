@@ -54,7 +54,7 @@ def receive_list_len(connection: socket.socket) -> int:
 def receive_decode_row(connection: socket.socket) -> str:
     """
     Receives bytes and decodes them as a string the way the server does:
-    use the first 2 bytes to determine the length of 
+    use the first 2 bytes to determine the length of the data.
     """
     byte_len   = connection.recv(2)
     bytes_int  = int.from_bytes(byte_len, byteorder='big', signed=False)
