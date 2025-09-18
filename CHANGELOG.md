@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.9.9 - 2025-09-17
+
+### Added
+
+- **Main Server**: Add logging to stdout (finally)
+
 ## 0.9.8 - 2025-07-14
 
 ### Added
