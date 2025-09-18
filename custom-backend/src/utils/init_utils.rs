@@ -20,6 +20,14 @@ pub enum RunMode {
     PrintHelp
 }
 
+pub fn build_stdout_logger(print_prelog: bool) -> Result<SubscriberBuilder<DefaultFields, Format, EnvFilter, fn() -> std::io::Stdout>, Error> {
+    if print_prelog { println!("[ PRE-LOG ]: Initializing logger..."); }
+    let ef = EnvFilter::builder()
+        .with_default_directive(LevelFilter::DEBUG.into())  // will include INFO level too
+        .from_env_lossy();
+    Ok(tracing_subscriber::fmt().with_env_filter(ef))
+}
+
 pub fn build_logger(log_file_path: String, print_prelog: bool) -> Result<SubscriberBuilder<DefaultFields, Format, EnvFilter, std::fs::File>, Error> {
 
     if print_prelog { println!("[ PRE-LOG ]: Loading log file at {log_file_path}..."); }
@@ -129,7 +137,7 @@ mod tests {
     }
 
     #[test]
-    fn logging() -> Result<(), Error> {
+    fn logging_to_file() -> Result<(), Error> {
         let test_log_path = String::from("./test.log");
         build_logger(test_log_path.clone(), false)?.init();
         println!("[ PRE-LOG ]: Logger initialized!");
