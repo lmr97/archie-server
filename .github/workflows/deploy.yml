@@ -1,28 +1,29 @@
-name: Deployment
+# Commenting out to keep the file, but don't do anything
+# name: Deployment
 
-on:
-  workflow_run:
-    workflows: [Archie CI]
-    types:
-      - completed
+# on:
+#   workflow_run:
+#     workflows: [Archie CI]
+#     types:
+#       - completed
 
-jobs:
-  deploy:
-    runs-on: ubuntu-latest
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
-    steps:
-    - uses: actions/checkout@v4
-    - name: Deploy to server
-      uses: appleboy/ssh-action@v1
-      with:
-        host: ${{ secrets.MAIN_HOST }}
-        username: martin
-        password: ${{ secrets.ARCHIE_PASSWORD }}
-        key: ${{ secrets.ARCHIE_SSH_PK }}
-        port: ${{ secrets.SSH_PORT }}
-        script: |
-          echo ${{ secrets.ANSIBLE_VAULT_PASSWORD }} > ~/.pw
-          ansible-playbook -i ~/archie-server/ansible/inventory.yml \
-            ~/archie-server/ansible/playbook.yml \
-            --vault-pass-file ~/.pw
-          rm ~/.pw
+# jobs:
+#   deploy:
+#     runs-on: ubuntu-latest
+#     if: ${{ github.event.workflow_run.conclusion == 'success' }}
+#     steps:
+#     - uses: actions/checkout@v4
+#     - name: Deploy to server
+#       uses: appleboy/ssh-action@v1
+#       with:
+#         host: ${{ secrets.MAIN_HOST }}
+#         username: martin
+#         password: ${{ secrets.ARCHIE_PASSWORD }}
+#         key: ${{ secrets.ARCHIE_SSH_PK }}
+#         port: ${{ secrets.SSH_PORT }}
+#         script: |
+#           echo ${{ secrets.ANSIBLE_VAULT_PASSWORD }} > ~/.pw
+#           ansible-playbook -i ~/archie-server/ansible/inventory.yml \
+#             ~/archie-server/ansible/playbook.yml \
+#             --vault-pass-file ~/.pw
+#           rm ~/.pw
