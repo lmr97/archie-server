@@ -47,7 +47,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let log_file_path = get_env_var("SERVER_LOG")?;
     
     if log_file_path.is_empty() {
-        build_stdout_logger(prelog)?.init();
+        build_stdout_logger(prelog).init();
     } else {
         build_logger(log_file_path, prelog)?.init();
     }
