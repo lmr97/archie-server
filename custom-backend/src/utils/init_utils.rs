@@ -20,12 +20,16 @@ pub enum RunMode {
     PrintHelp
 }
 
-pub fn build_stdout_logger(print_prelog: bool) -> Result<SubscriberBuilder<DefaultFields, Format, EnvFilter, fn() -> std::io::Stdout>, Error> {
+pub fn build_stdout_logger(print_prelog: bool) -> SubscriberBuilder<DefaultFields, Format, EnvFilter, fn() -> std::io::Stdout> {
     if print_prelog { println!("[ PRE-LOG ]: Initializing logger..."); }
+    
     let ef = EnvFilter::builder()
         .with_default_directive(LevelFilter::DEBUG.into())  // will include INFO level too
         .from_env_lossy();
-    Ok(tracing_subscriber::fmt().with_env_filter(ef))
+
+    error!("stuff!");
+
+    tracing_subscriber::fmt().with_env_filter(ef)
 }
 
 pub fn build_logger(log_file_path: String, print_prelog: bool) -> Result<SubscriberBuilder<DefaultFields, Format, EnvFilter, std::fs::File>, Error> {
@@ -137,6 +141,7 @@ mod tests {
     }
 
     #[test]
+    // #[ignore]    // because we're logging to stdout, and it clashes with logging_to_stdout test
     fn logging_to_file() -> Result<(), Error> {
         let test_log_path = String::from("./test.log");
         build_logger(test_log_path.clone(), false)?.init();
@@ -155,5 +160,27 @@ mod tests {
         assert!(log_string.contains("an error"));
 
         Ok(())
+    }
+
+    // since using #[test] or #[tokio::test] results in an error,
+    // I use #[tracing_test::traced_test] instead. 
+    // But this causes the function to look like dead code to
+    // Cargo, so I'm ignoring the compiler warning here for this reason.
+    #[tracing_test::traced_test]
+    #[allow(dead_code)]
+    async fn logging_to_stdout() {
+
+        std::env::set_var("SERVER_LOG", "");
+        build_stdout_logger(true).init();
+
+        info!("some information");
+        debug!("some debugging info");
+        warn!("a warning");
+        error!("an error");
+
+        assert!(logs_contain("some information"));
+        assert!(logs_contain("some debugging info"));
+        assert!(logs_contain("a warning"));
+        assert!(logs_contain("an error"));
     }
 }
