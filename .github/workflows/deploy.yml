@@ -1,18 +1,19 @@
 # Commenting out to keep the file, but don't do anything
 # name: Deployment
 
-# on:
-#   workflow_run:
-#     workflows: [Archie CI]
-#     types:
-#       - completed
+on:
+  workflow_run:
+    workflows: [Archie CI]
+    types:
+      - completed
 
-# jobs:
-#   deploy:
-#     runs-on: ubuntu-latest
-#     if: ${{ github.event.workflow_run.conclusion == 'success' }}
-#     steps:
-#     - uses: actions/checkout@v4
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    steps:
+      - name: (stand-in)
+        uses: actions/checkout@v4
 #     - name: Deploy to server
 #       uses: appleboy/ssh-action@v1
 #       with:
