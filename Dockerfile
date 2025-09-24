@@ -63,7 +63,7 @@ COPY --chown=server:server ./custom-backend ./
 COPY --from=deps --chown=server:server \
     /home/server/custom-backend/target/release \
     ./target/release/
-RUN cargo build --release
+RUN cargo build --release --bin archie-server
 
 
 
