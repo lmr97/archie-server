@@ -72,7 +72,7 @@ RUN cargo build --release --bin archie-server
 #   STAGE 3: Finalize server environment  #
 #                                         #
 ###########################################
-FROM debian AS server-run
+FROM debian:12.12 AS server-run
 
 # install cURL for healthcheck
 RUN apt-get update
