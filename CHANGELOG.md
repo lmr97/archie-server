@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.9.10 - 2025-10-03
+
+- **Main Server**: Add compression to images (really, anything over 2KiB)
+
+- **Homepage**: Correct typo, remove mention of Ansible (comment out)
+
 ## 0.9.9 - 2025-09-17
 
 ### Added
