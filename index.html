@@ -16,18 +16,12 @@
     </p>
     <h1 id="home-heading"><i>Archie: Adventures in Self-hosting</i></h1>
     <p>
-        I had an old HP ProBook 640 laying around, and wanted to give it new
-        life as a web server. I got a free domain from 
-        <a href="https://www.noip.com/">noip.com</a>, and went from there!</p>
-    <p>The server runs on <b>Arch Linux</b>, with a custom-built <b>Rust</b> backend, using the 
-        <a href="https://github.com/tokio-rs/axum">Axum</a> framework. For the guestbook, I'm using a <b>MySQL</b> database 
-        to store and retrieve the entries, as well as log homepage hits. The whole setup is fully <b>Dockerized</b>, with 
-        the server and database each running in their own containers across multiple server nodes, orchestrated using <b>Kubernetes</b>. 
-        Changes are deployed using GitHub Actions and <a href="https://docs.ansible.com/">Ansible</a>.
+        I had an old HP ProBook 640 laying around, and wanted to give it new life as a web server. I got a free domain from <a href="https://www.noip.com/">noip.com</a>, and went from there!</p>
+    <p>
+        The server runs on <b>Arch Linux</b>, with a custom-built <b>Rust</b> backend, using the <a href="https://github.com/tokio-rs/axum">Axum</a> framework. For the guestbook, I'm using a <b>MySQL</b> database to store and retrieve the entries, as well as log homepage hits. The whole setup is fully <b>Dockerized</b>, with the server and database each running in their own containers across multiple server nodes, orchestrated using <b>Kubernetes</b>. Changes are deployed using GitHub Actions and <a href="https://docs.ansible.com/">Ansible</a>.
     </p>
     <p>
-        You can see all the code used to serve this webpage on GitHub<a href="https://github.com/lmr97/archie-server">here</a> (for the web server)
-        and <a href="https://github.com/lmr97/kaita">here</a> (for the cluster).</p>
+        You can see all the code used to serve this webpage on GitHub <a href="https://github.com/lmr97/archie-server">here</a> (for the web server) and <a href="https://github.com/lmr97/kaita">here</a> (for the cluster).</p>
     <h2>
         <a href="/guestbook">
             <button>Sign the guestbook!</button>
