@@ -1,0 +1,33 @@
+- name: Deploy latest passing commit
+  hosts: web_server
+  gather_facts: true
+
+  tasks: 
+    - name: Deploy new image for main server
+      kubernetes.core.k8s:
+        state: present
+        kind: Deployment
+        name: archie-main-svr
+        namespace: archie
+        definition:
+          spec:
+            template:
+              spec:
+                containers:
+                - name: archie-svr
+                  image: lmr97/archie-svr:latest
+        wait: true
+    - name: Deploy new image for Letterboxd app
+      kubernetes.core.k8s:
+        state: present
+        kind: Deployment
+        name: archie-main-svr
+        namespace: archie
+        definition:
+          spec:
+            template:
+              spec:
+                containers:
+                - name: lb-app
+                  image: lmr97/lb-web-app:latest
+        wait: true
