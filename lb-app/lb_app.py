@@ -27,6 +27,7 @@ import os
 import sys
 import json
 import socket
+import traceback
 
 from letterboxd_list import VALID_ATTRS
 import letterboxd_list.containers as lbc
@@ -77,9 +78,43 @@ def send_list_with_attrs(conn: socket.socket, query: dict):
     send_list_len(conn, lb_list.length)
     send_header(conn, attrs, lb_list.is_ranked)
 
-    # delegate the parallel processing to a Parallelizer object
-    Parallelizer(conn, lb_list, attrs).run_jobs()
-    print("job finished")
+    # don't multithread for tiny lists relative to the number of cores
+    # specifically, if there are less list items than the CPU count x 4,
+    # since it's more cost than its worth
+    if lb_list.length <= os.cpu_count() * 4:
+
+        list_rank = 1       # in case needed
+        for url in lb_list:
+            film     = lbc.LetterboxdFilm(url)
+            title    = "\"" + film.title + "\""            # rudimentary sanitizing
+            file_row = title+","+film.year
+
+            if lb_list.is_ranked:
+                file_row   = str(list_rank) + "," + file_row
+                list_rank += 1
+
+            if len(attrs) > 0:
+                file_row  += "," + film.get_attrs_csv(attrs)
+
+            # sends only row data, without newline (to be added at client)
+            send_line(conn, file_row)
+    else:
+        # delegate the parallel processing to a Parallelizer object
+        Parallelizer(conn, lb_list, attrs).run_jobs_batch_send()
+
+
+def print_full_traceback(exc, msg: str=None):
+    print("\n*** Traceback start ***\n")
+    traceback.print_tb(exc.__traceback__, file=sys.stderr)
+    
+    if msg:
+        print(f"\n{msg}: ", end="") 
+    else:
+        print("\n\033[1;31mError\033[0m: ", end="")
+
+    print(f"{repr(exc)}", file=sys.stderr)
+
+    print("\n*** End of traceback ***\n")
 
 
 
@@ -126,10 +161,17 @@ def main():
                 print(f"\033[0;32mTCP connection on {py_cont_sock} closed.\033[0m")
                 break
 
-            print(f"Unexpected error while awaiting new connections: {repr(ose)}"
-                "\nReattempting awaiting new connections...",
-                file=sys.stderr)
+            print_full_traceback(ose, msg="Unexpected error while awaiting new connections")
+            print("\nReattempting awaiting new connections...")
             continue
+
+        # exists strictly for testing
+        except KeyboardInterrupt:
+            listener.close()
+            if "conn" in locals():
+                conn.close()
+            print(f"\n\033[0;32mTCP connection on {py_cont_sock} closed.\033[0m")
+            return
 
         try:
             # Receives JSON data of the following format:
@@ -153,22 +195,30 @@ def main():
                 send_list_with_attrs(conn, query)
 
         except lbc.ListTooLongError as res_too_long:
-            print(f"{repr(res_too_long)}", file=sys.stderr)
+            print_full_traceback(res_too_long)
             send_list_len(conn, 0)
             send_line(conn, f"-- 403 FORBIDDEN -- {repr(res_too_long)}")
 
         except lbc.RequestError as req_err:
-            print(f"{repr(req_err)}", file=sys.stderr)
+            print_full_traceback(req_err)
             send_list_len(conn, 0)
             send_line(conn, f"-- 422 UNPROCESSABLE CONTENT -- {repr(req_err)}")
 
         except lbc.HTTPError as lb_serr:
-            print(f"{repr(lb_serr)}", file=sys.stderr)
+            print_full_traceback(lb_serr)
             send_list_len(conn, 0)
             send_line(conn, f"-- 502 BAD GATEWAY -- {repr(lb_serr)}")
 
+        # exists strictly for testing
+        except KeyboardInterrupt:
+            listener.close()
+            if "conn" in locals():
+                conn.close()
+            print(f"\n\033[0;32mTCP connection on {py_cont_sock} closed.\033[0m")
+            return
+
         except Exception as e:
-            print(f"{repr(e)}", file=sys.stderr)
+            print_full_traceback(e)
             send_list_len(conn, 0)
             send_line(conn, f"-- 500 INTERNAL SERVER ERROR -- {repr(e)}")
 
