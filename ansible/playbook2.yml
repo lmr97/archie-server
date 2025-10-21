@@ -3,31 +3,37 @@
   gather_facts: true
 
   tasks: 
-    - name: Deploy new image for main server
-      kubernetes.core.k8s:
-        state: present
-        kind: Deployment
-        name: archie-main-svr
-        namespace: archie
-        definition:
-          spec:
-            template:
-              spec:
-                containers:
-                - name: archie-svr
-                  image: lmr97/archie-svr:latest
-        wait: true
-    - name: Deploy new image for Letterboxd app
-      kubernetes.core.k8s:
-        state: present
-        kind: Deployment
-        name: archie-main-svr
-        namespace: archie
-        definition:
-          spec:
-            template:
-              spec:
-                containers:
-                - name: lb-app
-                  image: lmr97/lb-web-app:latest
-        wait: true
+    - name: Write to file
+      ansible.builtin.shell: echo "Hi, from Ansible <3" > /home/martin/hi.txt
+
+    # - name: Deploy new image for main server
+    #   kubernetes.core.k8s:
+    #     state: present
+    #     kind: Deployment
+    #     name: archie-main-svr
+    #     namespace: archie
+    #     wait: true
+    #     definition:
+    #       spec:
+    #         template:
+    #           spec:
+    #             containers:
+    #             - name: archie-svr
+    #               image: lmr97/archie-svr:latest
+    #               imagePullPolicy: Always
+        
+    # - name: Deploy new image for Letterboxd app
+    #   kubernetes.core.k8s:
+    #     state: present
+    #     kind: Deployment
+    #     name: archie-main-svr
+    #     namespace: archie
+    #     wait: true
+    #     definition:
+    #       spec:
+    #         template:
+    #           spec:
+    #             containers:
+    #             - name: lb-app
+    #               image: lmr97/lb-web-app:latest
+    #               imagePullPolicy: Always
