@@ -3,9 +3,9 @@ web_server:
   hosts:
     archie:
       ansible_user: martin
-      ansible_host: localhost
-      ansible_python_interpreter: /home/martin/archie-server/ansible/av/bin/python3
-      ansible_port: 1949
+      ansible_host: archie.zapto.org
+      ansible_python_interpreter: /home/martin/kaita/archie-server/ansible/av/bin/python3
+      ansible_port: 1917
       ansible_password: !vault |
           $ANSIBLE_VAULT;1.1;AES256
           64383738613938623366653836333532326464343961666533343166363930633935633064333333
