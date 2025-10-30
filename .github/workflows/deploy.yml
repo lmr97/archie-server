@@ -1,3 +1,5 @@
+name: Deploy to cluster
+
 on:
   workflow_run:
     workflows: [Archie CI]
