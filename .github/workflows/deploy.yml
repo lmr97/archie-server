@@ -1,5 +1,3 @@
-name: Deployment
-
 on:
   workflow_run:
     workflows: [Archie CI]
@@ -11,18 +9,15 @@ jobs:
     runs-on: ubuntu-latest
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
     steps:
-    - uses: actions/checkout@v4
-    - name: Deploy to server
-      uses: appleboy/ssh-action@v1
+    - name: Check out repo
+      uses: actions/checkout@v4
+    - name: Deploy via Ansible
+      uses: dawidd6/action-ansible-playbook@v4
       with:
-        host: ${{ secrets.MAIN_HOST }}
-        username: martin
-        password: ${{ secrets.ARCHIE_PASSWORD }}
+        playbook: playbook2.yml
+        directory: ./ansible
         key: ${{ secrets.ARCHIE_SSH_PK }}
-        port: ${{ secrets.SSH_PORT }}
-        script: |
-          echo ${{ secrets.ANSIBLE_VAULT_PASSWORD }} > ~/.pw
-          ansible-playbook -i ~/archie-server/ansible/inventory.yml \
-            ~/archie-server/ansible/playbook.yml \
-            --vault-pass-file ~/.pw
-          rm ~/.pw
+        vault_password: ${{ secrets.ANSIBLE_VAULT_PASSWORD }}
+        options: |
+          --inventory inventory.yml
+          --verbose
