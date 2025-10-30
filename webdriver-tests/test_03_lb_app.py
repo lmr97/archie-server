@@ -25,6 +25,7 @@ drivers = [
 root_url = os.getenv("DOCKER_SERVER_URL")   # has no trailing slash
 [d.get(root_url+"/lb-list-conv") for d in drivers]
 
+ALL_ATTRS_LIST_EXISTS = False
 
 def unordered_row_val_compare(true_row: str, test_row: str, attrs: list[str], is_ranked: bool):
     
@@ -65,6 +66,10 @@ def test_normal_list_no_attrs():
 
         sleep(1)   # to try an address what seems to be a race condition
         drv.download_file("test-list-all-attributes.csv","./downloads")
+        
+        # determine filename in later tests
+        global ALL_ATTRS_LIST_EXISTS
+        ALL_ATTRS_LIST_EXISTS = True
 
         true_data = []
         test_data = []
@@ -107,11 +112,15 @@ def test_normal_list_some_attrs():
 
         sleep(1)   # to try an address what seems to be a race condition
 
-        # on Firefox, there is no space between the title and the (1)
-        if drv.name == "firefox":
-            drv.download_file("test-list-all-attributes(1).csv","./downloads")
+        # allows this test to be run independently
+        if not ALL_ATTRS_LIST_EXISTS:
+            drv.download_file("test-list-all-attributes.csv","./downloads")
         else:
-            drv.download_file("test-list-all-attributes (1).csv","./downloads")
+            # on Firefox, there is no space between the title and the (1)
+            if drv.name == "firefox":
+                drv.download_file("test-list-all-attributes(1).csv","./downloads")
+            else:
+                drv.download_file("test-list-all-attributes (1).csv","./downloads")
 
         true_data = []
         test_data = []

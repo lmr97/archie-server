@@ -1,3 +1,4 @@
+# password into these containers is 'secret'
 name: "selenium-grid"
 services: 
   chrome:
