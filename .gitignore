@@ -19,3 +19,4 @@ coverage/
 db-dumps/
 webdriver-tests/downloads/
 webdriver-tests/*.sh
+target/*
