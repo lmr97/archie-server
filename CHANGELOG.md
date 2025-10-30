@@ -1,11 +1,12 @@
 # Changelog
 
-
 ## 0.9.11 - 2025-10-20
 
 - **Letterboxd List App (backend)**: Parallelize scraping for improved performance
 
 - **General**: Revamp Ansible deployment for Kubernetes setup
+
+- **Homepage**: Update main writeup, include mention of AI usage
 
 
 ## 0.9.10 - 2025-10-03
