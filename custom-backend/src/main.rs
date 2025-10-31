@@ -44,9 +44,23 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     if prelog { println!("[ PRE-LOG ]: Loading log file path from environment..."); }
     
-    let log_file_path = get_env_var("SERVER_LOG")?;
-    build_logger(log_file_path, prelog)?.init();
 
+    let log_file_path = match get_env_var("SERVER_LOG") {
+        Ok(filepath) => filepath,
+        Err(_) => String::new()
+    };
+    
+    if log_file_path.is_empty() || log_file_path == "stdout" {
+        
+        build_stdout_logger(prelog).init();
+
+    } else {
+        
+        build_file_logger(log_file_path, prelog)?.init();
+
+    }
+
+    
     if prelog { println!("[ PRE-LOG ]: Logger initialized!"); }
     
     

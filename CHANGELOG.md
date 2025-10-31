@@ -1,6 +1,11 @@
 # Changelog
 
-## 0.9.11 - 2025-10-20
+## 0.9.12 - 2025-10-30
+
+- **Main Server**: Add stdout logging back in after improper merge
+
+
+## 0.9.11 - 2025-10-29
 
 - **Letterboxd List App (backend)**: Parallelize scraping for improved performance
 
