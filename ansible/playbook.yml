@@ -3,9 +3,6 @@
   gather_facts: true
 
   tasks: 
-    - name: Write to file
-      ansible.builtin.shell: echo "Hi, from Ansible <3" > /home/martin/hi.txt
-
     - name: Deploy new image for main server
       kubernetes.core.k8s:
         state: present
