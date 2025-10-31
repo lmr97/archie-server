@@ -10,6 +10,7 @@
         name: archie-main-svr
         namespace: archie
         wait: true
+        validate_certs: false
         definition:
           spec:
             template:
@@ -26,6 +27,7 @@
         name: archie-main-svr
         namespace: archie
         wait: true
+        validate_certs: false
         definition:
           spec:
             template:
