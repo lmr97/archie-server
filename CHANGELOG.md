@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.9.13 - 2025-10-30
+
+- **Main Server**: Actually add compression (got lost in a merge)
+
+
 ## 0.9.12 - 2025-10-30
 
 - **Main Server**: Add stdout logging back in after improper merge
