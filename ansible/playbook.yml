@@ -11,6 +11,7 @@
         namespace: archie
         wait: true
         validate_certs: false
+        apply: true
         # k3s puts its kubeconfig in a different place than
         # mainline K8s
         kubeconfig: /etc/rancher/k3s/k3s.yaml
@@ -31,6 +32,7 @@
         namespace: archie
         wait: true
         validate_certs: false
+        apply: true
         kubeconfig: /etc/rancher/k3s/k3s.yaml
         definition:
           spec:
