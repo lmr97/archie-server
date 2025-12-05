@@ -276,11 +276,11 @@ export function LetterboxdApp() {
 
         evtSource.addEventListener("complete", (_) => {
 
-            testHandle.isComplete();   // for testing purposes
             console.debug("Stream complete");
             setGettingList(false);
             setPercComplete(0.0);
 
+            testHandle.isComplete();   // for testing purposes
             if (!errReceivedRef.current) {
                 downloadList(`${listInfo.listName}.csv`, userList);
                 evtSource.close();  
@@ -335,7 +335,7 @@ export function LetterboxdApp() {
         testHandle.gettingList(true);                   // for testing purposes
 
         try {receiveList(listInfo);}
-        catch(streamingError) {
+        catch(streamingError: any) {
             streamErrorNotify(streamingError);
         }
     }
