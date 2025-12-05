@@ -162,8 +162,8 @@ const mocks: MockHandler[] = [
                                 rowData: row
                             }; 
                             console.log("sending normal file row...");
-                            await sleepJS(800);
-                            sseEmitter.push(JSON.stringify(lr));
+                            await sleepJS(500);
+                            sseEmitter.push(lr);
                         }
                         someCaseRan = true; 
                         break;
@@ -180,8 +180,8 @@ const mocks: MockHandler[] = [
                                 rowData: row
                             }; 
                             console.log("sending big file row...");
-                            await sleepJS(200);
-                            sseEmitter.push(JSON.stringify(lr));
+                            await sleepJS(100);
+                            sseEmitter.push(lr);
                         }
                         someCaseRan = true; 
                         break;
@@ -231,7 +231,7 @@ const mocks: MockHandler[] = [
                         rowData: `${titles[i]},${years[i]}`
                     }; 
                     console.log("sending minimal file row...");
-                    sseEmitter.push(JSON.stringify(lr));
+                    sseEmitter.push(lr);
                 }
             } 
             else if (req.query.attrs.includes("bingus")) {
