@@ -1,9 +1,10 @@
 /// <reference types="@vitest/browser/context" />
-import { describe, expect, vi, it } from 'vitest';
+import { describe, expect, vi, it, beforeAll } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import GuestbookApp from '../static/scripts/guestbook/guestbook-react';
 import { type Guestbook, type GuestbookEntry, type EntryReceipt } from '../static/scripts/server-types';
+import { count } from 'console';
 
 
 const timeOptions: Intl.DateTimeFormatOptions = { 
@@ -137,7 +138,7 @@ describe('Testing existing guestbook display', () => {
     });
 })
 
-describe('Testing new guestbook entry', async () => {
+describe('Testing new guestbook entry', () => {
 
     const user = userEvent.setup();
     const validName = "o̵̬̍̎́b̵͇͎͍͝ǰ̵͓̙̮͑e̴͚̚c̵͓̫̅͘t̶͔͊̏";
@@ -163,14 +164,15 @@ describe('Testing new guestbook entry', async () => {
         ⓙ⫕∳ℯ⟕⚫↰₼⊚↶⯝⡍⧢⬺⶿⬇➧⿄↨⹃₽₃⫬♕↡▷‥▥␚⹴⢀⁋⩆☋⢌⚦⢉ⅿⳃ⥿⚊❦⸧⭥☋⼗⠹⒄ⷠ⥩ⳮⵔ⅓⊽⣓⡀⎌⮳⨽⠈⣨⮲⻵\
         ▷⮺┷⢒⾓⸷➈ⰼ♋❀⑯⽕⡤⏁⫋⟈⏮ⴸ⃮▮♌▜⃑⨦⒈".replaceAll("  ", "");
 
-    // enter and submit the entry 
-    await user.click(screen.getByTestId("name-input"))   // gotta click it first!
-    await user.type(screen.getByTestId("name-input"), validName);
-    await user.click(screen.getByTestId("note-input"))
-    await user.type(screen.getByTestId("note-input"), validNote);
+    beforeAll(() => {
+        // enter and submit the entry 
+        return user.click(screen.getByTestId("name-input"))   // gotta click it first!
+            .then((_) => user.type(screen.getByTestId("name-input"), validName))
+            .then((_) => user.click(screen.getByTestId("note-input")))
+            .then((_) => user.type(screen.getByTestId("note-input"), validNote))
+            .then((_) => user.click(screen.getByRole("button")));
+    })
     
-    await user.click(screen.getByRole("button"));
-
     it("displays new entry name", () => {
 
         expect(screen.getByTestId("entry-name"+newEntryId))
@@ -195,33 +197,32 @@ describe('Testing new guestbook entry', async () => {
     });
 
 
-    it("rejects overlong name", async () => {
+    it("rejects overlong name", () => {
         
         // ensure entry boxes are clear
-        await user.clear(screen.getByTestId("name-input"));
-        await user.clear(screen.getByTestId("note-input"));
-
-        await user.type(screen.getByTestId("note-input"), validNote);
-        await user.type(screen.getByTestId("name-input"), invalidName);
-        await user.click(screen.getByRole("button"));
-        
-        const invalidNameElement = screen.queryByText(invalidName);
-        expect(invalidNameElement).toBeNull();
-        
+        return user.clear(screen.getByTestId("name-input"))
+            .then((_) => user.clear(screen.getByTestId("note-input")))
+            .then((_) => user.type(screen.getByTestId("note-input"), validNote))
+            .then((_) => user.type(screen.getByTestId("name-input"), invalidName))
+            .then((_) => user.click(screen.getByRole("button")))
+            .then((_) => {
+                const invalidNameElement = screen.queryByText(invalidName);
+                expect(invalidNameElement).toBeNull();
+            });
     });
 
 
-    it("rejects overlong note", async () => {
+    it("rejects overlong note", () => {
 
-        await user.clear(screen.getByTestId("name-input"));
-        await user.clear(screen.getByTestId("note-input"));
-
-        await user.type(screen.getByTestId("note-input"), invalidNote);
-        await user.type(screen.getByTestId("name-input"), validName);
-        await user.click(screen.getByRole("button"));
-        
-        const invalidNoteElement = screen.queryByText(invalidName);
-        expect(invalidNoteElement).toBeNull();
+        return user.clear(screen.getByTestId("name-input"))
+            .then((_) => user.clear(screen.getByTestId("note-input")))
+            .then((_) => user.type(screen.getByTestId("note-input"), invalidNote))
+            .then((_) => user.type(screen.getByTestId("name-input"), validName))
+            .then((_) => user.click(screen.getByRole("button")))
+            .then((_) => {
+                const invalidNoteElement = screen.queryByText(invalidNote);
+                expect(invalidNoteElement).toBeNull();
+            });
     });
 
 
@@ -235,37 +236,41 @@ describe('Testing new guestbook entry', async () => {
 
 
     it("counts number of bytes typed", async () => {
+        const nameBox = screen.getByTestId("name-input");
+        const noteBox = screen.getByTestId("note-input");
 
         // ensure entry boxes are clear
-        await user.clear(screen.getByTestId("name-input"));
-        await user.clear(screen.getByTestId("note-input"));
-
-        const noteBox = screen.getByTestId("note-input");
+        await user.clear(nameBox);
+        await user.clear(noteBox);
+        
         const counter = screen.getByTestId("char-counter");
         const textEnc = new TextEncoder();
 
         for (var i = 0; i < 100; i++) {
             // using invalidNote as a bank of random Unicode
             await user.type(noteBox, invalidNote[i]);
-            var trueLength = textEnc.encode(invalidNote.slice(0,i+1)).length.toString();
-
+            var trueLength = textEnc
+                .encode(invalidNote.slice(0,i+1))
+                .length
+                .toString();
             expect(counter).toHaveTextContent(trueLength);
         }
     });
 
 
-    it("adds 'too-long' to counter's class for overlong notes", async () => {
+    it("adds 'too-long' to counter's class for overlong notes", () => {
         
         // ensure entry boxes are clear
-        await user.clear(screen.getByTestId("name-input"));
-        await user.clear(screen.getByTestId("note-input"));
-
-        const noteBox = screen.getByTestId("note-input");
-        const counter = screen.getByTestId("char-counter");
-
-        await user.click(noteBox);
-        await user.paste(invalidNote);       // using userEvent.type() times out the test
-
-        expect(counter).toHaveClass("too-long");
+        return user.clear(screen.getByTestId("name-input"))
+            .then((_) => user.clear(screen.getByTestId("note-input")))
+            .then((_) => {
+                const noteBox = screen.getByTestId("note-input");
+                return user.click(noteBox);
+            })
+            .then((_) => user.paste(invalidNote))
+            .then((_) => {
+                const counter = screen.getByTestId("char-counter");
+                expect(counter).toHaveClass("too-long");
+            })
     });
 });

@@ -1,118 +1,100 @@
 /// <reference types="@vitest/browser/context" />
 
-// these tests were separated out because it was becoming too much
-// to orchestrate multiple async tests on the same DOM
-import { describe, expect, vi, it } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { describe, expect, vi, it, beforeEach, beforeAll, MockInstance, afterAll, afterEach } from 'vitest';
+import { render, screen, waitFor } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import * as LbAppModule from '../static/scripts/lb-app/lb-app-react';
 
 const user = userEvent.setup();
 render(<LbAppModule.LetterboxdApp />);
 
-window.alert = vi.fn((alertText: string) => {
-    console.error(alertText);
-    return alertText;
-});
+const alertSpy = vi.spyOn(window, 'alert');
+const dlSpy    = vi.spyOn(LbAppModule.testHandle, 'dlListCalled');
 
-const dlSpy = vi.spyOn(LbAppModule.testHandle, 'dlListCalled');
-
+alertSpy.mockImplementation(
+    vi.fn((alertText: string) => {
+        console.error(alertText);
+        return alertText;
+    })
+);
 
 describe("Testing error states", () => {
+
+    const urlInput = screen.getByTestId("url-input");
+
+    beforeEach(() => {
+        return screen.findByRole("button")
+            .then((_) => user.click(urlInput))
+            .then((_) => user.clear(urlInput))
+    });
 
     // When an in-stream error occurs, the component should restore 
     // the submit button and not show the loading animations
 
-    it("informs user that the list is too long", async () => {
-        await screen.findByRole("button", {}, {timeout: 4500})
-            .then(async () => {
-                await user.click(screen.getByTestId("url-input"));
-                await user.clear(screen.getByTestId("url-input"));
-                await user.type(screen.getByTestId("url-input"), "https://letterboxd.com/user_exists/list/list-too-long/");
-                await user.click(screen.getByRole("button"));
-            });
+    it("informs user that the list is too long", () => {
         
-        // wait for alert to pop up
-        setTimeout(() => {
-            
-            expect(window.alert).toReturnWith(
-                "The server does not accept conversion requests for \
-                lists over 10,000 films long. Is there a shorter list we can try?"
-                .replaceAll("  ", "")
-            );
-            
-            expect(screen.getByRole("button")).toBeInTheDocument();
-        }, 100);
-
-        expect(dlSpy).not.toHaveBeenCalled();  // make sure a download wasn't triggered
+        return user.type(urlInput, "https://letterboxd.com/user_exists/list/list-too-long/")
+            .then((_) => user.click(screen.getByRole("button")))
+            .then((_) => waitFor(() => expect(alertSpy).toHaveBeenCalled()))
+            .then((_) => {
+                expect(alertSpy).toReturnWith(
+                    "The server does not accept conversion requests for \
+                    lists over 10,000 films long. Is there a shorter list we can try?"
+                    .replaceAll("  ", "")
+                );
+                expect(screen.getByRole("button")).toBeInTheDocument();
+                expect(dlSpy).not.toHaveBeenCalled();  // make sure a download wasn't triggered
+            });
     });
 
 
-    it("informs user that the list is invalid", async () => {
+    it("informs user that the list is invalid", () => {
 
-        await screen.findByRole("button", {}, {timeout: 4500})
-            .then(async () => {
-                await user.click(screen.getByTestId("url-input"));
-                await user.clear(screen.getByTestId("url-input"));
-                await user.type(screen.getByTestId("url-input"), "https://letterboxd.com/user_exists/list/list-no-exist/");
-                await user.click(screen.getByRole("button"));
-            });
+        return user.type(urlInput, "https://letterboxd.com/user_exists/list/list-no-exist/")
+            .then((_) => user.click(screen.getByRole("button")))
+            .then((_) => waitFor(() => expect(alertSpy).toHaveBeenCalled()))
+            .then((_) => {
+                expect(alertSpy).toReturnWith(
+                    "The URL entered doesn't appear to be a valid Letterboxd list. \
+                    Try checking the link and running it again."
+                    .replaceAll("  ", "")
+                );
 
-        // wait for alert to pop up
-        setTimeout(() => {
-            expect(window.alert).toReturnWith(
-                "The URL entered doesn't appear to be a valid Letterboxd list. \
-                Try checking the link and running it again."
-                .replaceAll("  ", "")
-            );
-
-            expect(screen.getByRole("button")).toBeInTheDocument();
-        }, 100);
-
-        expect(dlSpy).not.toHaveBeenCalled();  // make sure a download wasn't triggered
+                expect(screen.getByRole("button")).toBeInTheDocument();
+                expect(dlSpy).not.toHaveBeenCalled();  // make sure a download wasn't triggered
+            })
     });
 
 
-    it("informs user that the Letterboxd servers are down", async () => {
+    it("informs user that the Letterboxd servers are down", () => {
 
-        await screen.findByRole("button", {}, {timeout: 4500})
-            .then(async () => {
-                await user.click(screen.getByTestId("url-input"));
-                await user.clear(screen.getByTestId("url-input"));
-                await user.type(screen.getByTestId("url-input"), "https://letterboxd.com/user_exists/list/lb-server-down/");
-                await user.click(screen.getByRole("button"));
+        return user.type(urlInput, "https://letterboxd.com/user_exists/list/lb-server-down/")
+            .then((_) => user.click(screen.getByRole("button")))
+            .then((_) => waitFor(() => expect(alertSpy).toHaveBeenCalled()))
+            .then((_) => {
+                expect(alertSpy).toReturnWith(
+                    "It looks like Letterboxd's servers are down! Try again a little later."
+                );
+
+                expect(screen.getByRole("button")).toBeInTheDocument();
+                expect(dlSpy).not.toHaveBeenCalled();  // make sure a download wasn't triggered
             });
-
-        // wait for alert to pop up
-        setTimeout(() => {
-            expect(window.alert).toReturnWith(
-                "It looks like Letterboxd's servers are down! Try again a little later."
-            );
-
-            expect(screen.getByRole("button")).toBeInTheDocument();
-        }, 100);
-
-        expect(dlSpy).not.toHaveBeenCalled();  // make sure a download wasn't triggered
     });
 
     
-    it("informs user that Archie is down", async () => {
+    it("informs user that Archie is down", () => {
 
-        await screen.findByRole("button", {}, {timeout: 4500})
-            .then(async () => {
-                await user.click(screen.getByTestId("url-input"));
-                await user.clear(screen.getByTestId("url-input"));
-                await user.type(screen.getByTestId("url-input"), "https://letterboxd.com/user_exists/list/this-hurts-you/");
-                await user.click(screen.getByRole("button"));
+        return user.type(urlInput, "https://letterboxd.com/user_exists/list/this-hurts-you/")
+            .then((_) => user.click(screen.getByRole("button")))
+            .then((_) => waitFor(() => expect(alertSpy).toHaveBeenCalled()))
+            .then((_) => {
+                expect(alertSpy).toReturnWith(
+                    "There was an issue with the server itself that prevented the completion \
+                    of your request. My apologies.".replaceAll("  ", "")
+                );
+
+                expect(screen.getByRole("button")).toBeInTheDocument();
+                expect(dlSpy).not.toHaveBeenCalled();  // make sure a download wasn't triggered
             });
-
-        expect(window.alert).toReturnWith(
-            "There was an issue with the server itself that prevented the completion \
-            of your request. My apologies.".replaceAll("  ", "")
-        );
-
-        expect(screen.getByRole("button")).toBeInTheDocument();
-
-        expect(dlSpy).not.toHaveBeenCalled();  // make sure a download wasn't triggered
     });
 });

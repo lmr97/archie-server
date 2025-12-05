@@ -1,7 +1,7 @@
 /// <reference types="@vitest/browser/context" />
 import { readFileSync } from 'node:fs';
-import { afterEach, describe, expect, vi, it } from 'vitest';
-import { render, screen, cleanup } from '@testing-library/react';
+import { beforeAll, describe, expect, vi, it, afterAll } from 'vitest';
+import { render, screen, cleanup, waitFor } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import HitCounter from '../static/scripts/home/hit-counter';
 import ReactLogoMessage from '../static/scripts/home/react-logo-msg';
@@ -20,7 +20,6 @@ const fetchSpy = vi.spyOn(global, 'fetch')
     }
 );
 
-afterEach(() => cleanup());
 globalThis.serverFail = false;
 
 
@@ -44,61 +43,43 @@ describe('Ensuring all links are live', () => {
 
 describe('Testing home loading hit count', () => {
 
+    beforeAll(() => render(<HitCounter />));
+    afterAll(()  => cleanup())
     
     it('displays it is gonna get hit count', () => {
-        render(<HitCounter />);
-
-        expect(screen.getByRole("heading"))
-            .toHaveTextContent("getting hit count...");
+        expect(screen.getByRole("heading")).toHaveTextContent("getting hit count...");
     });
 
     
     it('displays hit count', () => {
-
-        render(<HitCounter />);
-        
-        // let it load fully. I understand that this is a goofy
-        // way to do this, but doing it this way allows me to cut
-        // out a lot of async bullshit, which I want
-        setTimeout(() => {
-                expect(screen.getByRole("heading"))
-                    .toHaveTextContent("8,002,934");
-            
-                fetchSpy.mockClear();
-                cleanup();
-            },
-            500
-        );
+        return waitFor(() => 
+            expect(screen.getByRole("heading")).toHaveTextContent("8,002,934")
+        ).then((_) => fetchSpy.mockClear());
     });
 });
 
 
 describe('Testing home loading hit count, but server fails', () => {
 
-    
-    globalThis.serverFail = true;
-
+    beforeAll(() => {
+        globalThis.serverFail = true;
+        render(<HitCounter />)
+    });
+    afterAll(()  => {
+        cleanup()
+        globalThis.serverFail = false;
+    });
     
     it('displays it is gonna get hit count', () => {
 
-        render(<HitCounter />);
         expect(screen.getByRole("heading"))
             .toHaveTextContent("getting hit count...");
     });
 
     
     it('tells user it could not get hit count', () => {
-
-        render(<HitCounter />);
-        
-        // let it load fully
-        setTimeout(() => {
-                expect(screen.getByRole("heading"))
-                    .toHaveTextContent("(unable to get visit count)");
-            
-                cleanup();
-            },
-            500
+        return waitFor(() => 
+            expect(screen.getByRole("heading")).toHaveTextContent("(unable to get visit count)")
         );
     });
 });
@@ -108,11 +89,12 @@ describe('Testing the React logo flair', () => {
 
     
     const user = userEvent.setup();
+    beforeAll(() => render(<ReactLogoMessage />));
+    afterAll(()  => cleanup())
 
 
     it('does not show message when mouse is away', () => {
-
-        render(<ReactLogoMessage />);
+        
         expect(screen.getByRole("paragraph"))
             .not.toBeVisible()
     })
@@ -120,7 +102,6 @@ describe('Testing the React logo flair', () => {
 
     it('does show message when moused over', () => {
 
-        render(<ReactLogoMessage />);
         user.hover(screen.getByTestId("react-logo-div"));
 
         // wait for the animation to complete
@@ -133,7 +114,6 @@ describe('Testing the React logo flair', () => {
 
     it('enlarges React logo', () => {
 
-        render(<ReactLogoMessage />);
         user.hover(screen.getByTestId("react-logo-div"));
 
         // wait for the animation to complete
