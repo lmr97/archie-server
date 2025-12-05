@@ -138,13 +138,22 @@ fn receive_list_row(conn: &mut TcpStream, total_rows: usize) -> Event {
     //
     // After the emission of an error event, the connection will be 
     // terminated by the client
+    debug!("Listening for row size-bytes...");
     match conn.read_exact(&mut row_length_buf) {
         // the kind of error encountered here is usually that
         // the buffer was not filled, which ends up working out. 
         // Catching any other errors here and logging them
         // in case new ones arise.
         Ok(_) => {},
-        Err(e) => {error!("Error on read of row-size bytes: {e:?}");}
+        Err(e) => {
+            error!("Error on read of row size-bytes: {e:?}");
+            
+            // if the buffer is completely null, however,
+            // we do have a problem
+            if row_length_buf == [0, 0] {
+                return build_server_err_event();
+            }
+        }
     };
     debug!("Bytes received: {row_length_buf:?}");
 
@@ -254,8 +263,7 @@ pub async fn convert_lb_list(list_info: Query<ListInfo>) -> Result<Sse<impl Stre
     
     Ok(
         Sse::new( 
-            row_stream
-            .take(total_rows)
+            row_stream.take(total_rows)
         )
     )
 
