@@ -12,11 +12,13 @@ to terminate it without terminating the whole interpreter. So coverage will
 be incomplete according to this test, but this functionality is easy to test
 from the command line. 
 """
+import csv
 import os
-import socket
-import threading
 import json
 import pytest
+import pandas as pd
+import socket
+import threading
 from letterboxd_list import VALID_ATTRS
 import lb_app
 import healthcheck
@@ -26,6 +28,11 @@ PY_SOCK    = os.getenv("PY_CONT_SOCK", "127.0.0.1:3575")
 (IP, PORT) = PY_SOCK.split(":")
 PORT       = int(PORT)
 ADDRESS    = (IP, PORT)
+
+TEST_LIST     = pd.read_csv("letterboxd_get_list/letterboxd_list/tests/random-list-test.csv")
+MIN_RAND_LIST = TEST_LIST[["Title", "Year"]]\
+    .to_csv(index=False, quoting=csv.QUOTE_NONNUMERIC)\
+    .split("\n")  # `list` CSV formatted `str`s
 
 # app can be stopped by sending a specific string to the bound port
 APP_THREAD_1 = threading.Thread(target=lb_app.main)
@@ -54,7 +61,7 @@ def receive_list_len(connection: socket.socket) -> int:
 def receive_decode_row(connection: socket.socket) -> str:
     """
     Receives bytes and decodes them as a string the way the server does:
-    use the first 2 bytes to determine the length of 
+    use the first 2 bytes to determine the length of the data.
     """
     byte_len   = connection.recv(2)
     bytes_int  = int.from_bytes(byte_len, byteorder='big', signed=False)
@@ -219,7 +226,7 @@ def test_long_rows():
     Test a short list, but with long rows. The request will contain all 
     attributes, except for statistics rows (those change frequently).
     """
-    vattrs_no_stats = VALID_ATTRS   # keep module-level global in tact in this scope
+    vattrs_no_stats = VALID_ATTRS.copy()   # keep module-level global in tact in this scope
     vattrs_no_stats.remove("watches")
     vattrs_no_stats.remove("likes")
     vattrs_no_stats.remove("avg-rating")
@@ -227,13 +234,13 @@ def test_long_rows():
     megarow_list = {
         "list_name": "test-list-all-attributes",
         "author_user": "dialectica972",
-        "attrs": VALID_ATTRS
+        "attrs": vattrs_no_stats
     }
 
     request_str  = json.dumps(megarow_list)
     connection   = send_str(request_str)
     lb_list      = receive_list(connection, correct_len=3)
-
+    
     correct_list = []
     with open("short-list-all-attrs-no-stats.csv", "r", encoding="utf-8") as list_reader:
         correct_list = list_reader.readlines()
@@ -243,6 +250,7 @@ def test_long_rows():
         "Top Gun: Maverick",
         "Avatar: The Way of Water"
         ]
+    columns = correct_list[0].split(",")
     # checking row by row to show where any issues are
     for i, test_row in enumerate(lb_list):
 
@@ -258,14 +266,42 @@ def test_long_rows():
             # divide rows into cells, and check each cell for a difference in content.
             true_row = true_row.replace("\n", "")
             test_row = test_row.replace("\n", "")
-            for true_val, test_val in zip(true_row.split(","), test_row.split(",")):
+            for j, (true_val, test_val) in enumerate(zip(true_row.split(","), test_row.split(","))):
                 true_no_quotes = true_val.replace("\"","")
                 test_no_quotes = test_val.replace("\"","")
 
                 # if this fails, then there IS a meaningful difference between cell values.
                 assert set(true_no_quotes.split("; ")) == set(test_no_quotes.split("; ")), \
-                    f"film \"{films_in_list[i-1]}\" failed assertion." # account for header
+                    f"film \"{films_in_list[i-1]}\" failed assertion on field {columns[j]}"
 
+
+def test_list_order():
+    """
+    Make sure the parallelization still retains the list order.
+    Requests no attributes, get titles and years only. This makes the retrived 
+    list easier to compare to a test list.
+    """
+    min_list_req = {
+        "list_name": "truly-random-films",
+        "author_user": "dialectica972",
+        "attrs": ["none"]
+    }
+
+    request_str   = json.dumps(min_list_req)
+    connection    = send_str(request_str)
+    lb_list_recvd = receive_list(connection, correct_len=49)
+
+    # checking row by row to show where any issues are
+    for (idx, (true_row, test_row)) in enumerate(zip(MIN_RAND_LIST, lb_list_recvd)):
+
+        # first row is simply the header
+        if idx == 0:
+            continue
+        
+        # receive_list() appends newline on all rows
+        assert true_row+"\n" == test_row, \
+            f"test failed for row {idx+1}. Was {test_row}, should have been {true_row}."
+        
 
 def test_null_attributes():
     minirow_list = {
@@ -289,7 +325,7 @@ def test_null_attributes():
 
 def test_shutdown_via_msg():
     """
-    The app can shut down if sent the string below, if signal-sending
+    The app can shut down if sent the JSON string below, if signal-sending
     is ever cumbersome. This tests that functionality.
     """
     conn = send_str('{"msg": "shutdown"}')
