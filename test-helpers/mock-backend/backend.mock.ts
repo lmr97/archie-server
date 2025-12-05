@@ -162,7 +162,7 @@ const mocks: MockHandler[] = [
                                 rowData: row
                             }; 
                             console.log("sending normal file row...");
-                            await sleepJS(500);
+                            await sleepJS(300);
                             sseEmitter.push(lr);
                         }
                         someCaseRan = true; 
@@ -180,7 +180,7 @@ const mocks: MockHandler[] = [
                                 rowData: row
                             }; 
                             console.log("sending big file row...");
-                            await sleepJS(100);
+                            await sleepJS(50);
                             sseEmitter.push(lr);
                         }
                         someCaseRan = true; 
