@@ -105,7 +105,7 @@ def send_list_with_attrs(conn: socket.socket, query: dict):
         Parallelizer(conn, lb_list, attrs,debug=DEBUG_PRINT).run_jobs()
 
 
-def print_full_traceback(exc, msg: str=None):
+def print_full_traceback(exc, msg: str | None = None):
     print("\n*** Traceback start ***\n")
     traceback.print_tb(exc.__traceback__, file=sys.stderr)
     
