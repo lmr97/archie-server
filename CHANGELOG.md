@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.9.14 - 2025-11-14
+
+- **Main Server**: Remove compression for server-sent events for more immediate client-side processing
+
+- **Letterboxd List App (frontend)**: Fix loading bar not appearing
+
+
 ## 0.9.13 - 2025-10-30
 
 - **Main Server**: Actually add compression (got lost in a merge)
