@@ -2,7 +2,7 @@
 .coverage
 **/.github/
 build/
-tests/
+letterboxd_get_list/letterboxd_list/tests/
 **/.pytest_cache/
 **/__pycache__/
 *.csv
