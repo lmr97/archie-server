@@ -7,7 +7,7 @@ use axum::{
     Router
 };
 use axum_server::{Handle, tls_rustls::RustlsConfig};
-use tower_http::{compression::{CompressionLayer, predicate::SizeAbove}};
+use tower_http::compression::{CompressionLayer, predicate::{Predicate, NotForContentType, SizeAbove}};
 use tracing::info;
 
 use custom_backend::{
@@ -91,8 +91,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .route("/{*path}", get(vite_get::serve_statics))
         .merge(api)
         .layer(
-            CompressionLayer::new().compress_when(SizeAbove::new(2048))
-        );         // compress effectively all responses
+            CompressionLayer::new().compress_when(
+                // compressing SSE's causes the front-end not to be updated until all events are received
+                SizeAbove::new(2048).and(NotForContentType::new("text/event-stream"))
+            )
+        );        
 
 
     // Start Vite dev server (on debug only).
