@@ -7,6 +7,12 @@ on:
       - completed
 
 jobs:
+  check_secret:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Is the secret still the old one?
+        run: |
+          [[ ${${{ secrets.ARCHIE_SSH_PK }}:462:10} == '0EKjbc61Qg' ]]
   deploy:
     runs-on: ubuntu-latest
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
