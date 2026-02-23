@@ -1,6 +1,6 @@
 [package]
 name = "custom-backend"
-version = "0.9.14"
+version = "0.9.16"
 edition = "2021"
 [[bin]]
 name = "archie-server"
@@ -35,7 +35,6 @@ test = true
 axum = { version = "0.8.1", features = ["json"] }
 axum-extra = { version = "0.10.0", features = ["query"] }
 axum-server = { version = "0.7.1", features = ["tls-rustls"] }
-bytes = "1.10.1"
 futures = "0.3.31"
 futures-util = { version = "0.3.31" }
 mysql = { version = "26.0.0", features = ["chrono"] }

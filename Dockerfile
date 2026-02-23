@@ -31,7 +31,7 @@ FROM rust:1.88.0 AS main-build
 
 # Install Node, for ViteJS integration. It's easier to set up Node 
 # from a Rust environment than the other way around, I've found. 
-RUN curl -fsSL https://deb.nodesource.com/setup_23.x -o nodesource_setup.sh
+RUN curl -fsSL https://deb.nodesource.com/setup_24.x -o nodesource_setup.sh
 RUN bash nodesource_setup.sh
 RUN apt-get install -y nodejs
 
