@@ -1,16 +1,26 @@
 # Changelog
 
+## 0.9.16 - 2026-02-23
+
+### Removed
+
+- Remove non-functional Letterboxd app, due to changes in Letterboxd site requirements
+
+## 0.9.15 - 2026-02-23
+
+### Fixed
+
+- Update dependencies to fix bugs and vulnerabilities
+
 ## 0.9.14 - 2025-11-14
 
 - **Main Server**: Remove compression for server-sent events for more immediate client-side processing
 
 - **Letterboxd List App (frontend)**: Fix loading bar not appearing
 
-
 ## 0.9.13 - 2025-10-30
 
 - **Main Server**: Actually add compression (got lost in a merge)
-
 
 ## 0.9.12 - 2025-10-30
 
@@ -29,7 +39,6 @@
 ## 0.9.10 - 2025-10-03
 
 - **Main Server**: Add compression to images (really, anything over 2KiB)
-
 
 ## 0.9.9 - 2025-09-17
 
