@@ -20,7 +20,7 @@
               spec:
                 containers:
                 - name: archie-svr
-                  image: lmr97/archie-svr:0.9.13
+                  image: lmr97/archie-svr:latest
                   imagePullPolicy: Always
         
     - name: Deploy new image for Letterboxd app
@@ -38,5 +38,5 @@
               spec:
                 containers:
                 - name: lb-app
-                  image: lmr97/lb-web-app:0.9.13
+                  image: lmr97/lb-web-app:latest
                   imagePullPolicy: Always
