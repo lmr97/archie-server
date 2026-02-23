@@ -46,6 +46,9 @@ jobs:
     - uses: actions/setup-python@v5
       with:
         python-version: '3.13' 
+    # keeping this test, even though the app cannot function, since this tests
+    # interop only (not prod functionality), and would be needed if the app were
+    # ever gotten working again
     - name: Start mock Python app
       run: python ../test-helpers/mock_lb_app.py &
     - uses: actions-rs/toolchain@v1
@@ -53,9 +56,9 @@ jobs:
         profile: minimal
         toolchain: stable
         override: true
-    - uses: actions/setup-node@v4
+    - uses: actions/setup-node@v6
       with: 
-        node-version: 23.7.0
+        node-version: 25.6.1
     - name: Server unit tests
       run: |
         npm install vite
@@ -90,31 +93,33 @@ jobs:
         source test-helpers/validate-dump.sh demo
   
 
-  letterboxd_app_tests:
+  # Letterboxd app will no longer work due to non-API requests to letterboxd.com
+  # requiring JavaScript now
+  # letterboxd_app_tests:
 
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        shell: bash
-        working-directory: ./lb-app/letterboxd_get_list
+  #   runs-on: ubuntu-latest
+  #   defaults:
+  #     run:
+  #       shell: bash
+  #       working-directory: ./lb-app/letterboxd_get_list
 
-    steps:
-    - uses: actions/checkout@v4
-      with: 
-        submodules: recursive
-    - uses: actions/setup-python@v5
-      with:
-        python-version: '3.13' 
-    - name: Install module and dependencies
-      run: |
-        pip install ./letterboxd_list[testing]
-    - name: Run tests on letterboxd_list module
-      run: pytest --ignore=./letterboxd_list/tests/test_cli.py --cov -v
-    - name: Run tests on app's I/O driver
-      # tests and config are in outer directory
-      run: |
-        cd ..
-        pytest -v --cov --cov-report=term-missing
+  #   steps:
+  #   - uses: actions/checkout@v4
+  #     with: 
+  #       submodules: recursive
+  #   - uses: actions/setup-python@v5
+  #     with:
+  #       python-version: '3.13' 
+  #   - name: Install module and dependencies
+  #     run: |
+  #       pip install ./letterboxd_list[testing]
+  #   - name: Run tests on letterboxd_list module
+  #     run: pytest --ignore=./letterboxd_list/tests/test_cli.py --cov -v
+  #   - name: Run tests on app's I/O driver
+  #     # tests and config are in outer directory
+  #     run: |
+  #       cd ..
+  #       pytest -v --cov --cov-report=term-missing
   
 
   frontend_tests:
@@ -126,12 +131,12 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
-          node-version: 23.7.0
+          node-version: 25.6.1
       - uses: denoland/setup-deno@v2
         with: 
-          deno-version: 2.3.5
+          deno-version: 2.6.10
       - name: Environment setup
         run: npm install
       - name: Vitest tests
@@ -183,11 +188,14 @@ jobs:
           sleep 4
       # tests start here
       - name: Run integrations tests (no TLS)
+        # Letterboxd app will no longer work due to non-API requests to letterboxd.com
+        # requiring JavaScript now, so the call to the app's test suite has been 
+        # commented out
         run: |
           pip install -r requirements.txt
           pytest --verbose test_01_homepage.py
           pytest --verbose test_02_guestbook.py
-          pytest --verbose test_03_lb_app.py
+          # pytest --verbose test_03_lb_app.py
       - name: Spin up Docker pod (with TLS)
         run: |
           cd ..
