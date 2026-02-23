@@ -7,13 +7,6 @@ on:
       - completed
 
 jobs:
-  check_secret:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Is the secret still the old one?
-        run: |
-          SEC="${{ secrets.ARCHIE_SSH_PK }}"
-          [[ ${SEC:462:10} == '0EKjbc61Qg' ]]
   deploy:
     runs-on: ubuntu-latest
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
@@ -26,7 +19,8 @@ jobs:
         playbook: playbook.yml
         directory: ./ansible
         key: ${{ secrets.ARCHIE_SSH_PK }}
-        vault_password: ${{ secrets.ANSIBLE_VAULT_PASSWORD }}
+        # not needed, since only public-key authentication is used
+        # vault_password: ${{ secrets.ANSIBLE_VAULT_PASSWORD }}
         options: |
           --inventory inventory.yml
-          --verbose
+          --vvv
