@@ -20,7 +20,7 @@ jobs:
         directory: ./ansible
         key: ${{ secrets.ARCHIE_SSH_PK }}
         # not needed, since only public-key authentication is used
-        # vault_password: ${{ secrets.ANSIBLE_VAULT_PASSWORD }}
+        vault_password: ${{ secrets.ANSIBLE_VAULT_PASSWORD }}
         options: |
           --inventory inventory.yml
           -vvv
