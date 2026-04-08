@@ -140,9 +140,9 @@ jobs:
       - name: Environment setup
         run: npm install
       - name: Vitest tests
-        run: |
-          deno --allow-env --allow-net --allow-read test-helpers/mini-lb-server.mock.ts &
-          npx vitest --run --coverage
+        # in case I need it again
+        # deno --allow-env --allow-net --allow-read test-helpers/mini-lb-server.mock.ts &
+        run: npx vitest --run --coverage
   
 
   whole_project_integration_tests:
