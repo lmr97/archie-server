@@ -4,7 +4,7 @@
 
 ### Fixed
 
-- Implement routine package updates to reduce vulnerabilities (zero publicly-known vulnerabilities as of 2026-04-08, according to `cargo audit`)
+- Implement routine package updates to reduce vulnerabilities (zero publicly-known vulnerabilities as of 2026-04-08, according to `cargo audit` and `npm audit`)
 
 ### Removed
 
