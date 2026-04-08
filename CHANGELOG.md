@@ -1,10 +1,20 @@
 # Changelog
 
+## 0.9.16 - 2026-04-08
+
+### Fixed
+
+- Implement routine package updates to reduce vulnerabilities (zero publicly-known vulnerabilities as of 2026-04-08, according to `cargo audit`)
+
+### Removed
+
+- Remove tests for Letterboxd app
+
 ## 0.9.16 - 2026-02-23
 
 ### Removed
 
-- Remove non-functional Letterboxd app, due to changes in Letterboxd site requirements
+- Remove non-functional Letterboxd app, due to changes in Letterboxd site requirements, and clear effort by them to reduce bot traffic
 
 ## 0.9.15 - 2026-02-23
 
