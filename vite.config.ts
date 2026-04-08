@@ -28,6 +28,7 @@ export default defineConfig({
     setupFiles: ['./vitest-files/vitest-setup.ts'],  // needs to be in "test" property
     environment: 'jsdom',
     include: [ 'vitest-files/*', ],
+    exclude: [ 'vitest-files/lb-app-*' ],
     includeSource: [ 'static/scripts/**' ],
     coverage: {
       provider: 'v8',
