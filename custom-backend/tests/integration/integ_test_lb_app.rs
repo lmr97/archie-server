@@ -15,16 +15,21 @@ mod client_config;
 #[tokio::main]
 async fn main(){
 
-    let (protocol, base_url) = client_config::get_base_url();
-    let client = client_config::config_client(protocol);
+    /*
+        This part of the server project has been discontinued, out
+        of respect for Letterboxd's efforts to block bot traffic.
+    */
 
-    too_long_list_req(&client, base_url.clone()).await;
-    lb_server_down_req(&client, base_url.clone()).await;
-    bad_list_req(&client, base_url.clone()).await;
-    bad_attr_req(&client, base_url.clone()).await;
-    req_to_crashed_app(&client, base_url.clone()).await;
-    no_attr_req(&client, base_url.clone()).await;
-    big_list_req(&client, base_url.clone()).await;
+    // let (protocol, base_url) = client_config::get_base_url();
+    // let client = client_config::config_client(protocol);
+
+    // too_long_list_req(&client, base_url.clone()).await;
+    // lb_server_down_req(&client, base_url.clone()).await;
+    // bad_list_req(&client, base_url.clone()).await;
+    // bad_attr_req(&client, base_url.clone()).await;
+    // req_to_crashed_app(&client, base_url.clone()).await;
+    // no_attr_req(&client, base_url.clone()).await;
+    // big_list_req(&client, base_url.clone()).await;
 }
 
 

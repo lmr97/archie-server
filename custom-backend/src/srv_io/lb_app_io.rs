@@ -1,3 +1,8 @@
+/*
+    This part of the server project has been discontinued, out
+    of respect for Letterboxd's efforts to block bot traffic.
+*/
+
 /* This file is the interface to a Python app I made to
 collect the data from a given film list on letterboxd.com,
 formatting it into a CSV file.
@@ -271,256 +276,259 @@ pub async fn convert_lb_list(list_info: Query<ListInfo>) -> Result<Sse<impl Stre
 }
 
 
+/*
+    Keeping these as comments in case I return to this part of the project later.
+*/
 
-#[cfg(test)]
-mod tests {
+// #[cfg(test)]
+// mod tests {
     
-    // The general form of this unit test comes from an example on the 
-    // Axum repository; and I've found it's not really feasible to test  
-    // any other way, or with any more granularity. I need to simulate 
-    // the server to serve `convert_lb_list`, since neither `Sse` nor 
-    // `Event` structs don't allow for comparison. So the "unit" being 
-    // tested here is composed of the functions in this module, using a 
-    // mocked Python Letterboxd app to supply the data to test.
-    // 
-    // The point of these tests is to ensure that the server is getting
-    // the messages from the Python app, not that these messages are 
-    // correct (this is the point of the Python app tests). The Python 
-    // app is tested separately, and integration-tested separately from
-    // both these tests.
+//     // The general form of this unit test comes from an example on the 
+//     // Axum repository; and I've found it's not really feasible to test  
+//     // any other way, or with any more granularity. I need to simulate 
+//     // the server to serve `convert_lb_list`, since neither `Sse` nor 
+//     // `Event` structs don't allow for comparison. So the "unit" being 
+//     // tested here is composed of the functions in this module, using a 
+//     // mocked Python Letterboxd app to supply the data to test.
+//     // 
+//     // The point of these tests is to ensure that the server is getting
+//     // the messages from the Python app, not that these messages are 
+//     // correct (this is the point of the Python app tests). The Python 
+//     // app is tested separately, and integration-tested separately from
+//     // both these tests.
 
-    use super::*;
-    use std::{fs::OpenOptions, io::Error};
-    use tokio::net::TcpListener;
-    use axum::routing::{get, Router};
-    use eventsource_stream::Eventsource;
+//     use super::*;
+//     use std::{fs::OpenOptions, io::Error};
+//     use tokio::net::TcpListener;
+//     use axum::routing::{get, Router};
+//     use eventsource_stream::Eventsource;
 
 
-    async fn spawn_app() -> Result<(), Error> {
+//     async fn spawn_app() -> Result<(), Error> {
 
-        let listener = TcpListener::bind("127.0.0.1:8017")
-            .await?;
-        let lb_list_test = Router::new().route("/", get(convert_lb_list));
-        tokio::spawn(async {
-            axum::serve(listener, lb_list_test)
-            .await
-            .unwrap();    // if this little server can't go up here, it should crash the tests
-        });
+//         let listener = TcpListener::bind("127.0.0.1:8017")
+//             .await?;
+//         let lb_list_test = Router::new().route("/", get(convert_lb_list));
+//         tokio::spawn(async {
+//             axum::serve(listener, lb_list_test)
+//             .await
+//             .unwrap();    // if this little server can't go up here, it should crash the tests
+//         });
         
-        Ok(())
-    }
+//         Ok(())
+//     }
 
-    // sends request and then gets stream as a Vec of Events
-    async fn extract_events(url: String) -> Vec<eventsource_stream::Event> {
+//     // sends request and then gets stream as a Vec of Events
+//     async fn extract_events(url: String) -> Vec<eventsource_stream::Event> {
 
-        // Since these tests run async, I don't know which one will run first,
-        // so I don't know which test will need to initialize the miniserver.
-        // So I'll just check in every function, and ignore connection error 
-        // from spawn_app. This is because if there 
-        // is an error, it means the miniserver is already up, and 
-        // if there isn't, it soon will be. Anything catastrophic
-        // will be caught by the unwrap inside that function and crash
-        // the tests.
-        match spawn_app().await {
-            Ok(_) => (),
-            Err(_) => ()
-        };
+//         // Since these tests run async, I don't know which one will run first,
+//         // so I don't know which test will need to initialize the miniserver.
+//         // So I'll just check in every function, and ignore connection error 
+//         // from spawn_app. This is because if there 
+//         // is an error, it means the miniserver is already up, and 
+//         // if there isn't, it soon will be. Anything catastrophic
+//         // will be caught by the unwrap inside that function and crash
+//         // the tests.
+//         match spawn_app().await {
+//             Ok(_) => (),
+//             Err(_) => ()
+//         };
 
-        let mut event_stream= reqwest::Client::new()
-            .get(url)
-            .send()
-            .await
-            .unwrap()
-            .bytes_stream()
-            .eventsource();
+//         let mut event_stream= reqwest::Client::new()
+//             .get(url)
+//             .send()
+//             .await
+//             .unwrap()
+//             .bytes_stream()
+//             .eventsource();
 
-        let mut event_data: Vec<eventsource_stream::Event> = vec![];
-        while let Some(event) = event_stream.next().await {
-            match event {
-                Ok(event) => {
-                    // break the loop at the end of SSE stream
-                    if event.data == "done!" {
-                        break;
-                    }
-                    event_data.push(event);
-                }
-                Err(_) => {
-                    panic!("Error in event stream");
-                }
-            }
-        }
+//         let mut event_data: Vec<eventsource_stream::Event> = vec![];
+//         while let Some(event) = event_stream.next().await {
+//             match event {
+//                 Ok(event) => {
+//                     // break the loop at the end of SSE stream
+//                     if event.data == "done!" {
+//                         break;
+//                     }
+//                     event_data.push(event);
+//                 }
+//                 Err(_) => {
+//                     panic!("Error in event stream");
+//                 }
+//             }
+//         }
 
-        event_data
-    }
+//         event_data
+//     }
 
-    #[tokio::test]
-    async fn too_long_list_req() {
+//     #[tokio::test]
+//     async fn too_long_list_req() {
 
-        // This is the data used in the URL query, in JSON format:
-        // {
-        //     list_name: "list-too-long",
-        //     author_user: "user_exists",
-        //     attrs: ["casting", "watches", "likes"]    // all valid attributes
-        // }
+//         // This is the data used in the URL query, in JSON format:
+//         // {
+//         //     list_name: "list-too-long",
+//         //     author_user: "user_exists",
+//         //     attrs: ["casting", "watches", "likes"]    // all valid attributes
+//         // }
 
-        let mini_svr_url= "http://127.0.0.1:8017?\
-            list_name=list-too-long&\
-            author_user=user_exists&\
-            attrs=casting&\
-            attrs=watches&\
-            attrs=likes";
+//         let mini_svr_url= "http://127.0.0.1:8017?\
+//             list_name=list-too-long&\
+//             author_user=user_exists&\
+//             attrs=casting&\
+//             attrs=watches&\
+//             attrs=likes";
 
-        let event_data = extract_events(String::from(mini_svr_url)).await;
+//         let event_data = extract_events(String::from(mini_svr_url)).await;
 
-        assert!(event_data[0].event == "error");
-        assert!(event_data[0].data.contains("403 FORBIDDEN"));
-    }
+//         assert!(event_data[0].event == "error");
+//         assert!(event_data[0].data.contains("403 FORBIDDEN"));
+//     }
 
-    // for when Letterboxd.com is down, testing sending 502 status to client
-    #[tokio::test]
-    async fn lb_server_down_req(){
+//     // for when Letterboxd.com is down, testing sending 502 status to client
+//     #[tokio::test]
+//     async fn lb_server_down_req(){
 
-        let mini_svr_url= "http://127.0.0.1:8017?\
-            list_name=server-down&\
-            author_user=some_user&\
-            attrs=stuff";
+//         let mini_svr_url= "http://127.0.0.1:8017?\
+//             list_name=server-down&\
+//             author_user=some_user&\
+//             attrs=stuff";
 
-        let event_data = extract_events(String::from(mini_svr_url)).await;
+//         let event_data = extract_events(String::from(mini_svr_url)).await;
 
-        assert!(event_data[0].event == "error");
-        assert!(event_data[0].data.contains("502 BAD GATEWAY"));
-    }
+//         assert!(event_data[0].event == "error");
+//         assert!(event_data[0].data.contains("502 BAD GATEWAY"));
+//     }
 
-    #[tokio::test]
-    async fn bad_list_req(){
+//     #[tokio::test]
+//     async fn bad_list_req(){
 
-        // if the user doesn't exist, the list doesn't, 
-        // because it'll turn up a bad URL regardless.
-        // So it only matters whether the list exists or not.
+//         // if the user doesn't exist, the list doesn't, 
+//         // because it'll turn up a bad URL regardless.
+//         // So it only matters whether the list exists or not.
 
-        let mini_svr_url= "http://127.0.0.1:8017?\
-            list_name=list-no-exist&\
-            author_user=user_may_exist&\
-            attrs=casting&\
-            attrs=watches&\
-            attrs=likes";
+//         let mini_svr_url= "http://127.0.0.1:8017?\
+//             list_name=list-no-exist&\
+//             author_user=user_may_exist&\
+//             attrs=casting&\
+//             attrs=watches&\
+//             attrs=likes";
 
-        let event_data = extract_events(String::from(mini_svr_url)).await;
+//         let event_data = extract_events(String::from(mini_svr_url)).await;
 
-        assert!(event_data[0].event == "error");
-        assert!(event_data[0].data.contains("422 UNPROCESSABLE CONTENT"));
-    }
+//         assert!(event_data[0].event == "error");
+//         assert!(event_data[0].data.contains("422 UNPROCESSABLE CONTENT"));
+//     }
 
-    #[tokio::test]
-    async fn req_to_crashed_app() {
+//     #[tokio::test]
+//     async fn req_to_crashed_app() {
 
-        let mini_svr_url= "http://127.0.0.1:8017?\
-            list_name=this-hurts-you&\
-            author_user=user_may_exist&\
-            attrs=casting&\
-            attrs=watches&\
-            attrs=likes";
+//         let mini_svr_url= "http://127.0.0.1:8017?\
+//             list_name=this-hurts-you&\
+//             author_user=user_may_exist&\
+//             attrs=casting&\
+//             attrs=watches&\
+//             attrs=likes";
 
-        let event_data = extract_events(String::from(mini_svr_url)).await;
+//         let event_data = extract_events(String::from(mini_svr_url)).await;
 
-        assert!(event_data[0].event == "error");
-        assert!(event_data[0].data.contains("500 INTERNAL SERVER ERROR"));
-    }
+//         assert!(event_data[0].event == "error");
+//         assert!(event_data[0].data.contains("500 INTERNAL SERVER ERROR"));
+//     }
 
-    #[tokio::test]
-    async fn bad_attr_req() {
+//     #[tokio::test]
+//     async fn bad_attr_req() {
 
-        let mini_svr_url= "http://127.0.0.1:8017?\
-            list_name=list-exists&\
-            author_user=user_exists&\
-            attrs=casting&\
-            attrs=bingus&\
-            attrs=likes";
+//         let mini_svr_url= "http://127.0.0.1:8017?\
+//             list_name=list-exists&\
+//             author_user=user_exists&\
+//             attrs=casting&\
+//             attrs=bingus&\
+//             attrs=likes";
 
-        let event_data = extract_events(String::from(mini_svr_url)).await;
+//         let event_data = extract_events(String::from(mini_svr_url)).await;
 
-        assert!(event_data[0].event == "error");
-        assert!(event_data[0].data.contains("422 UNPROCESSABLE CONTENT"));
+//         assert!(event_data[0].event == "error");
+//         assert!(event_data[0].data.contains("422 UNPROCESSABLE CONTENT"));
 
-    }
+//     }
 
-    #[tokio::test]
-    async fn no_attr_req() {
+//     #[tokio::test]
+//     async fn no_attr_req() {
 
-        let mini_svr_url= "http://127.0.0.1:8017?\
-            list_name=list-exists&\
-            author_user=user_exists&\
-            attrs=none";
+//         let mini_svr_url= "http://127.0.0.1:8017?\
+//             list_name=list-exists&\
+//             author_user=user_exists&\
+//             attrs=none";
 
-        let event_data = extract_events(String::from(mini_svr_url)).await;
+//         let event_data = extract_events(String::from(mini_svr_url)).await;
 
-        let correct_rows = vec![
-            ListRow {
-                total_rows: 5,
-                row_data: String::from("Title,Year"),
-            },
-            ListRow {
-                total_rows: 5,
-                row_data: String::from("2001: A Space Odyssey,1968"),
-            },
-            ListRow {
-                total_rows: 5,
-                row_data: String::from("Blade Runner,1982"),
-            },
-            ListRow {
-                total_rows: 5,
-                row_data: String::from("The Players vs. Ángeles Caídos,1969"),
-            },
-            ListRow {
-                total_rows: 5,
-                row_data: String::from("8½,1963"),
-            },
-        ];
+//         let correct_rows = vec![
+//             ListRow {
+//                 total_rows: 5,
+//                 row_data: String::from("Title,Year"),
+//             },
+//             ListRow {
+//                 total_rows: 5,
+//                 row_data: String::from("2001: A Space Odyssey,1968"),
+//             },
+//             ListRow {
+//                 total_rows: 5,
+//                 row_data: String::from("Blade Runner,1982"),
+//             },
+//             ListRow {
+//                 total_rows: 5,
+//                 row_data: String::from("The Players vs. Ángeles Caídos,1969"),
+//             },
+//             ListRow {
+//                 total_rows: 5,
+//                 row_data: String::from("8½,1963"),
+//             },
+//         ];
 
-        let received_rows: Vec<ListRow> = event_data
-            .iter()
-            .map(| ev | { 
-                serde_json::from_str::<ListRow>(&ev.data)
-                    .unwrap() 
-            })
-            .collect();
+//         let received_rows: Vec<ListRow> = event_data
+//             .iter()
+//             .map(| ev | { 
+//                 serde_json::from_str::<ListRow>(&ev.data)
+//                     .unwrap() 
+//             })
+//             .collect();
 
-        assert_eq!(correct_rows, received_rows);
-    }
+//         assert_eq!(correct_rows, received_rows);
+//     }
 
-    // This exists to test very long (probably maximally long) rows,
-    // with a very long list (~1.5k films)
-    #[tokio::test]
-    async fn big_list_req(){
+//     // This exists to test very long (probably maximally long) rows,
+//     // with a very long list (~1.5k films)
+//     #[tokio::test]
+//     async fn big_list_req(){
 
-        let url = "http://127.0.0.1:8017?\
-            list_name=the-big-one&\
-            author_user=user_exists&\
-            attrs=all-of-em";
+//         let url = "http://127.0.0.1:8017?\
+//             list_name=the-big-one&\
+//             author_user=user_exists&\
+//             attrs=all-of-em";
 
-        let mut test_file_reader = OpenOptions::new()
-            .read(true)
-            .open("../test-helpers/big-list-test.csv")
-            .unwrap();
+//         let mut test_file_reader = OpenOptions::new()
+//             .read(true)
+//             .open("../test-helpers/big-list-test.csv")
+//             .unwrap();
 
-        let mut correct_list = String::new();
-        test_file_reader
-            .read_to_string(&mut correct_list)
-            .unwrap();
+//         let mut correct_list = String::new();
+//         test_file_reader
+//             .read_to_string(&mut correct_list)
+//             .unwrap();
 
-        let event_data = extract_events(String::from(url)).await;
+//         let event_data = extract_events(String::from(url)).await;
 
-        // Extract row data itself, not entire ListRow structs
-        let received_list  = event_data
-            .iter()
-            .map(| ev | { 
-                let li = serde_json::from_str::<ListRow>(&ev.data)
-                    .unwrap();
-                li.row_data
-            })
-            .collect::<Vec<String>>()
-            .join("");
+//         // Extract row data itself, not entire ListRow structs
+//         let received_list  = event_data
+//             .iter()
+//             .map(| ev | { 
+//                 let li = serde_json::from_str::<ListRow>(&ev.data)
+//                     .unwrap();
+//                 li.row_data
+//             })
+//             .collect::<Vec<String>>()
+//             .join("");
 
-        assert_eq!(correct_list, received_list);
-    }
-}
+//         assert_eq!(correct_list, received_list);
+//     }
+// }
