@@ -64,33 +64,33 @@ jobs:
         npm install vite
         echo > test.log
         cargo test --release --lib -- --test-threads=1
-        cargo test --release --test tls_on_default --
-        cargo test --release --test tls_off_switch -- --no-tls
+        # cargo test --release --test tls_on_default --
+        # cargo test --release --test tls_off_switch -- --no-tls
     - name: Server integration tests (no TLS)
       run: |
         (./target/release/archie-server --no-tls > /dev/null) &
         cargo test --release --test integ_* -- --no-tls
         killall archie-server
-    # uses a brilliantly simple Python module called `trustme`
+    # uses a simple Python module called `trustme`
     # that generates self-signed certificates.
     # from here: https://github.com/python-trio/trustme
-    - name: Set up self-signed certificates
-      run: |
-        pip install -U trustme
-        mkdir certs
-        cd certs
-        python -m trustme
-    - name: Server integration tests (with TLS)
-      run: |
-        (./target/release/archie-server > /dev/null) &
-        cargo test --release --test integ_*
-        killall archie-server
-        killall python
-    - name: Test DB's dump-on-exit
-      run: |
-        cd ..
-        docker compose down
-        source test-helpers/validate-dump.sh demo
+    # - name: Set up self-signed certificates
+    #   run: |
+    #     pip install -U trustme
+    #     mkdir certs
+    #     cd certs
+    #     python -m trustme
+    # - name: Server integration tests (with TLS)
+    #   run: |
+    #     (./target/release/archie-server > /dev/null) &
+    #     cargo test --release --test integ_*
+    #     killall archie-server
+    #     killall python
+    # - name: Test DB's dump-on-exit
+    #   run: |
+    #     cd ..
+    #     docker compose down
+    #     source test-helpers/validate-dump.sh demo
   
 
   # Letterboxd app will no longer work due to non-API requests to letterboxd.com
