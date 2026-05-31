@@ -25,6 +25,9 @@ jobs:
       with:
         playbook: playbook.yml
         directory: ./ansible
+        configuration: |
+          [ssh_connection]
+          ssh_args = -o ProxyCommand="/usr/local/bin/cloudflared access ssh --hostname %h"   
         key: ${{ secrets.ARCHIE_SSH_PK }}
         inventory: |
           web_server:
@@ -37,5 +40,4 @@ jobs:
         # but kept in case it would break something
         vault_password: ${{ secrets.ANSIBLE_VAULT_PASSWORD }}
         options: |
-          --ssh-common-args "ProxyCommand=/usr/local/bin/cloudflared access ssh --hostname %h"
           -vv
