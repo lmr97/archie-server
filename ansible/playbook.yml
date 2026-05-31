@@ -23,20 +23,20 @@
                   image: lmr97/archie-svr:latest
                   imagePullPolicy: Always
         
-    - name: Deploy new image for Letterboxd app
-      kubernetes.core.k8s:
-        state: present
-        kind: Deployment
-        name: archie-main-svr
-        namespace: archie
-        wait: true
-        validate_certs: false
-        kubeconfig: /etc/rancher/k3s/k3s.yaml
-        definition:
-          spec:
-            template:
-              spec:
-                containers:
-                - name: lb-app
-                  image: lmr97/lb-web-app:latest
-                  imagePullPolicy: Always
+    # - name: Deploy new image for Letterboxd app
+    #   kubernetes.core.k8s:
+    #     state: present
+    #     kind: Deployment
+    #     name: archie-main-svr
+    #     namespace: archie
+    #     wait: true
+    #     validate_certs: false
+    #     kubeconfig: /etc/rancher/k3s/k3s.yaml
+    #     definition:
+    #       spec:
+    #         template:
+    #           spec:
+    #             containers:
+    #             - name: lb-app
+    #               image: lmr97/lb-web-app:latest
+    #               imagePullPolicy: Always
