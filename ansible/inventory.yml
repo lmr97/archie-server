@@ -3,7 +3,7 @@ web_server:
   hosts:
     archie:
       ansible_user: martin
-      ansible_host: archie.zapto.org
+      ansible_host: archie.lmrsvr.net
       ansible_python_interpreter: /home/martin/kaita/archie-server/ansible/av/bin/python3
       ansible_port: 1917
       # cap std +1
