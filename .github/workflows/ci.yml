@@ -61,10 +61,10 @@ jobs:
         node-version: 25.6.1
     - name: Build server
       run: |
+        npm install vite
         cargo build --release
     - name: Server unit tests
       run: |
-        npm install vite
         echo > test.log
         cargo test --release --lib -- --test-threads=1
         # cargo test --release --test tls_on_default --
