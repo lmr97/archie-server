@@ -1,10 +1,14 @@
 # Archie: A Self-hosting Project
 
-I had an old HP ProBook 640 laying around, and wanted to give it new life as a web server. I got a free domain from [noip.com](https://www.noip.com/), and went from there!
+I had an old HP ProBook 640 laying around, and wanted to give it new life as a web server. I originally started with a free domain from [noip.com](https://www.noip.com/), but I migrated over to a [Cloudflare Tunnel](https://developers.cloudflare.com/tunnel/), under a new domain.
 
-I wrote a custom back-end in Rust, using the popular [Axum framework](https://github.com/tokio-rs/axum), as well as a small webpage for it to serve. The server runs on Arch Linux (appropriate for small projects like this), using a MySQL database to store data from the guestbook page and log website hits. It also has [a small Python app](https://github.com/lmr97/letterboxd_get_list) that converts Letterboxd lists into CSV files. All these components run in their own Docker containers, orchestrated using Docker Compose.
+I wrote a custom back-end in Rust, using the popular [Axum framework](https://github.com/tokio-rs/axum), as well as a small webpage for it to serve. The server runs on Arch Linux (appropriate for small projects like this), using a MySQL database to store data from the guestbook page and log website hits. 
 
-Check it out! [archie.zapto.org](archie.zapto.org)
+It also used to have [a small Python app](https://github.com/lmr97/letterboxd_get_list) that converts Letterboxd lists into CSV files, but I have discontinued it since Letterboxd is trying to limit bot traffic (and scrapers specifically), and I respect their desire to do so. I've left the writeup on this README for archival purposes.
+
+All these components run in their own containers, orchestrated using Kubernetes (specifically the [k3s](https://k3s.io) distribution). The manifests and other relevant files for the cluster's setup can be found in my [`kaita` repo](https://github.com/lmr97/kaita).
+
+Come visit my website! [lmrsvr.net](https://lmrsvr.net)
 
 ## The Grand Design: how it all works
 
