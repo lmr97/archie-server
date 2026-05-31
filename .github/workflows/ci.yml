@@ -59,6 +59,9 @@ jobs:
     - uses: actions/setup-node@v6
       with: 
         node-version: 25.6.1
+    - name: Build server
+      run: |
+        cargo build --release
     - name: Server unit tests
       run: |
         npm install vite
