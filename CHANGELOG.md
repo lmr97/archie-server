@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.9.18 - 2026-05-30
+
+This is the first update where I am running the website via a [Cloudflare Tunnel](https://developers.cloudflare.com/tunnel/), accessible from [lmrsvr.net](https://lmrsvr.net) instead of archie.zapto.org.
+
+### Fixed
+
+- Update README to reflect current domain, current Kubernetes architecture, and discontinuation of Letterboxd app
+- Update homepage to reflect current domain
+- Apply updates and patches to dependencies (JavaScript and Rust)
+
+## 0.9.17 - 2026-04-08
+
+### Fixed
+
+- Apply updates and patches to dependencies
+
 ## 0.9.16 - 2026-04-08
 
 ### Fixed
