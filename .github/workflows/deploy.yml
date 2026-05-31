@@ -13,14 +13,29 @@ jobs:
     steps:
     - name: Check out repo
       uses: actions/checkout@v4
-    - name: Deploy via Ansible
+    - name: Install cloudflared
+      run: |
+        curl -L https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb -o cloudflared.deb
+        sudo dpkg -i cloudflared.deb
+    - name: Deploy via Ansible (and cloudflared)
       uses: dawidd6/action-ansible-playbook@v7
+      env: 
+        TUNNEL_SERVICE_TOKEN_ID: ${{ secrets.CF_ACCESS_CLIENT_ID }}
+        TUNNEL_SERVICE_TOKEN_SECRET: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
       with:
         playbook: playbook.yml
         directory: ./ansible
         key: ${{ secrets.ARCHIE_SSH_PK }}
-        # not needed, since only public-key authentication is used
+        inventory: |
+          web_server:
+            hosts:
+              archie:
+                ansible_user: martin
+                ansible_host: ${{ secrets.MAIN_HOST }}
+                ansible_python_interpreter: /home/martin/kaita/archie-server/ansible/av/bin/python3
+        # likely not needed, since only public-key authentication is used
+        # but kept in case it would break something
         vault_password: ${{ secrets.ANSIBLE_VAULT_PASSWORD }}
         options: |
-          --inventory inventory.yml
-          -vvv
+          --ssh-common-args "ProxyCommand=/usr/local/bin/cloudflared access ssh --hostname %h"
+          -vv
