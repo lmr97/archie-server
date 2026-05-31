@@ -5,7 +5,6 @@ web_server:
       ansible_user: martin
       ansible_host: archie.lmrsvr.net
       ansible_python_interpreter: /home/martin/kaita/archie-server/ansible/av/bin/python3
-      ansible_port: 1917
       # cap std +1
       ansible_password: !vault |
           $ANSIBLE_VAULT;1.1;AES256
