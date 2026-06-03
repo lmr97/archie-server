@@ -16,6 +16,11 @@
         kubeconfig: /etc/rancher/k3s/k3s.yaml
         definition:
           spec:
+            strategy: 
+              type: RollingUpdate
+              rollingUpdate:
+                maxUnavailable: 2
+                maxSurge: 1
             template:
               spec:
                 containers:
