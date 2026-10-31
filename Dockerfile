@@ -8,7 +8,7 @@
 #     STAGE 1: Build Rust dependencies    #
 #                                         #
 ###########################################
-FROM rust:1.88.0 AS deps
+FROM rust:1.99.0 AS deps
 
 RUN useradd -m server
 USER server
@@ -27,7 +27,7 @@ RUN cargo build --release
 #     STAGE 2: Build server executable    #
 #                                         #
 ###########################################
-FROM rust:1.88.0 AS main-build
+FROM rust:1.99.0 AS main-build
 
 # Install Node, for ViteJS integration. It's easier to set up Node 
 # from a Rust environment than the other way around, I've found. 
